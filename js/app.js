@@ -3,9 +3,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 const App = (() => {
-  // ── DATOS EMBEDIDOS DEL EXCEL ──
   const EUR_USD = 0.85;
-
   const COINGECKO_IMG = 'https://coin-images.coingecko.com/coins/images';
 
   const portfolio = [
@@ -32,16 +30,7 @@ const App = (() => {
     { name: 'Bitget', type: 'Exchange earn', pct: 0.334, color: '#1e90ff', purpose: 'Earn / operativa' },
   ];
 
-  const targetAllocation = [
-    { token: 'BTC', pct: 0.40 },
-    { token: 'ETH', pct: 0.30 },
-    { token: 'ATOM', pct: 0.15 },
-    { token: 'TIA', pct: 0.10 },
-    { token: 'USDC', pct: 0.05 },
-  ];
-
   const cosmosTopPct = 0.35;
-  const satelliteMaxPct = 0.15;
 
   const transactions = [
     { date: '2024-02-03', token: 'BTC', type: 'Compra', price: 43.18, qty: 0.000532, totalUsd: 0.02 },
@@ -88,7 +77,9 @@ const App = (() => {
   let currency = 'USD';
   let prices = {};
   let chartInstance = null;
+  let evolutionChart = null;
   let refreshInterval = null;
+  let txFilter = '';
 
   // ── FORMATEO ──
   const fmt = (n, decimals = 2) => {
@@ -135,16 +126,7 @@ const App = (() => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
-      portfolio.forEach(asset => {
-        if (data[asset.coingeckoId]) {
-          prices[asset.token] = {
-            price: data[asset.coingeckoId].usd,
-            change24h: data[asset.coingeckoId].usd_24h_change || 0,
-          };
-        }
-      });
-
-      airdrops.forEach(asset => {
+      [...portfolio, ...airdrops].forEach(asset => {
         if (data[asset.coingeckoId]) {
           prices[asset.token] = {
             price: data[asset.coingeckoId].usd,
@@ -156,10 +138,10 @@ const App = (() => {
       updateLastUpdate();
       render();
     } catch (err) {
-      console.warn('CoinGecko fetch failed, using Excel prices:', err.message);
-      portfolio.forEach(asset => {
+      console.warn('CoinGecko fetch failed:', err.message);
+      [...portfolio, ...airdrops].forEach(asset => {
         if (!prices[asset.token]) {
-          prices[asset.token] = { price: asset.avgPrice, change24h: 0 };
+          prices[asset.token] = { price: asset.avgPrice || asset.priceUsd || 0, change24h: 0 };
         }
       });
     }
@@ -172,8 +154,7 @@ const App = (() => {
   }
 
   function getAssetPnl(asset) {
-    const value = getAssetValue(asset);
-    return value - asset.costUsd;
+    return getAssetValue(asset) - asset.costUsd;
   }
 
   function getAirdropValue(ad) {
@@ -213,13 +194,15 @@ const App = (() => {
   function render() {
     renderHero();
     renderCards();
+    renderDcaSummary();
+    renderCosmosBar();
     renderAssetTable();
     renderAllocation();
+    renderEvolutionChart();
     renderStaking();
     renderAirdrops();
     renderCustody();
     renderTransactions();
-    renderCosmosWarning();
   }
 
   function renderHero() {
@@ -257,12 +240,73 @@ const App = (() => {
     document.getElementById('card-airdrops').textContent = fmtCurrency(airdropVal);
   }
 
+  function renderDcaSummary() {
+    const now = new Date();
+    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const dcaTarget = 175;
+
+    const investedUsd = transactions
+      .filter(tx => tx.date.startsWith(monthKey) && tx.type === 'Compra' && tx.totalUsd > 0)
+      .reduce((sum, tx) => sum + tx.totalUsd, 0);
+
+    const symbol = currency === 'USD' ? '$' : '€';
+    const investedConv = currency === 'EUR' ? investedUsd * EUR_USD : investedUsd;
+    const targetConv = currency === 'EUR' ? dcaTarget * EUR_USD : dcaTarget;
+    const pct = Math.min((investedConv / targetConv) * 100, 100);
+    const remaining = Math.max(targetConv - investedConv, 0);
+
+    const el = document.getElementById('dca-summary');
+    if (!el) return;
+    el.innerHTML = `
+      <div class="dca-header">
+        <span class="dca-month">${now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</span>
+        <span class="dca-amount">${symbol}${fmt(investedConv, 2)} / ${symbol}${fmt(targetConv, 2)}</span>
+      </div>
+      <div class="dca-bar">
+        <div class="dca-fill ${pct >= 100 ? 'complete' : ''}" style="width:${pct}%"></div>
+      </div>
+      <div class="dca-footer">
+        ${pct >= 100
+          ? '<span class="positive">✓ Mes completo</span>'
+          : `<span style="color:var(--text-muted)">Faltan ${symbol}${fmt(remaining, 2)}</span>`}
+      </div>
+    `;
+  }
+
+  function renderCosmosBar() {
+    const cosmosPct = getCosmosPct() * 100;
+    const bar = document.getElementById('cosmos-bar-fill');
+    const label = document.getElementById('cosmos-bar-label');
+    const banner = document.getElementById('cosmos-warning');
+    if (!bar || !label) return;
+
+    bar.style.width = `${Math.min(cosmosPct, 100)}%`;
+
+    if (cosmosPct > cosmosTopPct * 100) {
+      bar.className = 'progress-fill red';
+      label.textContent = `${cosmosPct.toFixed(1)}% / 35% — TOPE SUPERADO`;
+      label.className = 'cosmos-label negative';
+      if (banner) { banner.style.display = 'flex'; banner.innerHTML = '⚠️ Cosmos por encima del 35%. No añadir dinero nuevo.'; }
+    } else if (cosmosPct > (cosmosTopPct - 0.05) * 100) {
+      bar.className = 'progress-fill yellow';
+      label.textContent = `${cosmosPct.toFixed(1)}% / 35% — Cerca del tope`;
+      label.className = 'cosmos-label';
+      label.style.color = 'var(--accent-yellow)';
+      if (banner) banner.style.display = 'none';
+    } else {
+      bar.className = 'progress-fill green';
+      label.textContent = `${cosmosPct.toFixed(1)}% / 35%`;
+      label.className = 'cosmos-label';
+      label.style.color = 'var(--accent-green)';
+      if (banner) banner.style.display = 'none';
+    }
+  }
+
   function renderAssetTable() {
     const tbody = document.getElementById('asset-tbody');
     const total = getTotalPortfolioValue();
 
-    let html = '';
-    portfolio.forEach(asset => {
+    tbody.innerHTML = portfolio.map(asset => {
       const p = prices[asset.token]?.price || asset.avgPrice;
       const change = prices[asset.token]?.change24h || 0;
       const value = getAssetValue(asset);
@@ -270,7 +314,7 @@ const App = (() => {
       const pnlPct = asset.costUsd > 0 ? pnl / asset.costUsd : 0;
       const weight = total > 0 ? value / total : 0;
 
-      html += `
+      return `
         <tr>
           <td>
             <div class="token-cell">
@@ -290,24 +334,15 @@ const App = (() => {
           <td class="text-right">${(weight * 100).toFixed(1)}%</td>
         </tr>
       `;
-    });
-
-    tbody.innerHTML = html;
+    }).join('');
   }
 
   function renderAllocation() {
     const total = getTotalPortfolioValue() + getTotalAirdropValue();
 
     const segments = portfolio.map(a => ({
-      token: a.token,
-      value: getAssetValue(a),
-      color: a.color,
+      token: a.token, value: getAssetValue(a), color: a.color,
     }));
-
-    const usdcValue = 0;
-    if (usdcValue > 0) {
-      segments.push({ token: 'USDC', value: usdcValue, color: '#2775ca' });
-    }
 
     airdrops.forEach(a => {
       const v = getAirdropValue(a);
@@ -316,7 +351,6 @@ const App = (() => {
 
     segments.sort((a, b) => b.value - a.value);
 
-    // Pie chart
     const ctx = document.getElementById('allocation-chart').getContext('2d');
     if (chartInstance) chartInstance.destroy();
 
@@ -357,9 +391,7 @@ const App = (() => {
       },
     });
 
-    // Allocation list
-    const listEl = document.getElementById('allocation-list');
-    listEl.innerHTML = segments.map(s => {
+    document.getElementById('allocation-list').innerHTML = segments.map(s => {
       const pct = total > 0 ? (s.value / total) * 100 : 0;
       return `
         <div class="allocation-item">
@@ -376,9 +408,94 @@ const App = (() => {
     }).join('');
   }
 
+  function renderEvolutionChart() {
+    const ctx = document.getElementById('evolution-chart');
+    if (!ctx) return;
+
+    const monthlyInvest = {};
+    transactions.forEach(tx => {
+      if (tx.type === 'Compra' && tx.totalUsd > 0) {
+        const month = tx.date.substring(0, 7);
+        monthlyInvest[month] = (monthlyInvest[month] || 0) + tx.totalUsd / EUR_USD;
+      }
+    });
+
+    const sorted = Object.keys(monthlyInvest).sort();
+    let cumulative = 0;
+    const labels = [];
+    const invested = [];
+
+    sorted.forEach(m => {
+      cumulative += monthlyInvest[m];
+      const [y, mo] = m.split('-');
+      const date = new Date(y, parseInt(mo) - 1);
+      labels.push(date.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }));
+      invested.push(parseFloat(cumulative.toFixed(2)));
+    });
+
+    if (evolutionChart) evolutionChart.destroy();
+
+    const totalNow = (getTotalPortfolioValue() + getTotalAirdropValue());
+    const currentVal = currency === 'EUR' ? totalNow * EUR_USD : totalNow;
+
+    evolutionChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Invertido',
+            data: invested,
+            borderColor: '#1e90ff',
+            backgroundColor: 'rgba(30, 144, 255, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 3,
+            pointBackgroundColor: '#1e90ff',
+            borderWidth: 2,
+          },
+          {
+            label: 'Valor actual',
+            data: invested.map(() => currentVal),
+            borderColor: '#0ecb81',
+            borderDash: [6, 4],
+            pointRadius: 0,
+            borderWidth: 2,
+            fill: false,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#848e9c', font: { size: 12 } } },
+          tooltip: {
+            backgroundColor: '#2b3139',
+            titleColor: '#eaecef',
+            bodyColor: '#eaecef',
+            borderColor: '#363c45',
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 8,
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${fmtCurrency(ctx.raw)}`,
+            },
+          },
+        },
+        scales: {
+          x: { ticks: { color: '#5e6673', font: { size: 11 } }, grid: { color: 'rgba(43,49,57,0.5)' } },
+          y: {
+            ticks: { color: '#5e6673', font: { size: 11 }, callback: (v) => '$' + v.toLocaleString() },
+            grid: { color: 'rgba(43,49,57,0.5)' },
+          },
+        },
+      },
+    });
+  }
+
   function renderStaking() {
-    const container = document.getElementById('staking-grid');
-    container.innerHTML = staking.map(s => {
+    document.getElementById('staking-grid').innerHTML = staking.map(s => {
       const asset = portfolio.find(a => a.token === s.token);
       const p = prices[s.token]?.price || asset?.avgPrice || 0;
       const yearlyIncome = s.qty * p * s.apr;
@@ -418,8 +535,7 @@ const App = (() => {
   }
 
   function renderAirdrops() {
-    const tbody = document.getElementById('airdrop-tbody');
-    tbody.innerHTML = airdrops.map(a => {
+    document.getElementById('airdrop-tbody').innerHTML = airdrops.map(a => {
       const price = prices[a.token]?.price || a.priceUsd;
       const value = getAirdropValue(a);
       return `
@@ -443,13 +559,11 @@ const App = (() => {
   }
 
   function renderCustody() {
-    const bar = document.getElementById('custody-bar');
-    bar.innerHTML = custody.map(c =>
+    document.getElementById('custody-bar').innerHTML = custody.map(c =>
       `<div class="custody-segment" style="flex:${c.pct};background:${c.color}">${(c.pct * 100).toFixed(0)}%</div>`
     ).join('');
 
-    const legend = document.getElementById('custody-legend');
-    legend.innerHTML = custody.map(c =>
+    document.getElementById('custody-legend').innerHTML = custody.map(c =>
       `<div class="custody-legend-item">
         <div class="custody-legend-dot" style="background:${c.color}"></div>
         <span><strong>${c.name}</strong> — ${c.purpose}</span>
@@ -459,9 +573,17 @@ const App = (() => {
 
   function renderTransactions() {
     const tbody = document.getElementById('tx-tbody');
-    const recent = [...transactions].reverse().slice(0, 15);
+    let filtered = [...transactions].reverse();
+    if (txFilter) {
+      const q = txFilter.toLowerCase();
+      filtered = filtered.filter(tx =>
+        tx.token.toLowerCase().includes(q) ||
+        tx.type.toLowerCase().includes(q) ||
+        tx.date.includes(q)
+      );
+    }
 
-    tbody.innerHTML = recent.map(tx => {
+    tbody.innerHTML = filtered.slice(0, 20).map(tx => {
       const allAssets = [...portfolio, ...airdrops];
       const txAsset = allAssets.find(a => a.token === tx.token);
       return `
@@ -484,22 +606,6 @@ const App = (() => {
     }).join('');
   }
 
-  function renderCosmosWarning() {
-    const banner = document.getElementById('cosmos-warning');
-    const cosmosPct = getCosmosPct();
-    const pctNum = cosmosPct * 100;
-
-    if (pctNum > cosmosTopPct * 100) {
-      banner.style.display = 'flex';
-      banner.innerHTML = `⚠️ Cosmos (ATOM+TIA) al ${pctNum.toFixed(1)}% — por encima del tope del 35%. No añadir dinero nuevo.`;
-    } else if (pctNum > (cosmosTopPct - 0.05) * 100) {
-      banner.style.display = 'flex';
-      banner.innerHTML = `⚡ Cosmos (ATOM+TIA) al ${pctNum.toFixed(1)}% — cerca del tope del 35%.`;
-    } else {
-      banner.style.display = 'none';
-    }
-  }
-
   function updateLastUpdate() {
     const now = new Date();
     document.getElementById('last-update').textContent =
@@ -519,26 +625,19 @@ const App = (() => {
   function setupSortable(tableId) {
     const table = document.getElementById(tableId);
     if (!table) return;
-    const headers = table.querySelectorAll('thead th[data-sort]');
-    headers.forEach((th, idx) => {
+    table.querySelectorAll('thead th[data-sort]').forEach((th, idx) => {
       th.addEventListener('click', () => {
-        const key = th.dataset.sort;
         const tbody = table.querySelector('tbody');
         const rows = Array.from(tbody.querySelectorAll('tr'));
-
         const dir = th.dataset.dir === 'asc' ? 'desc' : 'asc';
         th.dataset.dir = dir;
 
         rows.sort((a, b) => {
           let va = a.cells[idx]?.textContent.trim() || '';
           let vb = b.cells[idx]?.textContent.trim() || '';
-
           const na = parseFloat(va.replace(/[$€,%+\s]/g, ''));
           const nb = parseFloat(vb.replace(/[$€,%+\s]/g, ''));
-
-          if (!isNaN(na) && !isNaN(nb)) {
-            return dir === 'asc' ? na - nb : nb - na;
-          }
+          if (!isNaN(na) && !isNaN(nb)) return dir === 'asc' ? na - nb : nb - na;
           return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
         });
 
@@ -555,6 +654,36 @@ const App = (() => {
 
     setupSortable('asset-table');
     setupSortable('tx-table');
+
+    const refreshBtn = document.getElementById('refresh-btn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', async () => {
+        refreshBtn.classList.add('spinning');
+        await fetchPrices();
+        refreshBtn.classList.remove('spinning');
+      });
+    }
+
+    const searchInput = document.getElementById('tx-search');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        txFilter = e.target.value;
+        renderTransactions();
+      });
+    }
+
+    const navLinks = document.querySelectorAll('.nav-link');
+    const sections = document.querySelectorAll('[id^="sec-"]');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          navLinks.forEach(l => l.classList.remove('active'));
+          const active = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+          if (active) active.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-120px 0px -60% 0px' });
+    sections.forEach(s => observer.observe(s));
 
     await fetchPrices();
     refreshInterval = setInterval(fetchPrices, 60000);

@@ -19,6 +19,9 @@
         </div>
       </div>
       <div class="header-actions">
+        <button id="refresh-btn" class="refresh-btn" title="Actualizar precios">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        </button>
         <span class="last-update" id="last-update">Cargando...</span>
         <span class="live-dot" title="Precios en vivo"></span>
         <div class="currency-toggle">
@@ -37,11 +40,22 @@
       <div class="hero-pnl" id="hero-pnl">Cargando...</div>
     </section>
 
-    <!-- ═══ COSMOS WARNING ═══ -->
+    <!-- ═══ NAV SECCIONES ═══ -->
+    <nav class="section-nav">
+      <a href="#sec-cartera" class="nav-link active">Cartera</a>
+      <a href="#sec-distribucion" class="nav-link">Distribución</a>
+      <a href="#sec-evolucion" class="nav-link">Evolución</a>
+      <a href="#sec-staking" class="nav-link">Staking</a>
+      <a href="#sec-airdrops" class="nav-link">Airdrops</a>
+      <a href="#sec-custodia" class="nav-link">Custodia</a>
+      <a href="#sec-movimientos" class="nav-link">Movimientos</a>
+    </nav>
+
+    <!-- ═══ COSMOS WARNING (solo si supera 35%) ═══ -->
     <div class="warning-banner" id="cosmos-warning" style="display:none;"></div>
 
     <!-- ═══ CARDS RESUMEN ═══ -->
-    <section class="cards-grid">
+    <section class="cards-grid" id="sec-cartera">
       <div class="card">
         <div class="card-icon green">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
@@ -56,7 +70,10 @@
         </div>
         <div class="card-label">Cosmos (ATOM+TIA)</div>
         <div class="card-value" id="card-cosmos-pct">—</div>
-        <div class="card-sub">Tope: 35%</div>
+        <div class="cosmos-bar-wrap">
+          <div class="progress-bar"><div class="progress-fill green" id="cosmos-bar-fill" style="width:0%"></div></div>
+          <span class="cosmos-label" id="cosmos-bar-label">— / 35%</span>
+        </div>
       </div>
       <div class="card">
         <div class="card-icon green">
@@ -74,17 +91,21 @@
         <div class="card-value" id="card-airdrops">—</div>
         <div class="card-sub">PI / ATONE / MODE</div>
       </div>
+      <div class="card card-dca" id="dca-summary">
+        <!-- populated by JS -->
+      </div>
     </section>
 
     <!-- ═══ TABLA ACTIVOS ═══ -->
-    <section class="section">
-      <div class="section-header">
+    <details class="section collapsible-section" id="sec-cartera-table" open>
+      <summary class="section-header collapsible-header">
         <h2 class="section-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
           Cartera
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </h2>
         <span class="section-badge" style="background:var(--accent-green-bg);color:var(--accent-green);">4 activos</span>
-      </div>
+      </summary>
       <div class="table-wrapper">
         <table id="asset-table">
           <thead>
@@ -104,16 +125,17 @@
           </tbody>
         </table>
       </div>
-    </section>
+    </details>
 
     <!-- ═══ ALLOCATION ═══ -->
-    <section class="section">
-      <div class="section-header">
+    <details class="section collapsible-section" id="sec-distribucion" open>
+      <summary class="section-header collapsible-header">
         <h2 class="section-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 118 2.83"/><path d="M22 12A10 10 0 0012 2v10z"/></svg>
           Distribución
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </h2>
-      </div>
+      </summary>
       <div class="allocation-grid">
         <div class="chart-container">
           <canvas id="allocation-chart"></canvas>
@@ -122,24 +144,40 @@
           <!-- populated by JS -->
         </div>
       </div>
-    </section>
+    </details>
+
+    <!-- ═══ EVOLUCIÓN ═══ -->
+    <details class="section collapsible-section" id="sec-evolucion" open>
+      <summary class="section-header collapsible-header">
+        <h2 class="section-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Evolución
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </h2>
+        <span class="section-badge" style="background:var(--accent-blue-bg);color:var(--accent-blue);">Invertido vs Valor</span>
+      </summary>
+      <div class="chart-wrapper">
+        <canvas id="evolution-chart"></canvas>
+      </div>
+    </details>
 
     <!-- ═══ STAKING ═══ -->
-    <section class="section">
-      <div class="section-header">
+    <details class="section collapsible-section" id="sec-staking" open>
+      <summary class="section-header collapsible-header">
         <h2 class="section-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
           Staking
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </h2>
         <span class="section-badge" style="background:var(--accent-green-bg);color:var(--accent-green);">Ingresos pasivos</span>
-      </div>
+      </summary>
       <div class="staking-grid" id="staking-grid">
         <!-- populated by JS -->
       </div>
-    </section>
+    </details>
 
     <!-- ═══ AIRDROPS ═══ -->
-    <details class="section collapsible-section" open>
+    <details class="section collapsible-section" id="sec-airdrops" open>
       <summary class="section-header collapsible-header">
         <h2 class="section-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/></svg>
@@ -167,13 +205,14 @@
     </details>
 
     <!-- ═══ CUSTODIA ═══ -->
-    <section class="section">
-      <div class="section-header">
+    <details class="section collapsible-section" id="sec-custodia" open>
+      <summary class="section-header collapsible-header">
         <h2 class="section-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
           Custodia
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </h2>
-      </div>
+      </summary>
       <div class="card">
         <div class="custody-bar" id="custody-bar"></div>
         <div class="custody-legend" id="custody-legend"></div>
@@ -181,16 +220,21 @@
           Objetivo: subir autocustodia progresivamente
         </div>
       </div>
-    </section>
+    </details>
 
     <!-- ═══ HISTORIAL ═══ -->
-    <section class="section">
-      <div class="section-header">
+    <details class="section collapsible-section" id="sec-movimientos" open>
+      <summary class="section-header collapsible-header">
         <h2 class="section-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           Últimos movimientos
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </h2>
-      </div>
+        <div class="search-wrap" onclick="event.preventDefault();event.stopPropagation()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="tx-search" class="tx-search" placeholder="Filtrar...">
+        </div>
+      </summary>
       <div class="table-wrapper">
         <table id="tx-table">
           <thead>
@@ -208,7 +252,7 @@
           </tbody>
         </table>
       </div>
-    </section>
+    </details>
 
   </main>
 
