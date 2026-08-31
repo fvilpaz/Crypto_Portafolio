@@ -524,7 +524,9 @@ const App = (() => {
     const tbody = document.getElementById('asset-tbody');
     const total = getTotalPortfolioValue();
 
-    tbody.innerHTML = portfolio.map((asset, i) => {
+    const sorted = [...portfolio].sort((a, b) => getAssetValue(b) - getAssetValue(a));
+
+    tbody.innerHTML = sorted.map((asset, i) => {
       const p = prices[asset.token]?.price || asset.avgPrice;
       const change = prices[asset.token]?.change24h || 0;
       const value = getAssetValue(asset);
