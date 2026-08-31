@@ -76,10 +76,14 @@ const App = (() => {
   // ── ESTADO ──
   let currency = 'USD';
   let prices = {};
+  let sparklineData = {};
   let chartInstance = null;
   let evolutionChart = null;
   let refreshInterval = null;
   let txFilter = '';
+  let prevTotal = null;
+  let prevPnl = null;
+  let isInitialLoad = true;
 
   // ── FORMATEO ──
   const fmt = (n, decimals = 2) => {
@@ -113,6 +117,149 @@ const App = (() => {
     return `<div class="token-icon ${cssClass}" style="width:${size}px;height:${size}px;font-size:${size * 0.38}px;">${token.substring(0, 2)}</div>`;
   }
 
+  // ── SKELETON LOADING ──
+  function renderSkeletons() {
+    const assetTbody = document.getElementById('asset-tbody');
+    if (assetTbody) {
+      assetTbody.innerHTML = Array(4).fill('').map(() => `
+        <tr><td colspan="9"><div class="skeleton-row">
+          <div class="skeleton skeleton-circle"></div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+            <div class="skeleton skeleton-line w80"></div>
+            <div class="skeleton skeleton-line w60"></div>
+          </div>
+          <div class="skeleton skeleton-line w100"></div>
+          <div class="skeleton skeleton-line w80"></div>
+          <div class="skeleton skeleton-line w60"></div>
+          <div class="skeleton skeleton-line w100"></div>
+          <div class="skeleton skeleton-line w80"></div>
+          <div class="skeleton skeleton-line w60"></div>
+        </div></td></tr>
+      `).join('');
+    }
+
+    const stakingGrid = document.getElementById('staking-grid');
+    if (stakingGrid) {
+      stakingGrid.innerHTML = Array(2).fill('').map(() => `
+        <div class="staking-card skeleton-card">
+          <div class="skeleton skeleton-line h20" style="margin-bottom:16px"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div><div class="skeleton skeleton-line h14" style="width:50px;margin-bottom:6px"></div><div class="skeleton skeleton-line h20" style="width:80px"></div></div>
+            <div><div class="skeleton skeleton-line h14" style="width:50px;margin-bottom:6px"></div><div class="skeleton skeleton-line h20" style="width:80px"></div></div>
+            <div><div class="skeleton skeleton-line h14" style="width:50px;margin-bottom:6px"></div><div class="skeleton skeleton-line h20" style="width:80px"></div></div>
+            <div><div class="skeleton skeleton-line h14" style="width:50px;margin-bottom:6px"></div><div class="skeleton skeleton-line h20" style="width:80px"></div></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    const txTbody = document.getElementById('tx-tbody');
+    if (txTbody) {
+      txTbody.innerHTML = Array(8).fill('').map(() => `
+        <tr><td colspan="6"><div class="skeleton-row">
+          <div class="skeleton skeleton-line w80"></div>
+          <div class="skeleton skeleton-circle" style="width:24px;height:24px"></div>
+          <div class="skeleton skeleton-line w60"></div>
+          <div class="skeleton skeleton-line w100"></div>
+          <div class="skeleton skeleton-line w80"></div>
+          <div class="skeleton skeleton-line w60"></div>
+        </div></td></tr>
+      `).join('');
+    }
+  }
+
+  // ── ANIMATE VALUE (counter) ──
+  function animateValue(el, start, end, duration, formatter) {
+    if (start === null || start === undefined) start = end;
+    if (Math.abs(end - start) < 0.01) {
+      el.textContent = formatter(end);
+      return;
+    }
+    const startTime = performance.now();
+    function tick(now) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = start + (end - start) * eased;
+      el.textContent = formatter(current);
+      if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }
+
+  // ── SPARKLINE DATA ──
+  async function fetchSparklines() {
+    try {
+      const ids = portfolio.map(a => a.coingeckoId).join(',');
+      const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&sparkline=true&price_change_percentage=24h`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      data.forEach(coin => {
+        const asset = portfolio.find(a => a.coingeckoId === coin.id);
+        if (asset && coin.sparkline_in_7d?.price) {
+          sparklineData[asset.token] = coin.sparkline_in_7d.price.slice(-24);
+        }
+      });
+    } catch (err) {
+      console.warn('Sparklines fetch failed:', err.message);
+    }
+  }
+
+  function renderSparkline(token, isPositive) {
+    const canvasId = `spark-${token}`;
+    const data = sparklineData[token];
+    if (!data || data.length === 0) return '<div class="sparkline-cell"></div>';
+
+    const color = isPositive ? '#0ecb81' : '#f6465d';
+    return `<div class="sparkline-cell"><canvas id="${canvasId}" width="80" height="32"></canvas></div>`;
+  }
+
+  function drawSparklines() {
+    portfolio.forEach(asset => {
+      const data = sparklineData[asset.token];
+      if (!data || data.length === 0) return;
+      const canvas = document.getElementById(`spark-${asset.token}`);
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+      const w = 80;
+      const h = 32;
+      canvas.width = w * 2;
+      canvas.height = h * 2;
+      ctx.scale(2, 2);
+
+      const min = Math.min(...data);
+      const max = Math.max(...data);
+      const range = max - min || 1;
+      const change = prices[asset.token]?.change24h || 0;
+      const color = change >= 0 ? '#0ecb81' : '#f6465d';
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = 'round';
+
+      data.forEach((val, i) => {
+        const x = (i / (data.length - 1)) * w;
+        const y = h - ((val - min) / range) * (h - 4) - 2;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      const gradient = ctx.createLinearGradient(0, 0, 0, h);
+      gradient.addColorStop(0, color + '30');
+      gradient.addColorStop(1, color + '00');
+      ctx.lineTo(w, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fillStyle = gradient;
+      ctx.fill();
+    });
+  }
+
   // ── COINGECKO API ──
   const COINGECKO_IDS = [...portfolio, ...airdrops]
     .filter(a => a.coingeckoId)
@@ -137,6 +284,11 @@ const App = (() => {
 
       updateLastUpdate();
       render();
+      if (Object.keys(sparklineData).length === 0) {
+        fetchSparklines().then(() => {
+          render();
+        });
+      }
     } catch (err) {
       console.warn('CoinGecko fetch failed:', err.message);
       [...portfolio, ...airdrops].forEach(asset => {
@@ -203,6 +355,7 @@ const App = (() => {
     renderAirdrops();
     renderCustody();
     renderTransactions();
+    if (isInitialLoad) isInitialLoad = false;
   }
 
   function renderHero() {
@@ -211,12 +364,20 @@ const App = (() => {
     const totalPnl = totalValue - totalCost;
     const totalPnlPct = totalCost > 0 ? totalPnl / totalCost : 0;
 
-    document.getElementById('hero-value').textContent = fmtCurrency(totalValue);
+    const heroEl = document.getElementById('hero-value');
+    if (isInitialLoad) {
+      animateValue(heroEl, 0, totalValue, 1200, (v) => fmtCurrency(v));
+    } else if (prevTotal !== null && Math.abs(prevTotal - totalValue) > 0.01) {
+      animateValue(heroEl, prevTotal, totalValue, 600, (v) => fmtCurrency(v));
+    } else {
+      heroEl.textContent = fmtCurrency(totalValue);
+    }
+    prevTotal = totalValue;
 
     const pnlEl = document.getElementById('hero-pnl');
     pnlEl.className = `hero-pnl ${pnlClass(totalPnl)}`;
     pnlEl.innerHTML = `
-      <span>${fmtCurrency(totalPnl)}</span>
+      <span id="hero-pnl-amount">${fmtCurrency(totalPnl)}</span>
       <span class="badge ${pnlClass(totalPnl)}" style="background:${totalPnl >= 0 ? 'var(--accent-green-bg)' : 'var(--accent-red-bg)'}; color:${totalPnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">
         ${fmtPct(totalPnlPct)}
       </span>
@@ -306,7 +467,7 @@ const App = (() => {
     const tbody = document.getElementById('asset-tbody');
     const total = getTotalPortfolioValue();
 
-    tbody.innerHTML = portfolio.map(asset => {
+    tbody.innerHTML = portfolio.map((asset, i) => {
       const p = prices[asset.token]?.price || asset.avgPrice;
       const change = prices[asset.token]?.change24h || 0;
       const value = getAssetValue(asset);
@@ -315,7 +476,7 @@ const App = (() => {
       const weight = total > 0 ? value / total : 0;
 
       return `
-        <tr>
+        <tr data-token="${asset.token}" class="fade-in-up" style="cursor:pointer;animation-delay:${i * 0.06}s">
           <td>
             <div class="token-cell">
               ${iconHtml(asset.token, asset.cssClass)}
@@ -328,6 +489,7 @@ const App = (() => {
           <td class="text-right">${fmt(asset.qty, asset.token === 'BTC' ? 8 : 4)}</td>
           <td class="text-right">${fmtCurrency(p)}</td>
           <td class="text-right ${pnlClass(change / 100)}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</td>
+          <td>${renderSparkline(asset.token, change >= 0)}</td>
           <td class="text-right">${fmtCurrency(value)}</td>
           <td class="text-right ${pnlClass(pnl)}">${fmtCurrency(pnl)}</td>
           <td class="text-right ${pnlClass(pnlPct)}">${fmtPct(pnlPct)}</td>
@@ -335,6 +497,8 @@ const App = (() => {
         </tr>
       `;
     }).join('');
+
+    setTimeout(drawSparklines, 50);
   }
 
   function renderAllocation() {
@@ -495,14 +659,14 @@ const App = (() => {
   }
 
   function renderStaking() {
-    document.getElementById('staking-grid').innerHTML = staking.map(s => {
+    document.getElementById('staking-grid').innerHTML = staking.map((s, i) => {
       const asset = portfolio.find(a => a.token === s.token);
       const p = prices[s.token]?.price || asset?.avgPrice || 0;
       const yearlyIncome = s.qty * p * s.apr;
       const monthlyIncome = yearlyIncome / 12;
 
       return `
-        <div class="staking-card">
+        <div class="staking-card fade-in-up" style="animation-delay:${i * 0.08}s">
           <div class="staking-card-header">
             <div class="token-info">
               ${iconHtml(s.token, asset?.cssClass || '', 32)}
@@ -646,14 +810,224 @@ const App = (() => {
     });
   }
 
+  // ── TOKEN DETAIL MODAL ──
+  function openTokenModal(token) {
+    const asset = portfolio.find(a => a.token === token);
+    if (!asset) return;
+
+    const p = prices[asset.token]?.price || asset.avgPrice;
+    const change = prices[asset.token]?.change24h || 0;
+    const value = getAssetValue(asset);
+    const pnl = getAssetPnl(asset);
+    const pnlPct = asset.costUsd > 0 ? pnl / asset.costUsd : 0;
+    const total = getTotalPortfolioValue();
+    const weight = total > 0 ? value / total : 0;
+
+    const txs = transactions
+      .filter(tx => tx.token === token)
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const totalInvested = txs.reduce((s, tx) => s + (tx.totalUsd || 0), 0);
+    const avgBuy = txs.length > 0
+      ? txs.reduce((s, tx) => s + (tx.price * tx.qty), 0) / asset.qty
+      : asset.avgPrice;
+
+    const stakingInfo = staking.find(s => s.token === token);
+    const yearlyIncome = stakingInfo ? stakingInfo.qty * p * stakingInfo.apr : 0;
+
+    const buyVsNow = p > 0 ? ((p - avgBuy) / avgBuy) * 100 : 0;
+
+    document.getElementById('modal-header').innerHTML = `
+      <div class="modal-hero" style="border-left:4px solid ${asset.color}">
+        <div class="modal-hero-top">
+          <div class="modal-token-cell">
+            ${iconHtml(asset.token, asset.cssClass, 56)}
+            <div>
+              <div class="modal-token-name">${asset.name}</div>
+              <div class="modal-token-symbol">${asset.token}</div>
+            </div>
+          </div>
+          <button class="modal-close" id="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-hero-price">
+          <span class="modal-price">${fmtCurrency(p)}</span>
+          <span class="modal-change-badge ${change >= 0 ? 'positive' : 'negative'}">
+            ${change >= 0 ? '↑' : '↓'} ${Math.abs(change).toFixed(2)}%
+          </span>
+        </div>
+        <div class="modal-chart-area" id="modal-chart-area"></div>
+      </div>
+    `;
+
+    document.getElementById('modal-body').innerHTML = `
+      <div class="modal-section">
+        <div class="modal-section-label">Resumen</div>
+        <div class="modal-grid-3">
+          <div class="modal-stat-card">
+            <div class="modal-stat-label">Cantidad</div>
+            <div class="modal-stat-big">${fmt(asset.qty, asset.token === 'BTC' ? 8 : 4)}</div>
+            <div class="modal-stat-sub">${asset.token}</div>
+          </div>
+          <div class="modal-stat-card">
+            <div class="modal-stat-label">Valor actual</div>
+            <div class="modal-stat-big">${fmtCurrency(value)}</div>
+            <div class="modal-stat-sub">${(weight * 100).toFixed(1)}% del portfolio</div>
+          </div>
+          <div class="modal-stat-card">
+            <div class="modal-stat-label">P&L</div>
+            <div class="modal-stat-big ${pnlClass(pnl)}">${fmtCurrency(pnl)}</div>
+            <div class="modal-stat-sub ${pnlClass(pnlPct)}">${fmtPct(pnlPct)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-label">Coste</div>
+        <div class="modal-grid-2">
+          <div class="modal-stat-card">
+            <div class="modal-stat-label">Invertido total</div>
+            <div class="modal-stat-big">${fmtCurrency(totalInvested || asset.costUsd)}</div>
+          </div>
+          <div class="modal-stat-card">
+            <div class="modal-stat-label">Precio medio</div>
+            <div class="modal-stat-big">${fmtCurrency(avgBuy)}</div>
+          </div>
+        </div>
+        <div class="modal-buy-bar">
+          <div class="modal-buy-bar-label">
+            <span>Tu precio medio</span>
+            <span>Precio actual</span>
+          </div>
+          <div class="modal-buy-bar-track">
+            <div class="modal-buy-bar-marker" style="left:50%"></div>
+            <div class="modal-buy-bar-fill ${buyVsNow >= 0 ? 'positive' : 'negative'}" style="width:${Math.min(Math.abs(buyVsNow), 100)}%;${buyVsNow >= 0 ? 'left:50%' : `left:${50 - Math.min(Math.abs(buyVsNow), 50)}%`}"></div>
+          </div>
+          <div class="modal-buy-bar-result ${pnlClass(buyVsNow)}">
+            ${buyVsNow >= 0 ? '+' : ''}${buyVsNow.toFixed(1)}% vs tu entrada
+          </div>
+        </div>
+      </div>
+
+      ${stakingInfo ? `
+        <div class="modal-section">
+          <div class="modal-section-label">Staking</div>
+          <div class="modal-grid-3">
+            <div class="modal-stat-card">
+              <div class="modal-stat-label">Stakeado</div>
+              <div class="modal-stat-big">${fmt(stakingInfo.qty, 0)} ${token}</div>
+            </div>
+            <div class="modal-stat-card">
+              <div class="modal-stat-label">APR</div>
+              <div class="modal-stat-big positive">${(stakingInfo.apr * 100).toFixed(2)}%</div>
+            </div>
+            <div class="modal-stat-card">
+              <div class="modal-stat-label">Ingreso / año</div>
+              <div class="modal-stat-big positive">${fmtCurrency(yearlyIncome)}</div>
+              <div class="modal-stat-sub">${fmtCurrency(yearlyIncome / 12)}/mes</div>
+            </div>
+          </div>
+          <div class="modal-staking-note">${stakingInfo.note}</div>
+        </div>
+      ` : ''}
+
+      <div class="modal-section">
+        <div class="modal-section-label">Historial (${txs.length} compras)</div>
+        <div class="modal-tx-list">
+          ${txs.length === 0 ? '<div class="modal-empty">Sin transacciones registradas</div>' :
+            txs.map(tx => `
+              <div class="modal-tx-row">
+                <div class="modal-tx-left">
+                  <div class="modal-tx-date">${tx.date}</div>
+                  <div class="modal-tx-qty">${fmt(tx.qty, tx.token === 'BTC' ? 8 : 4)} ${tx.token}</div>
+                </div>
+                <div class="modal-tx-right">
+                  <div class="modal-tx-price">${tx.price > 0 ? fmtCurrency(tx.price) : '—'}</div>
+                  <div class="modal-tx-total">${tx.totalUsd > 0 ? fmtCurrency(tx.totalUsd) : '—'}</div>
+                </div>
+              </div>
+            `).join('')}
+        </div>
+      </div>
+    `;
+
+    const modal = document.getElementById('token-modal');
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    drawModalSparkline(token, asset.color);
+  }
+
+  function drawModalSparkline(token, color) {
+    const data = sparklineData[token];
+    const container = document.getElementById('modal-chart-area');
+    if (!data || data.length === 0 || !container) return;
+
+    container.innerHTML = '<canvas id="modal-spark-canvas"></canvas>';
+    const canvas = document.getElementById('modal-spark-canvas');
+    const ctx = canvas.getContext('2d');
+    const w = container.offsetWidth || 440;
+    const h = 80;
+    canvas.width = w * 2;
+    canvas.height = h * 2;
+    canvas.style.width = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.scale(2, 2);
+
+    const min = Math.min(...data);
+    const max = Math.max(...data);
+    const range = max - min || 1;
+
+    ctx.clearRect(0, 0, w, h);
+
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+
+    data.forEach((val, i) => {
+      const x = (i / (data.length - 1)) * w;
+      const y = h - ((val - min) / range) * (h - 12) - 6;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, h);
+    gradient.addColorStop(0, color + '25');
+    gradient.addColorStop(1, color + '00');
+    ctx.lineTo(w, h);
+    ctx.lineTo(0, h);
+    ctx.closePath();
+    ctx.fillStyle = gradient;
+    ctx.fill();
+  }
+
+  function closeModal() {
+    document.getElementById('token-modal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
   // ── INIT ──
   async function init() {
+    renderSkeletons();
+
     document.querySelectorAll('.currency-toggle button').forEach(btn => {
       btn.addEventListener('click', () => setCurrency(btn.dataset.currency));
     });
 
     setupSortable('asset-table');
     setupSortable('tx-table');
+
+    document.getElementById('asset-tbody').addEventListener('click', (e) => {
+      const row = e.target.closest('tr[data-token]');
+      if (row) openTokenModal(row.dataset.token);
+    });
 
     const refreshBtn = document.getElementById('refresh-btn');
     if (refreshBtn) {
@@ -687,9 +1061,24 @@ const App = (() => {
 
     await fetchPrices();
     refreshInterval = setInterval(fetchPrices, 60000);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeModal();
+    });
   }
 
   return { init };
 })();
 
 document.addEventListener('DOMContentLoaded', App.init);
+
+// ═══════════════════════════════════════════════════════════════
+// PWA — registro del service worker (instalable en móvil)
+// ═══════════════════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch((err) => {
+      console.warn('No se pudo registrar el service worker:', err);
+    });
+  });
+}

@@ -91,6 +91,38 @@ a:hover { text-decoration: underline; }
   gap: 12px;
 }
 
+/* ── App-switch pill → CryptoTrace ── */
+#app-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  color: #fff;
+  text-decoration: none;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.45);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+#app-link svg { display: block; }
+#app-link .al-arrow { opacity: 0.85; }
+
+#app-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 22px rgba(79, 70, 229, 0.6);
+}
+
+@media (max-width: 600px) {
+  #app-link span,
+  #app-link .al-arrow { display: none; }
+  #app-link { padding: 8px 10px; gap: 0; }
+}
+
 .currency-toggle {
   display: flex;
   background: var(--bg-card);
@@ -881,4 +913,552 @@ tbody td {
 section[id^="sec-"],
 details[id^="sec-"] {
   scroll-margin-top: 80px;
+}
+
+/* ── TOKEN DETAIL MODAL ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 540px;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+
+.modal-overlay.open .modal {
+  transform: translateY(0) scale(1);
+}
+
+/* ── MODAL HERO ── */
+.modal-hero {
+  padding: 28px 28px 20px;
+  background: linear-gradient(180deg, rgba(43, 49, 57, 0.4) 0%, transparent 100%);
+  border-radius: 16px 16px 0 0;
+}
+
+.modal-hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.modal-token-cell {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.modal-token-name {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.modal-token-symbol {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.modal-close {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  width: 36px;
+  height: 36px;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.modal-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.modal-hero-price {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.modal-price {
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.modal-change-badge {
+  font-size: 14px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 8px;
+}
+
+.modal-change-badge.positive {
+  background: var(--accent-green-bg);
+  color: var(--accent-green);
+}
+
+.modal-change-badge.negative {
+  background: var(--accent-red-bg);
+  color: var(--accent-red);
+}
+
+.modal-chart-area {
+  width: 100%;
+  height: 80px;
+  margin-top: 4px;
+}
+
+.modal-chart-area canvas {
+  display: block;
+}
+
+/* ── MODAL BODY ── */
+.modal-body {
+  padding: 8px 28px 32px;
+}
+
+/* ── MODAL SECTIONS ── */
+.modal-section {
+  margin-bottom: 28px;
+}
+
+.modal-section:last-child {
+  margin-bottom: 0;
+}
+
+.modal-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 14px;
+}
+
+/* ── MODAL STAT CARDS ── */
+.modal-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.modal-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.modal-stat-card {
+  background: var(--bg-card);
+  border-radius: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(43, 49, 57, 0.6);
+}
+
+.modal-stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.modal-stat-big {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.modal-stat-sub {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+/* ── BUY-IN BAR ── */
+.modal-buy-bar {
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--bg-card);
+  border-radius: 10px;
+  border: 1px solid rgba(43, 49, 57, 0.6);
+}
+
+.modal-buy-bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.modal-buy-bar-track {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-hover);
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-buy-bar-marker {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 10px;
+  background: var(--text-secondary);
+  border-radius: 1px;
+}
+
+.modal-buy-bar-fill {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+.modal-buy-bar-fill.positive {
+  background: var(--accent-green);
+}
+
+.modal-buy-bar-fill.negative {
+  background: var(--accent-red);
+}
+
+.modal-buy-bar-result {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 10px;
+}
+
+/* ── STAKING NOTE ── */
+.modal-staking-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 8px 12px;
+  background: var(--accent-yellow-bg);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent-yellow);
+}
+
+/* ── MODAL TX LIST ── */
+.modal-tx-list {
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border-radius: 10px;
+  border: 1px solid rgba(43, 49, 57, 0.6);
+}
+
+.modal-tx-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(43, 49, 57, 0.4);
+}
+
+.modal-tx-row:last-child {
+  border-bottom: none;
+}
+
+.modal-tx-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.modal-tx-date {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.modal-tx-qty {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.modal-tx-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.modal-tx-price {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.modal-tx-total {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.modal-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+@media (max-width: 480px) {
+  .modal {
+    width: 96%;
+    max-height: 92vh;
+    border-radius: 14px;
+  }
+
+  .modal-hero {
+    padding: 20px 20px 16px;
+  }
+
+  .modal-body {
+    padding: 4px 20px 24px;
+  }
+
+  .modal-grid-3 {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .modal-grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .modal-price {
+    font-size: 26px;
+  }
+
+  .modal-token-name {
+    font-size: 18px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PREMIUM EFFECTS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 1. SKELETON LOADING ── */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-hover) 50%, var(--bg-card) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(43, 49, 57, 0.5);
+}
+
+.skeleton-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.skeleton-line {
+  height: 14px;
+  border-radius: 4px;
+}
+
+.skeleton-line.w60 { width: 60px; }
+.skeleton-line.w80 { width: 80px; }
+.skeleton-line.w100 { width: 100px; }
+.skeleton-line.w120 { width: 120px; }
+
+.skeleton-card {
+  padding: 20px;
+}
+
+.skeleton-card .skeleton-line.h20 {
+  height: 20px;
+  width: 60%;
+  margin-bottom: 10px;
+}
+
+.skeleton-card .skeleton-line.h32 {
+  height: 32px;
+  width: 40%;
+  margin-bottom: 8px;
+}
+
+.skeleton-card .skeleton-line.h14 {
+  height: 14px;
+  width: 80%;
+}
+
+/* ── 2. GLASSMORPHISM HEADER ── */
+.header {
+  background: rgba(11, 14, 17, 0.75);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-bottom: 1px solid rgba(43, 49, 57, 0.5);
+}
+
+/* ── 3. HOVER GLOW ON CARDS ── */
+.card {
+  transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+  position: relative;
+}
+
+.card[data-glow]:hover {
+  transform: translateY(-3px);
+}
+
+.card[data-glow="green"]:hover {
+  box-shadow: 0 0 24px rgba(14, 203, 129, 0.15), 0 4px 16px rgba(0,0,0,0.3);
+  border-color: rgba(14, 203, 129, 0.3);
+}
+
+.card[data-glow="yellow"]:hover {
+  box-shadow: 0 0 24px rgba(240, 185, 11, 0.15), 0 4px 16px rgba(0,0,0,0.3);
+  border-color: rgba(240, 185, 11, 0.3);
+}
+
+.card[data-glow="blue"]:hover {
+  box-shadow: 0 0 24px rgba(30, 144, 255, 0.15), 0 4px 16px rgba(0,0,0,0.3);
+  border-color: rgba(30, 144, 255, 0.3);
+}
+
+.card[data-glow="purple"]:hover {
+  box-shadow: 0 0 24px rgba(205, 158, 255, 0.15), 0 4px 16px rgba(0,0,0,0.3);
+  border-color: rgba(205, 158, 255, 0.3);
+}
+
+.card[data-glow="red"]:hover {
+  box-shadow: 0 0 24px rgba(246, 70, 93, 0.15), 0 4px 16px rgba(0,0,0,0.3);
+  border-color: rgba(246, 70, 93, 0.3);
+}
+
+/* ── 4. ANIMATED GRADIENT HERO ── */
+.hero-value {
+  background: linear-gradient(135deg, #f7931a, #f0b90b, #0ecb81, #1e90ff, #cd9eff, #f7931a);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gradientShift 6s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── 5. MODAL SPRING ANIMATION ── */
+.modal {
+  transform: translateY(30px) scale(0.95);
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+}
+
+.modal-overlay.open .modal {
+  transform: translateY(0) scale(1);
+}
+
+/* ── 6. FADE IN UP ANIMATION ── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.4s ease forwards;
+  opacity: 0;
+}
+
+/* ── 7. SPARKLINE IN TABLE ── */
+.sparkline-cell {
+  width: 80px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.sparkline-cell canvas {
+  width: 80px;
+  height: 32px;
+}
+
+/* ── 8. CARD VALUE ANIMATION ── */
+.card-value {
+  transition: color 0.3s;
+}
+
+/* ── NAV LINK GLOW ON ACTIVE ── */
+.nav-link.active {
+  box-shadow: 0 0 12px rgba(240, 185, 11, 0.25);
+}
+
+/* ── REFRESH BTN GLOW ── */
+.refresh-btn:hover {
+  box-shadow: 0 0 12px rgba(240, 185, 11, 0.2);
+}
+
+/* ── TABLE ROW HOVER GLOW ── */
+tbody tr[data-token]:hover {
+  background: rgba(43, 49, 57, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(240, 185, 11, 0.15);
+}
+
+/* ── PROGRESS BAR GLOW ── */
+.progress-fill.green {
+  box-shadow: 0 0 8px rgba(14, 203, 129, 0.4);
+}
+
+.progress-fill.yellow {
+  box-shadow: 0 0 8px rgba(240, 185, 11, 0.4);
+}
+
+.progress-fill.red {
+  box-shadow: 0 0 8px rgba(246, 70, 93, 0.4);
 }
