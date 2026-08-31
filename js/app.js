@@ -1246,6 +1246,92 @@ const App = (() => {
     render();
   }
 
+  // ── EXPORT / IMPORT CSV (movimientos) ──
+  const csvEscape = (v) => {
+    const s = String(v ?? '');
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+
+  function exportCsv() {
+    const header = ['date', 'token', 'type', 'price', 'qty', 'totalUsd'];
+    const rows = transactions.map(t => [t.date, t.token, t.type, t.price, t.qty, t.totalUsd].map(csvEscape));
+    const csv = [header.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mi-cartera-movimientos-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function importCsvFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const lines = String(reader.result).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        if (lines.length < 2) throw new Error('El CSV está vacío o mal formado.');
+        const header = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
+        const idx = {};
+        ['date', 'token', 'type', 'price', 'qty', 'totalUsd'].forEach(f => { idx[f] = header.indexOf(f); });
+        if (idx.token < 0 || idx.type < 0) throw new Error('Cabecera CSV no reconocida. Usa: date,token,type,price,qty,totalUsd');
+
+        const parsed = [];
+        for (let i = 1; i < lines.length; i++) {
+          const row = parseCsvLine(lines[i]);
+          const get = (f) => (idx[f] >= 0 ? String(row[idx[f]] ?? '').replace(/^"|"$/g, '').trim() : '');
+          const token = get('token').toUpperCase();
+          const type = get('type');
+          const date = get('date') || new Date().toISOString().slice(0, 10);
+          const qty = parseFloat(get('qty'));
+          const price = parseFloat(get('price'));
+          const totalUsd = parseFloat(get('totalUsd')) || qty * price;
+          if (!token || !type || !(qty > 0) || !(price > 0)) continue;
+          parsed.push({ date, token, type, price, qty, totalUsd });
+        }
+        if (!parsed.length) throw new Error('No se encontraron movimientos válidos en el CSV.');
+
+        if (!confirm(`Se importarán ${parsed.length} movimientos y se reconstruirá la cartera. ¿Continuar?`)) return;
+
+        // Reconstruye cartera desde cero aplicando los movimientos en orden cronológico.
+        portfolio = [];
+        const byDate = [...parsed].sort((a, b) => a.date.localeCompare(b.date));
+        byDate.forEach(tx => {
+          tx.applied = true;
+          if (tx.id == null) tx.id = uid();
+          applyMovement(tx);
+        });
+        transactions = byDate;
+        persist();
+        render();
+        alert(`Importación completada: ${parsed.length} movimientos.`);
+      } catch (e) {
+        alert('Error al importar: ' + e.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function parseCsvLine(line) {
+    const out = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (inQ) {
+        if (c === '"') {
+          if (line[i + 1] === '"') { cur += '"'; i++; }
+          else inQ = false;
+        } else cur += c;
+      } else if (c === '"') inQ = true;
+      else if (c === ',') { out.push(cur); cur = ''; }
+      else cur += c;
+    }
+    out.push(cur);
+    return out;
+  }
+
   // ── INIT ──
   async function init() {
     renderSkeletons();
@@ -1270,6 +1356,16 @@ const App = (() => {
         refreshBtn.classList.remove('spinning');
       });
     }
+
+    document.getElementById('export-btn').addEventListener('click', exportCsv);
+    document.getElementById('import-btn').addEventListener('click', () => {
+      document.getElementById('import-file').click();
+    });
+    document.getElementById('import-file').addEventListener('change', (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (f) importCsvFile(f);
+      e.target.value = '';
+    });
 
     const searchInput = document.getElementById('tx-search');
     if (searchInput) {
