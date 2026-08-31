@@ -6,7 +6,17 @@ const App = (() => {
   const EUR_USD = 0.85;
   const COINGECKO_IMG = 'https://coin-images.coingecko.com/coins/images';
 
-  const portfolio = [
+  // Catálogo de las monedas que farmeo. Sirve para el selector de "Añadir" y
+  // para crear la tenencia la primera vez que compro una nueva (p.ej. USDC).
+  const COINS = {
+    BTC:  { name: 'Bitcoin',  coingeckoId: 'bitcoin',  icon: `${COINGECKO_IMG}/1/small/bitcoin.png`,      color: '#f7931a', cssClass: 'btc' },
+    ETH:  { name: 'Ethereum', coingeckoId: 'ethereum', icon: `${COINGECKO_IMG}/279/small/ethereum.png`,   color: '#627eea', cssClass: 'eth' },
+    ATOM: { name: 'Cosmos',   coingeckoId: 'cosmos',   icon: `${COINGECKO_IMG}/1481/small/cosmos_hub.png`, color: '#8c94a8', cssClass: 'atom' },
+    TIA:  { name: 'Celestia', coingeckoId: 'celestia', icon: `${COINGECKO_IMG}/31967/small/tia.jpg`,       color: '#cd9eff', cssClass: 'tia' },
+    USDC: { name: 'USD Coin', coingeckoId: 'usd-coin', icon: `${COINGECKO_IMG}/6319/small/usdc.png`,       color: '#2775ca', cssClass: 'usdc' },
+  };
+
+  const SEED_PORTFOLIO = [
     { token: 'BTC', name: 'Bitcoin', qty: 0.014246, costUsd: 879.44, avgPrice: 61732.42, coingeckoId: 'bitcoin', icon: `${COINGECKO_IMG}/1/small/bitcoin.png`, color: '#f7931a', cssClass: 'btc' },
     { token: 'ETH', name: 'Ethereum', qty: 0.5145, costUsd: 968.17, avgPrice: 1881.78, coingeckoId: 'ethereum', icon: `${COINGECKO_IMG}/279/small/ethereum.png`, color: '#627eea', cssClass: 'eth' },
     { token: 'ATOM', name: 'Cosmos', qty: 713.68, costUsd: 1123.15, avgPrice: 1.5737, coingeckoId: 'cosmos', icon: `${COINGECKO_IMG}/1481/small/cosmos_hub.png`, color: '#8c94a8', cssClass: 'atom' },
@@ -32,7 +42,7 @@ const App = (() => {
 
   const cosmosTopPct = 0.35;
 
-  const transactions = [
+  const SEED_TRANSACTIONS = [
     { date: '2024-02-03', token: 'BTC', type: 'Compra', price: 43.18, qty: 0.000532, totalUsd: 0.02 },
     { date: '2024-02-28', token: 'BTC', type: 'Compra', price: 0, qty: 0.00023, totalUsd: 0 },
     { date: '2024-09-16', token: 'MODE', type: 'Compra', price: 0, qty: 349, totalUsd: 0 },
@@ -73,6 +83,51 @@ const App = (() => {
     { date: '2026-07-31', token: 'BTC', type: 'Compra', price: 63885.09, qty: 0.0012, totalUsd: 76.66 },
   ];
 
+  // ── PERSISTENCIA (localStorage con semilla) ──
+  // Los holdings y movimientos viven ahora en el navegador. La primera vez se
+  // siembran con los arrays de arriba; a partir de ahí mandan los datos guardados.
+  const STORE_KEY = 'miCartera.v1';
+  const clone = (x) => JSON.parse(JSON.stringify(x));
+
+  function saveStore(data) {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.warn('No se pudo guardar en localStorage:', e);
+    }
+  }
+
+  function loadStore() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (data && Array.isArray(data.portfolio) && Array.isArray(data.transactions)) {
+          return data;
+        }
+      }
+    } catch (e) {
+      console.warn('localStorage ilegible, uso la semilla:', e);
+    }
+    // Primera vez (o datos corruptos): parte de la semilla y la persiste.
+    const seed = { portfolio: clone(SEED_PORTFOLIO), transactions: clone(SEED_TRANSACTIONS) };
+    saveStore(seed);
+    return seed;
+  }
+
+  const _store = loadStore();
+  let portfolio = _store.portfolio;
+  let transactions = _store.transactions;
+
+  // Guarda el estado actual (holdings + movimientos) tras cada edición.
+  function persist() {
+    saveStore({ portfolio, transactions });
+  }
+
+  // Cada movimiento necesita un id estable para poder editar/borrar por fila.
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  transactions.forEach(t => { if (t.id == null) t.id = uid(); });
+
   // ── ESTADO ──
   let currency = 'USD';
   let prices = {};
@@ -110,7 +165,7 @@ const App = (() => {
 
   function iconHtml(token, cssClass, size = 32) {
     const all = [...portfolio, ...airdrops];
-    const asset = all.find(a => a.token === token);
+    const asset = all.find(a => a.token === token) || COINS[token];
     if (asset?.icon) {
       return `<img src="${asset.icon}" alt="${token}" width="${size}" height="${size}" style="border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="token-icon ${cssClass}" style="display:none;width:${size}px;height:${size}px;font-size:${size * 0.38}px;">${token.substring(0, 2)}</div>`;
     }
@@ -261,14 +316,16 @@ const App = (() => {
   }
 
   // ── COINGECKO API ──
-  const COINGECKO_IDS = [...portfolio, ...airdrops]
+  // Se recalcula en cada llamada para que una moneda recién añadida (p.ej. USDC)
+  // reciba precio en el siguiente tick sin necesidad de recargar.
+  const coingeckoIds = () => [...portfolio, ...airdrops]
     .filter(a => a.coingeckoId)
     .map(a => a.coingeckoId)
     .join(',');
 
   async function fetchPrices() {
     try {
-      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${COINGECKO_IDS}&vs_currencies=usd&include_24hr_change=true`;
+      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoIds()}&vs_currencies=usd&include_24hr_change=true`;
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -765,6 +822,14 @@ const App = (() => {
         <td class="text-right">${tx.price > 0 ? fmtCurrency(tx.price) : '—'}</td>
         <td class="text-right">${fmt(tx.qty, tx.token === 'BTC' ? 8 : 2)}</td>
         <td class="text-right">${tx.totalUsd > 0 ? fmtCurrency(tx.totalUsd) : '—'}</td>
+        <td class="text-right tx-actions">
+          <button type="button" class="tx-btn tx-edit" data-txid="${tx.id}" title="Editar" aria-label="Editar">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <button type="button" class="tx-btn tx-del" data-txid="${tx.id}" title="Borrar" aria-label="Borrar">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+          </button>
+        </td>
       </tr>
       `;
     }).join('');
@@ -1013,6 +1078,172 @@ const App = (() => {
     document.body.style.overflow = '';
   }
 
+  // ── AÑADIR MOVIMIENTO (Compra / Venta) ──
+  let addState = { token: 'BTC', type: 'Compra' };
+  let editingId = null;
+
+  function renderAddChips() {
+    document.getElementById('add-coin-chips').innerHTML = Object.keys(COINS).map(t => `
+      <button type="button" class="coin-chip${t === addState.token ? ' active' : ''}" data-token="${t}">
+        ${iconHtml(t, COINS[t].cssClass, 20)}<span>${t}</span>
+      </button>`).join('');
+  }
+
+  // Parseo robusto: acepta coma decimal (0,044) y punto (0.044).
+  const parseNum = (v) => parseFloat(String(v).replace(/\./g, '').replace(',', '.')) || 0;
+  const fmtInput = (n, dec) => n.toLocaleString('es-ES', { maximumFractionDigits: dec, useGrouping: false });
+
+  // Precio en vivo de la moneda seleccionada, en €.
+  function addPriceEur() {
+    const t = addState.token;
+    const usd = prices[t]?.price || portfolio.find(a => a.token === t)?.avgPrice || (t === 'USDC' ? 1 : 0);
+    return usd * EUR_USD;
+  }
+
+  function renderAddPrice() {
+    const pe = addPriceEur();
+    document.getElementById('add-price-live').textContent = pe > 0
+      ? `Precio ${addState.token} en vivo: ${pe.toLocaleString('es-ES', { maximumFractionDigits: pe < 1 ? 6 : 2 })} €/ud`
+      : `Sin precio de ${addState.token} todavía — metelo a mano`;
+  }
+
+  function updateEffective() {
+    const amount = parseNum(document.getElementById('add-amount').value);
+    const qty = parseNum(document.getElementById('add-qty').value);
+    document.getElementById('add-derived').textContent = (amount > 0 && qty > 0)
+      ? `≈ ${(amount / qty).toLocaleString('es-ES', { maximumFractionDigits: 6 })} €/ud`
+      : '';
+  }
+
+  // Metes € → calcula la cantidad. Metes cantidad → calcula los €. (Precio en vivo.)
+  function onAmountInput() {
+    const pe = addPriceEur();
+    const amount = parseNum(document.getElementById('add-amount').value);
+    if (pe > 0 && amount > 0) document.getElementById('add-qty').value = fmtInput(amount / pe, 8);
+    updateEffective();
+  }
+  function onQtyInput() {
+    const pe = addPriceEur();
+    const qty = parseNum(document.getElementById('add-qty').value);
+    if (pe > 0 && qty > 0) document.getElementById('add-amount').value = fmtInput(qty * pe, 2);
+    updateEffective();
+  }
+
+  // Aplica el efecto de un movimiento sobre las tenencias.
+  function applyMovement(tx) {
+    const h = portfolio.find(a => a.token === tx.token);
+    if (tx.type === 'Compra') {
+      if (h) { h.qty += tx.qty; h.costUsd += tx.totalUsd; h.avgPrice = h.costUsd / h.qty; }
+      else {
+        const m = COINS[tx.token] || {};
+        portfolio.push({ token: tx.token, name: m.name || tx.token, qty: tx.qty, costUsd: tx.totalUsd, avgPrice: tx.price, coingeckoId: m.coingeckoId, icon: m.icon, color: m.color, cssClass: m.cssClass });
+      }
+    } else { // Venta
+      if (!h) return;
+      h.qty -= tx.qty;
+      if (h.qty <= 1e-9) portfolio = portfolio.filter(a => a.token !== tx.token);
+      else h.costUsd = h.avgPrice * h.qty;
+    }
+  }
+
+  // Deshace el efecto (para borrar o editar un movimiento).
+  function reverseMovement(tx) {
+    const h = portfolio.find(a => a.token === tx.token);
+    if (tx.type === 'Compra') {
+      if (!h) return;
+      h.qty -= tx.qty; h.costUsd -= tx.totalUsd;
+      if (h.qty <= 1e-9) portfolio = portfolio.filter(a => a.token !== tx.token);
+      else h.avgPrice = h.costUsd / h.qty;
+    } else { // revertir una Venta = devolver
+      if (h) { h.qty += tx.qty; h.costUsd = h.avgPrice * h.qty; }
+      else {
+        const m = COINS[tx.token] || {};
+        portfolio.push({ token: tx.token, name: m.name || tx.token, qty: tx.qty, costUsd: tx.price * tx.qty, avgPrice: tx.price, coingeckoId: m.coingeckoId, icon: m.icon, color: m.color, cssClass: m.cssClass });
+      }
+    }
+  }
+
+  function openAddModal(tx) {
+    editingId = tx ? tx.id : null;
+    addState = { token: tx ? tx.token : 'BTC', type: tx ? tx.type : 'Compra' };
+    document.getElementById('add-title').textContent = tx ? 'Editar movimiento' : 'Añadir movimiento';
+    document.getElementById('add-date').value = tx ? tx.date : new Date().toISOString().slice(0, 10);
+    document.getElementById('add-qty').value = tx ? fmtInput(tx.qty, 8) : '';
+    document.getElementById('add-amount').value = tx ? fmtInput(tx.totalUsd * EUR_USD, 2) : '';
+    document.getElementById('add-error').textContent = '';
+    document.getElementById('add-derived').textContent = '';
+    renderAddChips();
+    renderAddPrice();
+    updateEffective();
+    document.querySelectorAll('#add-type button').forEach(b => b.classList.toggle('active', b.dataset.type === addState.type));
+    document.getElementById('add-modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeAddModal() {
+    editingId = null;
+    document.getElementById('add-modal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  function submitAdd(e) {
+    e.preventDefault();
+    const errEl = document.getElementById('add-error');
+    errEl.textContent = '';
+
+    const token = addState.token;
+    const type = addState.type;
+    const date = document.getElementById('add-date').value;
+    const qty = parseNum(document.getElementById('add-qty').value);
+    const amountEur = parseNum(document.getElementById('add-amount').value);
+
+    if (!date || !(qty > 0) || !(amountEur > 0)) {
+      errEl.textContent = 'Rellena fecha, cantidad e importe (mayores que 0).';
+      return;
+    }
+
+    const totalUsd = amountEur / EUR_USD;   // € → $ (la cartera calcula en USD)
+    const priceUsd = totalUsd / qty;
+
+    // Si editamos, revertimos primero el movimiento viejo.
+    let oldIdx = -1, oldTx = null;
+    if (editingId) {
+      oldIdx = transactions.findIndex(t => t.id === editingId);
+      if (oldIdx >= 0) { oldTx = transactions[oldIdx]; if (oldTx.applied) reverseMovement(oldTx); }
+    }
+
+    if (type === 'Venta') {
+      const h = portfolio.find(a => a.token === token);
+      if (!h || qty > h.qty + 1e-9) {
+        if (oldTx && oldTx.applied) applyMovement(oldTx); // deshacer la reversión
+        errEl.textContent = h
+          ? `No puedes vender ${fmt(qty, 6)} ${token}: solo tienes ${fmt(h.qty, 6)}.`
+          : `No tienes ${token} para vender.`;
+        return;
+      }
+    }
+
+    const newTx = { id: editingId || uid(), date, token, type, price: priceUsd, qty, totalUsd, applied: true };
+    applyMovement(newTx);
+    if (oldIdx >= 0) transactions[oldIdx] = newTx;
+    else transactions.push(newTx);
+
+    editingId = null;
+    persist();
+    closeAddModal();
+    render();
+  }
+
+  function deleteTx(id) {
+    const idx = transactions.findIndex(t => t.id === id);
+    if (idx < 0) return;
+    const tx = transactions[idx];
+    if (tx.applied) reverseMovement(tx);   // solo revierte tenencias lo que se metió por el formulario
+    transactions.splice(idx, 1);
+    persist();
+    render();
+  }
+
   // ── INIT ──
   async function init() {
     renderSkeletons();
@@ -1059,11 +1290,43 @@ const App = (() => {
     }, { rootMargin: '-120px 0px -60% 0px' });
     sections.forEach(s => observer.observe(s));
 
+    // FAB + formulario "Añadir movimiento"
+    document.getElementById('add-fab').addEventListener('click', () => openAddModal());
+    document.getElementById('tx-tbody').addEventListener('click', (e) => {
+      const del = e.target.closest('.tx-del');
+      const ed = e.target.closest('.tx-edit');
+      if (del) { if (confirm('¿Borrar este movimiento?')) deleteTx(del.dataset.txid); }
+      else if (ed) { const t = transactions.find(x => x.id === ed.dataset.txid); if (t) openAddModal(t); }
+    });
+    document.getElementById('add-close').addEventListener('click', closeAddModal);
+    document.getElementById('add-cancel').addEventListener('click', closeAddModal);
+    document.getElementById('add-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'add-modal') closeAddModal();
+    });
+    document.getElementById('add-coin-chips').addEventListener('click', (e) => {
+      const chip = e.target.closest('.coin-chip');
+      if (!chip) return;
+      addState.token = chip.dataset.token;
+      renderAddChips();
+      renderAddPrice();
+      if (parseNum(document.getElementById('add-amount').value) > 0) onAmountInput();
+      else if (parseNum(document.getElementById('add-qty').value) > 0) onQtyInput();
+    });
+    document.getElementById('add-type').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-type]');
+      if (!b) return;
+      addState.type = b.dataset.type;
+      document.querySelectorAll('#add-type button').forEach(x => x.classList.toggle('active', x === b));
+    });
+    document.getElementById('add-qty').addEventListener('input', onQtyInput);
+    document.getElementById('add-amount').addEventListener('input', onAmountInput);
+    document.getElementById('add-form').addEventListener('submit', submitAdd);
+
     await fetchPrices();
     refreshInterval = setInterval(fetchPrices, 60000);
 
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeModal();
+      if (e.key === 'Escape') { closeModal(); closeAddModal(); }
     });
   }
 
