@@ -831,6 +831,11 @@ const App = (() => {
       return;
     }
 
+    // Borde de los segmentos = fondo de la tarjeta; hover = texto principal.
+    const csA = getComputedStyle(document.body);
+    const segBorder = csA.getPropertyValue('--bg-secondary').trim() || '#1e2329';
+    const segHover = csA.getPropertyValue('--text-primary').trim() || '#eaecef';
+
     chartInstance = new Chart(ctx, {
       type: 'doughnut',
       data: {
@@ -838,9 +843,9 @@ const App = (() => {
         datasets: [{
           data: segments.map(s => s.value),
           backgroundColor: segments.map(s => s.color),
-          borderColor: '#1e2329',
+          borderColor: segBorder,
           borderWidth: 3,
-          hoverBorderColor: '#eaecef',
+          hoverBorderColor: segHover,
           hoverBorderWidth: 2,
         }],
       },
@@ -888,6 +893,12 @@ const App = (() => {
   function renderEvolutionChart() {
     const ctx = document.getElementById('evolution-chart');
     if (!ctx) return;
+
+    // Colores del chart según el tema (se leen al recrearlo en cada render).
+    const cs = getComputedStyle(document.body);
+    const tickColor = cs.getPropertyValue('--text-muted').trim() || '#5e6673';
+    const gridColor = cs.getPropertyValue('--chart-grid').trim() || 'rgba(43,49,57,0.5)';
+    const legendColor = cs.getPropertyValue('--text-secondary').trim() || '#848e9c';
 
     const monthlyInvest = {};
     transactions.forEach(tx => {
@@ -946,7 +957,7 @@ const App = (() => {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { labels: { color: '#848e9c', font: { size: 12 } } },
+          legend: { labels: { color: legendColor, font: { size: 12 } } },
           tooltip: {
             backgroundColor: '#2b3139',
             titleColor: '#eaecef',
@@ -961,11 +972,12 @@ const App = (() => {
           },
         },
         scales: {
-          x: { ticks: { color: '#5e6673', font: { size: 11 } }, grid: { color: 'rgba(43,49,57,0.5)' } },
+          x: { ticks: { color: tickColor, font: { size: 11 } }, grid: { color: gridColor } },
           y: {
-            ticks: { color: '#5e6673', font: { size: 11 }, callback: (v) => '$' + v.toLocaleString() },
-            grid: { color: 'rgba(43,49,57,0.5)' },
+            ticks: { color: tickColor, font: { size: 11 }, callback: (v) => '$' + v.toLocaleString() },
+            grid: { color: gridColor },
           },
+
         },
       },
     });
@@ -2007,6 +2019,24 @@ const App = (() => {
 
     document.getElementById('currency-switch').addEventListener('click', () => {
       setCurrency(currency === 'USD' ? 'EUR' : 'USD');
+    });
+
+    // Tema claro/oscuro: preferencia local de este navegador (no viaja por el gist).
+    // El icono muestra el estado: sol de día (claro), luna de noche (oscuro).
+    const THEME_KEY = 'miCartera.theme';
+    const sunSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+    const moonSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>';
+    const themeBtn = document.getElementById('theme-btn');
+    const applyTheme = (t) => {
+      document.body.classList.toggle('light', t === 'light');
+      if (themeBtn) themeBtn.innerHTML = t === 'light' ? sunSvg : moonSvg;
+    };
+    applyTheme(localStorage.getItem(THEME_KEY) || 'dark');
+    if (themeBtn) themeBtn.addEventListener('click', () => {
+      const next = document.body.classList.contains('light') ? 'dark' : 'light';
+      localStorage.setItem(THEME_KEY, next);
+      applyTheme(next);
+      render();   // redibuja los gráficos con el tema nuevo
     });
 
     setupSortable('asset-table');

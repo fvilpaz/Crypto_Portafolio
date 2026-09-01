@@ -17,9 +17,68 @@
   --accent-blue: #1e90ff;
   --accent-blue-bg: rgba(30, 144, 255, 0.1);
   --border: #2b3139;
+  --chart-grid: rgba(43, 49, 57, 0.5);   /* rejilla de gráficos (oscuro, valor original) */
   --radius: 12px;
   --radius-sm: 8px;
   --shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* Modo claro: azules y blancos (nada de grises lavados). Solo reescribe las
+   variables, el resto de la app las usa. */
+body.light {
+  --bg-primary: #eaf1fc;      /* fondo blanco-azulado */
+  --bg-secondary: #ffffff;    /* tarjetas blancas puras */
+  --bg-card: #e6eefb;         /* pistas de barras / fondos suaves, azul claro */
+  --bg-hover: #d8e5fb;
+  --text-primary: #0b1c3f;    /* navy oscuro */
+  --text-secondary: #45587d;  /* azul-gris */
+  --text-muted: #8b9bbb;
+  --border: #d6e2f5;          /* borde azulado */
+  --chart-grid: #dbe4f4;      /* rejilla de gráficos (claro) */
+  --shadow: 0 4px 18px rgba(24, 78, 168, 0.10);
+}
+
+/* En claro: cabecera con el degradado azul del botón CryptoTrace, y el logo
+   "Mi Cartera" + ese botón en blanco para que contrasten sobre el azul. */
+body.light .header {
+  background: linear-gradient(135deg, #3b82f6, #6366f1);
+  border-bottom: none;
+}
+body.light .header-brand .logo {
+  background: none;
+  -webkit-text-fill-color: #ffffff;
+  color: #ffffff;
+}
+body.light .header-brand .subtitle {
+  color: rgba(255, 255, 255, 0.82);
+}
+body.light #app-link {
+  background: #ffffff;
+  color: #3b82f6;
+}
+/* Solo el pill de CryptoTrace va en blanco. Los demás se tratan como iconos
+   sobre el azul: fondo transparente e icono blanco (hover translúcido). El
+   importe (USD) queda como pill translúcido con borde sutil. */
+body.light .header .refresh-btn {
+  background: transparent;
+  border-color: transparent;
+  color: #ffffff;
+}
+body.light .header .refresh-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+body.light .header .currency-switch {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #ffffff;
+}
+body.light .header .currency-switch__code {
+  color: #ffffff;
+}
+
+/* Hover de fila de tabla: en oscuro es gris; en claro, azul suave. */
+body.light tbody tr[data-token]:hover {
+  background: rgba(30, 144, 255, 0.08);
 }
 
 * {
