@@ -122,10 +122,13 @@ a:hover { text-decoration: underline; }
   #app-link .al-arrow { display: none; }
   #app-link { padding: 8px 10px; gap: 0; }
 
+  /* La fila de acciones baja bajo el título: la centramos y le damos aire
+     entre botones para que respiren. */
   .header-actions {
     flex-wrap: wrap;
-    gap: 8px;
-    justify-content: flex-end;
+    gap: 14px;
+    justify-content: center;
+    width: 100%;
   }
 }
 

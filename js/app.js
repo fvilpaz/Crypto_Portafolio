@@ -263,7 +263,7 @@ const App = (() => {
   async function fetchSparklines() {
     try {
       const ids = portfolio.map(a => a.coingeckoId).join(',');
-      const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&sparkline=true&price_change_percentage=24h`;
+      const url = `/.netlify/functions/coingecko?type=markets&ids=${ids}`;
       const res = await fetchCoinGecko(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -342,7 +342,7 @@ const App = (() => {
 
   async function fetchPrices() {
     try {
-      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoIds()}&vs_currencies=usd&include_24hr_change=true`;
+      const url = `/.netlify/functions/coingecko?type=price&ids=${coingeckoIds()}`;
       const res = await fetchCoinGecko(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
