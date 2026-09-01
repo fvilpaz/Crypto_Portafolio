@@ -1509,9 +1509,19 @@ document.addEventListener('DOMContentLoaded', App.init);
 // PWA — registro del service worker (instalable en móvil)
 // ═══════════════════════════════════════════════════════════════
 if ('serviceWorker' in navigator) {
+  const localOnly = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch((err) => {
-      console.warn('No se pudo registrar el service worker:', err);
-    });
+    if (localOnly) {
+      // En desarrollo (localhost) NUNCA se usa service worker: su caché solo
+      // lía (sirve código viejo de visitas previas aunque cambies archivos).
+      // Desregistra cualquier SW viejo que quede de pruebas anteriores.
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        regs.forEach((r) => r.unregister());
+      });
+    } else {
+      navigator.serviceWorker.register('sw.js').catch((err) => {
+        console.warn('No se pudo registrar el service worker:', err);
+      });
+    }
   });
 }
