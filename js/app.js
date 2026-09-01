@@ -242,19 +242,23 @@ const App = (() => {
     requestAnimationFrame(tick);
   }
 
-  // URLs de precios (simple/price) o sparklines (coins/markets). En Netlify el
-  // PROXY va el primero: se ejecuta en el servidor, sin problema de CORS, con
-  // reintentos ante 429. La directa a CoinGecko es el respaldo (por si el proxy
-  // arranca en frío). En local (file:// o localhost) no hay proxy, así que solo
-  // la directa. El _t= al final rompe cualquier caché (service worker, CDN).
+  // URLs de precios (simple/price) o sparklines (coins/markets).
+  //  - En Netlify el proxy va el primero: corre en el servidor, sin CORS, con
+  //    reintentos ante 429. La directa de CoinGecko queda de respaldo.
+  //  - En local (file:// o localhost) la directa va primero; si CoinGecko la
+  //    bloquea (429/CORS sin cabecera), se cae al proxy del deploy, que responde
+  //    con Access-Control-Allow-Origin: * y precios frescos. Solo si AMBOS fallan
+  //    la app cae a los precios de compra (y muestra el aviso).
+  // El _t= al final rompe cualquier caché (service worker, CDN, navegador).
+  const PROXY_LIVE = 'https://portafoliocrypto.netlify.app/.netlify/functions/coingecko';
   function coingeckoUrls(type, ids) {
     const direct = type === 'markets'
       ? `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&sparkline=true&price_change_percentage=24h`
       : `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
-    const urls = [direct];
-    if (location.protocol.startsWith('http') && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
-      urls.unshift(`/.netlify/functions/coingecko?type=${type}&ids=${ids}`);
-    }
+    const isProd = location.protocol.startsWith('http') && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+    const urls = isProd
+      ? [`/.netlify/functions/coingecko?type=${type}&ids=${ids}`, direct]
+      : [direct, `${PROXY_LIVE}?type=${type}&ids=${ids}`];
     return urls.map(u => u + (u.includes('?') ? '&' : '?') + '_t=' + Date.now());
   }
 
