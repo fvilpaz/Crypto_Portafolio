@@ -16,19 +16,21 @@ const App = (() => {
     USDC: { name: 'USD Coin', coingeckoId: 'usd-coin', icon: `${COINGECKO_IMG}/6319/small/usdc.png`,       color: '#2775ca', cssClass: 'usdc' },
   };
 
-  // Airdrops recibidos (coste real de compra = 0). Su valor sale SIEMPRE del
-  // precio en vivo de CoinGecko vía coingeckoId — nunca de un valor fijo.
+  // Airdrops: apuntan a la moneda (precio en vivo de CoinGecko vía coingeckoId),
+  // pero SIN cantidades por defecto. El usuario los rellena cuando los tenga.
   const airdrops = [
-    { token: 'PI', name: 'Pi Network', qty: 969.79, note: 'Bloqueado ~4 años', coingeckoId: 'pi-network', icon: `${COINGECKO_IMG}/54342/small/pi_network.jpg`, color: '#0ecb81', cssClass: 'pi' },
-    { token: 'ATONE', name: 'ATONE', qty: 13.27, note: 'Airdrop / staking', coingeckoId: 'atomone', icon: `${COINGECKO_IMG}/33230/small/atomone_200x200.jpg`, color: '#1e90ff', cssClass: 'atone' },
-    { token: 'MODE', name: 'Mode', qty: 1271, note: 'Airdrop', coingeckoId: 'mode', icon: `${COINGECKO_IMG}/34979/small/MODE.jpg`, color: '#f0b90b', cssClass: 'mode' },
+    { token: 'PI', name: 'Pi Network', qty: 0, note: 'Bloqueado ~4 años', coingeckoId: 'pi-network', icon: `${COINGECKO_IMG}/54342/small/pi_network.jpg`, color: '#0ecb81', cssClass: 'pi' },
+    { token: 'ATONE', name: 'ATONE', qty: 0, note: 'Airdrop / staking', coingeckoId: 'atomone', icon: `${COINGECKO_IMG}/33230/small/atomone_200x200.jpg`, color: '#1e90ff', cssClass: 'atone' },
+    { token: 'MODE', name: 'Mode', qty: 0, note: 'Airdrop', coingeckoId: 'mode', icon: `${COINGECKO_IMG}/34979/small/MODE.jpg`, color: '#f0b90b', cssClass: 'mode' },
   ];
 
+  // Staking: apuntan a la moneda pero sin cantidades por defecto (se rellenan).
   const staking = [
-    { token: 'ATOM', qty: 698, apr: 0.1946, note: 'RE-STAKEAR (no aportar dinero nuevo)' },
-    { token: 'TIA', qty: 420, apr: 0.0547, note: 'Mantener stakeado' },
+    { token: 'ATOM', qty: 0, apr: 0, note: 'RE-STAKEAR (no aportar dinero nuevo)' },
+    { token: 'TIA', qty: 0, apr: 0, note: 'Mantener stakeado' },
   ];
 
+  // Reparto de custodia: distribución fija, no son datos del usuario.
   const custody = [
     { name: 'Bit2Me', type: 'Exchange regulado ES', pct: 0.333, color: '#f0b90b', purpose: 'Fiat / Hacienda' },
     { name: 'Autocustodia', type: 'Claves propias', pct: 0.333, color: '#0ecb81', purpose: 'Largo plazo' },
