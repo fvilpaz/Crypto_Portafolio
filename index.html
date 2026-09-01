@@ -109,7 +109,7 @@
         </div>
         <div class="card-label">Staking / mes</div>
         <div class="card-value positive" id="card-staking">—</div>
-        <div class="card-sub">ATOM 19.46% + TIA 5.47%</div>
+        <div class="card-sub" id="card-staking-sub">Sin staking</div>
       </div>
       <div class="card" data-glow="blue">
         <div class="card-icon blue">
@@ -132,7 +132,7 @@
           Cartera
           <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
         </h2>
-        <span class="section-badge" style="background:var(--accent-green-bg);color:var(--accent-green);">4 activos</span>
+        <span class="section-badge" id="asset-count-badge" style="background:var(--accent-green-bg);color:var(--accent-green);">0 activos</span>
       </summary>
       <div class="table-wrapper">
         <table id="asset-table">
@@ -329,6 +329,7 @@
             <div class="type-toggle" id="add-type">
               <button type="button" data-type="Compra" class="active">Compra</button>
               <button type="button" data-type="Venta">Venta</button>
+              <button type="button" data-type="Recompensa">Recompensa</button>
             </div>
           </div>
           <div class="add-field">
@@ -338,7 +339,7 @@
         </div>
 
         <div class="add-row">
-          <div class="add-field">
+          <div class="add-field" id="add-amount-field">
             <label>Importe (€)</label>
             <input type="text" inputmode="decimal" id="add-amount" placeholder="0,00" autocomplete="off">
           </div>
