@@ -16,8 +16,13 @@ const App = (() => {
     USDC: { name: 'USD Coin', coingeckoId: 'usd-coin', icon: `${COINGECKO_IMG}/6319/small/usdc.png`,       color: '#2775ca', cssClass: 'usdc' },
   };
 
-  // Los airdrops viven en el localStorage igual que la cartera (parten de 0).
-  let airdrops = [];
+  // Airdrops recibidos (coste real de compra = 0). Su valor sale SIEMPRE del
+  // precio en vivo de CoinGecko vía coingeckoId — nunca de un valor fijo.
+  const airdrops = [
+    { token: 'PI', name: 'Pi Network', qty: 969.79, note: 'Bloqueado ~4 años', coingeckoId: 'pi-network', icon: `${COINGECKO_IMG}/54342/small/pi_network.jpg`, color: '#0ecb81', cssClass: 'pi' },
+    { token: 'ATONE', name: 'ATONE', qty: 13.27, note: 'Airdrop / staking', coingeckoId: 'atomone', icon: `${COINGECKO_IMG}/33230/small/atomone_200x200.jpg`, color: '#1e90ff', cssClass: 'atone' },
+    { token: 'MODE', name: 'Mode', qty: 1271, note: 'Airdrop', coingeckoId: 'mode', icon: `${COINGECKO_IMG}/34979/small/MODE.jpg`, color: '#f0b90b', cssClass: 'mode' },
+  ];
 
   const staking = [
     { token: 'ATOM', qty: 698, apr: 0.1946, note: 'RE-STAKEAR (no aportar dinero nuevo)' },
@@ -60,7 +65,7 @@ const App = (() => {
       console.warn('localStorage ilegible, parto de cero:', e);
     }
     // Primera vez (o datos corruptos): parte de cero.
-    const empty = { portfolio: [], transactions: [], airdrops: [], updatedAt: 0 };
+    const empty = { portfolio: [], transactions: [], updatedAt: 0 };
     saveStore(empty);
     return empty;
   }
@@ -68,13 +73,12 @@ const App = (() => {
   const _store = loadStore();
   let portfolio = _store.portfolio;
   let transactions = _store.transactions;
-  airdrops = Array.isArray(_store.airdrops) ? _store.airdrops : [];
   let storeVersion = _store.updatedAt || 0;
 
   // Guarda el estado actual (holdings + movimientos) tras cada edición.
   function persist() {
     storeVersion = Date.now();
-    saveStore({ portfolio, transactions, airdrops, updatedAt: storeVersion });
+    saveStore({ portfolio, transactions, updatedAt: storeVersion });
   }
 
   // Cada movimiento necesita un id estable para poder editar/borrar por fila.
@@ -94,9 +98,12 @@ const App = (() => {
   let isInitialLoad = true;
 
   // ── FORMATEO ──
+  // Cantidades SIEMPRE con 2 decimales como máximo (0 → 0.00), salvo valores
+  // sin dígitos (enteros/porcentajes) que explícitamente piden 0 decimales.
   const fmt = (n, decimals = 2) => {
     if (n === null || n === undefined || isNaN(n)) return '—';
-    return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    const d = Math.max(0, Math.min(decimals, 2));
+    return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
   };
 
   const fmtCurrency = (n) => {
@@ -377,7 +384,9 @@ const App = (() => {
   }
 
   function getAirdropValue(ad) {
-    return ad.qty * (prices[ad.token]?.price || ad.priceUsd);
+    // Valor del airdrop SOLO con el precio en vivo de CoinGecko. Nunca con un
+    // valor fijo: si no hay precio, el airdrop no aporta al total (coste real 0).
+    return ad.qty * (prices[ad.token]?.price || 0);
   }
 
   function getTotalPortfolioValue() {
@@ -773,7 +782,7 @@ const App = (() => {
 
   function renderAirdrops() {
     document.getElementById('airdrop-tbody').innerHTML = airdrops.map(a => {
-      const price = prices[a.token]?.price || a.priceUsd;
+      const price = prices[a.token]?.price || 0;
       const value = getAirdropValue(a);
       return `
         <tr>

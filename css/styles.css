@@ -611,9 +611,50 @@ tbody td {
 /* ── FOOTER ── */
 .footer {
   border-top: 1px solid var(--border);
-  padding: 24px 0;
+  padding: 20px 0;
   margin-top: 40px;
-  text-align: center;
+}
+
+.footer .container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.footer-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.footer-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-links a:hover {
+  color: var(--accent-green);
+}
+
+.footer-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-muted);
 }
 
 .footer p {
@@ -627,7 +668,7 @@ tbody td {
   color: var(--text-muted);
   opacity: 0.7;
   max-width: 600px;
-  margin: 8px auto 0;
+  margin: 0;
   line-height: 1.5;
 }
 
@@ -1512,7 +1553,7 @@ tbody tr[data-token]:hover {
 .fab {
   position: fixed;
   right: 22px;
-  bottom: calc(22px + env(safe-area-inset-bottom));
+  bottom: calc(76px + env(safe-area-inset-bottom));
   width: 58px; height: 58px;
   border-radius: 50%;
   background: var(--accent-green);
@@ -1526,7 +1567,7 @@ tbody tr[data-token]:hover {
 }
 .fab:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(14, 203, 129, .65); }
 .fab svg { display: block; }
-main.container { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+main.container { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
 
 /* ── Modal: formulario añadir ── */
 .add-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 22px 24px 6px; }
