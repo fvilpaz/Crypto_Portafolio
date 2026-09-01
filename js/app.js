@@ -242,18 +242,18 @@ const App = (() => {
     requestAnimationFrame(tick);
   }
 
-  // La URL directa a CoinGecko es SIEMPRE la primera opción: así corremos igual
-  // que en local (file://), sin capas intermedias. El proxy de Netlify solo se
-  // añade como respaldo cuando la app está hosteada en http/https (no localhost)
-  // y la directa falla por rate limit (429 en móvil). El _t= al final rompe
-  // cualquier caché que pueda quedar (service worker antiguo, CDN, navegador).
+  // URLs de precios (simple/price) o sparklines (coins/markets). En Netlify el
+  // PROXY va el primero: se ejecuta en el servidor, sin problema de CORS, con
+  // reintentos ante 429. La directa a CoinGecko es el respaldo (por si el proxy
+  // arranca en frío). En local (file:// o localhost) no hay proxy, así que solo
+  // la directa. El _t= al final rompe cualquier caché (service worker, CDN).
   function coingeckoUrls(type, ids) {
     const direct = type === 'markets'
       ? `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&sparkline=true&price_change_percentage=24h`
       : `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
     const urls = [direct];
     if (location.protocol.startsWith('http') && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
-      urls.push(`/.netlify/functions/coingecko?type=${type}&ids=${ids}`);
+      urls.unshift(`/.netlify/functions/coingecko?type=${type}&ids=${ids}`);
     }
     return urls.map(u => u + (u.includes('?') ? '&' : '?') + '_t=' + Date.now());
   }

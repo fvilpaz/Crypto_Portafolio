@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-cartera-v4';
+const CACHE_NAME = 'mi-cartera-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -25,25 +25,27 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Stale-while-revalidate para el shell: responde al instante con la caché y en
-// segundo plano baja la versión nueva para la próxima carga. Los cambios llegan
-// al usuario sin borrar caché a mano. Chart.js (CDN) y la API de CoinGecko son
-// cross-origin y se dejan pasar directas a red.
+// Network-first para el shell: cuando hay red, SIEMPRE se baja la versión más
+// nueva (así un deploy llega a todo el mundo a la primera visita, sin servir
+// código viejo de la caché). La caché solo se usa si la red falla (offline o
+// servidor caído). Los cambios de app.js/html llegan al instante.
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return; // deja pasar CDN + API externa
   // Las funciones (proxy de precios) NUNCA se cachean en el SW: siempre a red,
-  // para que su propia caché de CDN (60s) mande y no sirvamos precios viejos.
+  // para que los precios lleguen frescos y no sirvamos datos viejos.
   if (url.pathname.startsWith('/.netlify/functions/')) return;
 
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
-      const cached = await cache.match(event.request);
-      const red = fetch(event.request).then((resp) => {
+      try {
+        const resp = await fetch(event.request);
         if (resp && resp.status === 200) cache.put(event.request, resp.clone());
         return resp;
-      }).catch(() => cached);
-      return cached || red; // instantáneo si hay caché; si no, espera a la red
+      } catch (e) {
+        const cached = await cache.match(event.request);
+        return cached || Response.error();
+      }
     })
   );
 });
