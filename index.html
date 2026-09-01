@@ -24,7 +24,7 @@
       <div class="header-brand">
         <div>
           <div class="logo">Mi Cartera</div>
-          <div class="subtitle">Portfolio Tracker &middot; DCA €175/mes</div>
+          <div class="subtitle">Portfolio Tracker &middot; DCA <span id="header-dca">€175</span>/mes</div>
         </div>
       </div>
       <div class="header-actions">
@@ -326,11 +326,11 @@
         <div class="add-row">
           <div class="add-field">
             <label>Tipo</label>
-            <div class="type-toggle" id="add-type">
-              <button type="button" data-type="Compra" class="active">Compra</button>
-              <button type="button" data-type="Venta">Venta</button>
-              <button type="button" data-type="Recompensa">Recompensa</button>
-            </div>
+            <select id="add-type" class="add-select">
+              <option value="Compra">Compra</option>
+              <option value="Venta">Venta</option>
+              <option value="Recompensa">Recompensa</option>
+            </select>
           </div>
           <div class="add-field">
             <label>Fecha</label>
