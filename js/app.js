@@ -36,6 +36,7 @@ const App = (() => {
   ];
 
   const cosmosTopPct = 0.35;
+  const DEFAULT_DCA_TARGET = 175;   // objetivo DCA inicial en €, hasta que lo edites
 
   // ── PERSISTENCIA (localStorage) ──
   // La cartera, los movimientos y los airdrops viven SOLO en el navegador.
@@ -73,6 +74,7 @@ const App = (() => {
   const _store = loadStore();
   let portfolio = _store.portfolio;
   let transactions = _store.transactions;
+  let settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET }, _store.settings || {});   // dcaTarget en €
   let storeVersion = _store.updatedAt || 0;
   let showHidden = false;   // mostrar temporalmente las monedas ocultas en la tabla
   let pendingImportFormat = null;   // 'json' | 'csv' elegido antes de abrir el file picker
@@ -100,7 +102,7 @@ const App = (() => {
   // Guarda el estado actual (holdings + movimientos) tras cada edición.
   function persist() {
     storeVersion = Date.now();
-    saveStore({ portfolio, transactions, updatedAt: storeVersion });
+    saveStore({ portfolio, transactions, settings, updatedAt: storeVersion });
     syncSchedulePush();   // si el sync está activo, sube al gist (debounced)
   }
 
@@ -509,27 +511,46 @@ const App = (() => {
     document.getElementById('card-airdrops').textContent = fmtCurrency(airdropVal);
   }
 
+  function editDcaTarget() {
+    const cur = settings.dcaTarget;
+    const input = prompt('Objetivo mensual de DCA (en €):', cur);
+    if (input === null) return;
+    const val = parseFloat(String(input).replace(',', '.'));
+    if (isNaN(val) || val < 0) return;
+    settings.dcaTarget = val;
+    persist();
+    render();
+  }
+
   function renderDcaSummary() {
     const now = new Date();
     const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const dcaTarget = 175;
+    const dcaTargetEur = settings.dcaTarget;   // objetivo en €
 
     const investedUsd = transactions
       .filter(tx => tx.date.startsWith(monthKey) && tx.type === 'Compra' && tx.totalUsd > 0)
       .reduce((sum, tx) => sum + tx.totalUsd, 0);
 
     const symbol = currency === 'USD' ? '$' : '€';
-    const investedConv = currency === 'EUR' ? investedUsd * EUR_USD : investedUsd;
-    const targetConv = currency === 'EUR' ? dcaTarget * EUR_USD : dcaTarget;
-    const pct = Math.min((investedConv / targetConv) * 100, 100);
-    const remaining = Math.max(targetConv - investedConv, 0);
+    const invested = currency === 'EUR' ? investedUsd * EUR_USD : investedUsd;
+    const target = currency === 'EUR' ? dcaTargetEur : dcaTargetEur / EUR_USD;
+    const pct = target > 0 ? Math.min((invested / target) * 100, 100) : 0;
+    const remaining = Math.max(target - invested, 0);
+
+    // Cabecera: objetivo siempre en € (es como lo piensa el usuario).
+    const headerDca = document.getElementById('header-dca');
+    if (headerDca) headerDca.textContent = `€${fmt(dcaTargetEur, 0)}`;
 
     const el = document.getElementById('dca-summary');
     if (!el) return;
     el.innerHTML = `
-      <div class="dca-header">
+      <div class="dca-top">
         <span class="dca-month">${now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</span>
-        <span class="dca-amount">${symbol}${fmt(investedConv, 2)} / ${symbol}${fmt(targetConv, 2)}</span>
+        <button type="button" class="dca-edit" id="dca-amount" title="Editar objetivo mensual" aria-label="Editar objetivo mensual">✎</button>
+      </div>
+      <div class="dca-amount">
+        <span class="dca-invested">${symbol}${fmt(invested, 2)}</span>
+        <span class="dca-target">de ${symbol}${fmt(target, 2)}</span>
       </div>
       <div class="dca-bar">
         <div class="dca-fill ${pct >= 100 ? 'complete' : ''}" style="width:${pct}%"></div>
@@ -540,6 +561,8 @@ const App = (() => {
           : `<span style="color:var(--text-muted)">Faltan ${symbol}${fmt(remaining, 2)}</span>`}
       </div>
     `;
+    const amountEl = document.getElementById('dca-amount');
+    if (amountEl) amountEl.addEventListener('click', editDcaTarget);
   }
 
   function renderCosmosBar() {
@@ -794,7 +817,9 @@ const App = (() => {
     }
     document.getElementById('staking-grid').innerHTML = stakingAssets.map((s, i) => {
       const p = prices[s.token]?.price || s.avgPrice || 0;
-      const yearlyIncome = s.qty * p * s.apr;
+      const yearlyTokens = s.qty * s.apr;      // tokens generados al año (no depende del precio)
+      const monthlyTokens = yearlyTokens / 12;
+      const yearlyIncome = yearlyTokens * p;
       const monthlyIncome = yearlyIncome / 12;
 
       return `
@@ -818,10 +843,12 @@ const App = (() => {
             <div>
               <div class="staking-stat-label">Ingreso/año</div>
               <div class="staking-stat-value positive">${fmtCurrency(yearlyIncome)}</div>
+              <div class="staking-stat-sub">${fmt(yearlyTokens, 2)} ${s.token}</div>
             </div>
             <div>
               <div class="staking-stat-label">Ingreso/mes</div>
               <div class="staking-stat-value positive">${fmtCurrency(monthlyIncome)}</div>
+              <div class="staking-stat-sub">${fmt(monthlyTokens, 2)} ${s.token}</div>
             </div>
           </div>
           <div style="margin-top:12px;font-size:12px;color:var(--text-muted);">${s.note || ''}</div>
@@ -1262,6 +1289,12 @@ const App = (() => {
     const priceLive = document.getElementById('add-price-live');
     if (isReward && priceLive) priceLive.textContent = 'Recompensa: monedas gratis a 0€ (solo suma cantidad, no cuenta como invertido).';
     else renderAddPrice();
+    // Cerrado: el nombre seleccionado conserva su color (solo el texto, borde neutro).
+    const sel = document.getElementById('add-type');
+    if (sel) {
+      sel.classList.remove('sel-compra', 'sel-venta', 'sel-recompensa');
+      sel.classList.add(addState.type === 'Venta' ? 'sel-venta' : addState.type === 'Recompensa' ? 'sel-recompensa' : 'sel-compra');
+    }
   }
 
   // Metes € → calcula la cantidad. Metes cantidad → calcula los €. (Precio en vivo.)
@@ -1334,7 +1367,7 @@ const App = (() => {
     renderAddChips();
     renderAddPrice();
     updateEffective();
-    document.querySelectorAll('#add-type button').forEach(b => b.classList.toggle('active', b.dataset.type === addState.type));
+    document.getElementById('add-type').value = addState.type;
     updateTypeUI();
     document.getElementById('add-modal').classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -1473,7 +1506,7 @@ const App = (() => {
       schema: 'mi-cartera', version: 1,
       exportedAt: new Date().toISOString(),
       updatedAt: storeVersion,   // para resolver conflictos: gana el más reciente
-      portfolio, transactions,
+      portfolio, transactions, settings,
     };
   }
 
@@ -1485,6 +1518,7 @@ const App = (() => {
     }
     portfolio = data.portfolio;
     transactions = data.transactions;
+    if (data.settings) settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET }, data.settings);
     normalizePortfolio(portfolio);
   }
 
@@ -1894,11 +1928,8 @@ const App = (() => {
       if (parseNum(document.getElementById('add-amount').value) > 0) onAmountInput();
       else if (parseNum(document.getElementById('add-qty').value) > 0) onQtyInput();
     });
-    document.getElementById('add-type').addEventListener('click', (e) => {
-      const b = e.target.closest('button[data-type]');
-      if (!b) return;
-      addState.type = b.dataset.type;
-      document.querySelectorAll('#add-type button').forEach(x => x.classList.toggle('active', x === b));
+    document.getElementById('add-type').addEventListener('change', (e) => {
+      addState.type = e.target.value;
       updateTypeUI();
     });
     document.getElementById('add-qty').addEventListener('input', onQtyInput);

@@ -568,6 +568,13 @@ tbody td {
   margin-top: 2px;
 }
 
+.staking-stat-sub {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
 /* ── CUSTODY BAR ── */
 .custody-bar {
   display: flex;
@@ -926,11 +933,11 @@ tbody td {
   justify-content: center;
 }
 
-.dca-header {
+.dca-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .dca-month {
@@ -941,9 +948,36 @@ tbody td {
   font-weight: 600;
 }
 
+.dca-edit {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+.dca-edit:hover { color: var(--text-primary); background: var(--bg-hover); }
+
 .dca-amount {
-  font-size: 16px;
-  font-weight: 700;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.dca-invested {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+}
+.dca-target {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
 }
 
 .dca-bar {
@@ -1759,13 +1793,24 @@ main.container { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
 .coin-chip:hover:not(.active) { color: var(--text-primary); border-color: var(--bg-hover); }
 .add-row { display: flex; gap: 14px; margin-bottom: 18px; }
 .add-field { flex: 1; min-width: 0; }
-.type-toggle { display: flex; gap: 4px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 4px; }
-.type-toggle button {
-  flex: 1; background: transparent; border: none; border-radius: calc(var(--radius-sm) - 3px); color: var(--text-secondary);
-  padding: 8px 6px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .2s; white-space: nowrap;
+.add-select {
+  width: 100%; box-sizing: border-box; background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text-primary); padding: 10px 34px 10px 12px; font-size: 15px;
+  font-family: inherit; color-scheme: dark; cursor: pointer;
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b93a1' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
 }
-.type-toggle button:hover:not(.active) { color: var(--text-primary); background: var(--bg-hover); }
-.type-toggle button.active { background: var(--accent-green); color: #0b0e11; }
+.add-select:focus { outline: none; border-color: var(--accent-yellow); }
+/* Al abrir, cada opción con su color de acción. */
+.add-select option { color: var(--text-primary); font-weight: 600; }
+.add-select option[value="Compra"] { color: var(--accent-green); }
+.add-select option[value="Venta"] { color: var(--accent-red); }
+.add-select option[value="Recompensa"] { color: var(--accent-blue); }
+/* Cerrado: el nombre elegido conserva su color (borde sigue neutro). */
+.add-select.sel-compra { color: var(--accent-green); }
+.add-select.sel-venta { color: var(--accent-red); }
+.add-select.sel-recompensa { color: var(--accent-blue); }
 .add-field input {
   width: 100%; box-sizing: border-box; background: var(--bg-card); border: 1px solid var(--border);
   border-radius: var(--radius-sm); color: var(--text-primary); padding: 10px 12px; font-size: 15px;
@@ -1775,6 +1820,12 @@ main.container { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
 .add-derived { font-size: 13px; color: var(--text-secondary); min-height: 18px; margin-bottom: 4px; }
 .add-error { color: var(--accent-red); font-size: 13px; min-height: 18px; margin-bottom: 8px; }
 .add-actions { display: flex; gap: 12px; justify-content: flex-end; }
+
+/* En vertical/móvil: apila TIPO y FECHA (e importe/cantidad) para que el selector
+   de tipo respire y "Recompensa" no salga cortado. */
+@media (max-width: 560px) {
+  .add-row { flex-direction: column; gap: 14px; }
+}
 .add-cancel, .add-submit { padding: 10px 20px; border-radius: 999px; font-weight: 700; font-size: 14px; cursor: pointer; font-family: inherit; border: 1px solid var(--border); }
 .add-cancel { background: var(--bg-card); color: var(--text-secondary); }
 .add-submit { background: var(--accent-green); color: #0b0e11; border-color: var(--accent-green); }
