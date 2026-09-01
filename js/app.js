@@ -16,11 +16,8 @@ const App = (() => {
     USDC: { name: 'USD Coin', coingeckoId: 'usd-coin', icon: `${COINGECKO_IMG}/6319/small/usdc.png`,       color: '#2775ca', cssClass: 'usdc' },
   };
 
-  const airdrops = [
-    { token: 'PI', name: 'Pi Network', qty: 969.79, priceUsd: 0.08997, note: 'Bloqueado ~4 años', coingeckoId: 'pi-network', icon: `${COINGECKO_IMG}/54342/small/pi_network.jpg`, color: '#0ecb81', cssClass: 'pi' },
-    { token: 'ATONE', name: 'ATONE', qty: 13.27, priceUsd: 0.1357, note: 'Airdrop / staking', coingeckoId: 'atomone', icon: `${COINGECKO_IMG}/33230/small/atomone_200x200.jpg`, color: '#1e90ff', cssClass: 'atone' },
-    { token: 'MODE', name: 'Mode', qty: 1271, priceUsd: 0.00007056, note: 'Airdrop', coingeckoId: 'mode', icon: `${COINGECKO_IMG}/34979/small/MODE.jpg`, color: '#f0b90b', cssClass: 'mode' },
-  ];
+  // Los airdrops viven en el localStorage igual que la cartera (parten de 0).
+  let airdrops = [];
 
   const staking = [
     { token: 'ATOM', qty: 698, apr: 0.1946, note: 'RE-STAKEAR (no aportar dinero nuevo)' },
@@ -36,8 +33,8 @@ const App = (() => {
   const cosmosTopPct = 0.35;
 
   // ── PERSISTENCIA (localStorage) ──
-  // Los holdings y movimientos viven ahora en el navegador. La primera vez se
-  // siembran con los arrays de arriba; a partir de ahí mandan los datos guardados.
+  // La cartera, los movimientos y los airdrops viven SOLO en el navegador.
+  // Primera vez: todo a 0. Nada de datos hardcodeados en el código.
   const STORE_KEY = 'miCartera.v1';
   const clone = (x) => JSON.parse(JSON.stringify(x));
 
@@ -55,17 +52,15 @@ const App = (() => {
       if (raw) {
         const data = JSON.parse(raw);
         if (data && Array.isArray(data.portfolio) && Array.isArray(data.transactions)) {
-          // Datos pre-sincronización: sin fecha → se tratan como SIEMPRE vigentes
-          // para no pisarlos con la semilla.
           if (data.updatedAt == null) data.updatedAt = Date.now();
           return data;
         }
       }
     } catch (e) {
-      console.warn('localStorage ilegible, uso la semilla:', e);
+      console.warn('localStorage ilegible, parto de cero:', e);
     }
-    // Primera vez (o datos corruptos): parte de cartera vacía.
-    const empty = { portfolio: [], transactions: [], updatedAt: 0 };
+    // Primera vez (o datos corruptos): parte de cero.
+    const empty = { portfolio: [], transactions: [], airdrops: [], updatedAt: 0 };
     saveStore(empty);
     return empty;
   }
@@ -73,12 +68,13 @@ const App = (() => {
   const _store = loadStore();
   let portfolio = _store.portfolio;
   let transactions = _store.transactions;
+  airdrops = Array.isArray(_store.airdrops) ? _store.airdrops : [];
   let storeVersion = _store.updatedAt || 0;
 
   // Guarda el estado actual (holdings + movimientos) tras cada edición.
   function persist() {
     storeVersion = Date.now();
-    saveStore({ portfolio, transactions, updatedAt: storeVersion });
+    saveStore({ portfolio, transactions, airdrops, updatedAt: storeVersion });
   }
 
   // Cada movimiento necesita un id estable para poder editar/borrar por fila.
@@ -590,6 +586,10 @@ const App = (() => {
 
     const ctx = document.getElementById('allocation-chart').getContext('2d');
     if (chartInstance) chartInstance.destroy();
+    if (segments.length === 0) {
+      chartInstance = null;
+      return;
+    }
 
     chartInstance = new Chart(ctx, {
       type: 'doughnut',
