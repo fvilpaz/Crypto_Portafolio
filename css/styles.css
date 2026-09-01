@@ -122,21 +122,21 @@ a:hover { text-decoration: underline; }
   #app-link .al-arrow { display: none; }
   #app-link { padding: 8px 10px; gap: 0; }
 
-  /* En vertical, la fila de acciones envuelve y el estado (texto + punto) baja
-     a su propia línea para que los botones no se descuadren. */
   .header-actions {
     flex-wrap: wrap;
     gap: 8px;
     justify-content: flex-end;
   }
-  .last-update {
-    order: 10;
-    flex-basis: 100%;
-    text-align: right;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+}
+
+/* Tira de estado de precios: bajo el hero, justo encima de las pestañas. */
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 12px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .currency-switch {
