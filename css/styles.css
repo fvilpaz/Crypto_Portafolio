@@ -121,6 +121,22 @@ a:hover { text-decoration: underline; }
   #app-link span,
   #app-link .al-arrow { display: none; }
   #app-link { padding: 8px 10px; gap: 0; }
+
+  /* En vertical, la fila de acciones envuelve y el estado (texto + punto) baja
+     a su propia línea para que los botones no se descuadren. */
+  .header-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+  .last-update {
+    order: 10;
+    flex-basis: 100%;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 .currency-switch {
