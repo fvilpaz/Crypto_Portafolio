@@ -101,6 +101,7 @@ const App = (() => {
   function persist() {
     storeVersion = Date.now();
     saveStore({ portfolio, transactions, updatedAt: storeVersion });
+    syncSchedulePush();   // si el sync está activo, sube al gist (debounced)
   }
 
   // Cada movimiento necesita un id estable para poder editar/borrar por fila.
@@ -1466,13 +1467,29 @@ const App = (() => {
 
   // Export/import COMPLETO en JSON: todo el estado (monedas con tags/ocultos/APR
   // + movimientos). Sirve para llevar tu cartera idéntica a otro dispositivo.
-  function exportState() {
-    const state = {
+  // Objeto de estado completo (lo comparten export a archivo y sync a Gist).
+  function buildState() {
+    return {
       schema: 'mi-cartera', version: 1,
       exportedAt: new Date().toISOString(),
+      updatedAt: storeVersion,   // para resolver conflictos: gana el más reciente
       portfolio, transactions,
     };
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json;charset=utf-8;' });
+  }
+
+  // Aplica un estado ya parseado (lo comparten import de archivo y pull del Gist).
+  // No persiste ni pide precios: eso lo decide quien llama.
+  function applyState(data) {
+    if (!data || !Array.isArray(data.portfolio) || !Array.isArray(data.transactions)) {
+      throw new Error('No es un backup de Mi Cartera (falta portfolio/transactions).');
+    }
+    portfolio = data.portfolio;
+    transactions = data.transactions;
+    normalizePortfolio(portfolio);
+  }
+
+  function exportState() {
+    const blob = new Blob([JSON.stringify(buildState(), null, 2)], { type: 'application/json;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1488,13 +1505,9 @@ const App = (() => {
     reader.onload = () => {
       try {
         const data = JSON.parse(reader.result);
-        if (!data || !Array.isArray(data.portfolio) || !Array.isArray(data.transactions)) {
-          throw new Error('No es un backup de Mi Cartera (falta portfolio/transactions).');
-        }
+        if (!Array.isArray(data?.portfolio)) throw new Error('No es un backup de Mi Cartera.');
         if (!confirm(`Se restaurará TODO: ${data.portfolio.length} monedas y ${data.transactions.length} movimientos (con tags, ocultos y APR). Reemplaza lo que tengas ahora. ¿Continuar?`)) return;
-        portfolio = data.portfolio;
-        transactions = data.transactions;
-        normalizePortfolio(portfolio);
+        applyState(data);
         persist();
         fetchPrices();   // precios en vivo tras restaurar
         alert(`Restaurado: ${portfolio.length} monedas y ${transactions.length} movimientos.`);
@@ -1503,6 +1516,184 @@ const App = (() => {
       }
     };
     reader.readAsText(file);
+  }
+
+  // ── SYNC ENTRE DISPOSITIVOS (Gist privado de GitHub) ──
+  // El "perfil" = un token de GitHub (solo permiso gists) guardado en ESTE
+  // navegador. El estado (mismo JSON del export) vive en un gist privado.
+  const SYNC_KEY = 'miCartera.sync';
+  const GIST_FILE = 'mi-cartera.json';
+  let pushTimer = null;
+
+  const getSync = () => {
+    try { return JSON.parse(localStorage.getItem(SYNC_KEY)) || {}; }
+    catch { return {}; }
+  };
+  const setSync = (obj) => localStorage.setItem(SYNC_KEY, JSON.stringify(obj));
+  const syncEnabled = () => !!getSync().token;
+  const gistHeaders = (token) => ({
+    'Authorization': `Bearer ${token}`,
+    'Accept': 'application/vnd.github+json',
+    'Content-Type': 'application/json',
+  });
+
+  function updateSyncStatus(kind, msg) {
+    const el = document.getElementById('sync-status');
+    if (el) {
+      const cfg = getSync();
+      const when = cfg.lastSync ? new Date(cfg.lastSync).toLocaleTimeString('es-ES') : '';
+      el.className = `sync-status ${kind}`;
+      el.textContent = kind === 'ok' ? `Sincronizado ${when ? '· ' + when : ''}`
+        : kind === 'error' ? `Error de sync: ${msg || ''}`
+        : kind === 'working' ? 'Sincronizando…'
+        : '';
+    }
+    const dot = document.getElementById('sync-btn');
+    if (dot) dot.classList.toggle('sync-on', syncEnabled());
+  }
+
+  // Aplica un estado que viene del gist SIN volver a empujarlo (evita ping-pong):
+  // conserva el updatedAt remoto y guarda en local sin programar push.
+  function applyRemote(data) {
+    applyState(data);
+    storeVersion = data.updatedAt || Date.now();
+    saveStore({ portfolio, transactions, updatedAt: storeVersion });
+  }
+
+  function syncSchedulePush() {
+    if (!syncEnabled()) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(() => { syncPush(); }, 1500);
+  }
+
+  async function syncPush() {
+    const cfg = getSync();
+    if (!cfg.token) return;
+    updateSyncStatus('working');
+    const content = JSON.stringify(buildState(), null, 2);
+    try {
+      const url = cfg.gistId ? `https://api.github.com/gists/${cfg.gistId}` : 'https://api.github.com/gists';
+      const res = await fetch(url, {
+        method: cfg.gistId ? 'PATCH' : 'POST',
+        headers: gistHeaders(cfg.token),
+        body: JSON.stringify({
+          description: 'Mi Cartera Crypto (sync)', public: false,
+          files: { [GIST_FILE]: { content } },
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const gist = await res.json();
+      setSync({ ...cfg, gistId: gist.id, lastSync: Date.now() });
+      updateSyncStatus('ok');
+    } catch (e) {
+      updateSyncStatus('error', e.message);
+    }
+  }
+
+  async function syncPull() {
+    const cfg = getSync();
+    if (!cfg.token || !cfg.gistId) return;
+    updateSyncStatus('working');
+    try {
+      const res = await fetch(`https://api.github.com/gists/${cfg.gistId}`, { headers: gistHeaders(cfg.token) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const gist = await res.json();
+      const file = gist.files?.[GIST_FILE];
+      if (!file) { updateSyncStatus('ok'); return; }
+      const content = file.truncated ? await (await fetch(file.raw_url)).text() : file.content;
+      const data = JSON.parse(content);
+      if ((data.updatedAt || 0) > storeVersion) {
+        applyRemote(data);
+        render();
+        fetchPrices();
+      }
+      setSync({ ...cfg, lastSync: Date.now() });
+      updateSyncStatus('ok');
+    } catch (e) {
+      updateSyncStatus('error', e.message);
+    }
+  }
+
+  // Conectar: guarda el token, busca un gist existente con nuestro archivo
+  // (para enganchar un segundo dispositivo) o crea uno nuevo con el estado local.
+  async function syncConnect(token) {
+    setSync({ token, gistId: null });
+    updateSyncStatus('working');
+    try {
+      const res = await fetch('https://api.github.com/gists?per_page=100', { headers: gistHeaders(token) });
+      if (res.status === 401) throw new Error('Token inválido (401).');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const gists = await res.json();
+      const found = gists.find(g => g.files && g.files[GIST_FILE]);
+      if (found) {
+        setSync({ token, gistId: found.id });
+        await syncPull();          // ya había datos en la nube → los bajamos
+      } else {
+        await syncPush();          // primer dispositivo → creamos el gist
+      }
+      return true;
+    } catch (e) {
+      updateSyncStatus('error', e.message);
+      throw e;
+    }
+  }
+
+  function syncDisconnect() {
+    localStorage.removeItem(SYNC_KEY);
+    clearTimeout(pushTimer);
+    updateSyncStatus('');
+  }
+
+  function openSyncModal() {
+    const cfg = getSync();
+    const connected = !!cfg.token;
+    const ov = document.createElement('div');
+    ov.className = 'modal-overlay open';
+    ov.innerHTML = `
+      <div class="modal" style="max-width:460px;">
+        <div class="add-modal-head">
+          <h3>Sync entre dispositivos</h3>
+          <button type="button" class="modal-close" aria-label="Cerrar">&times;</button>
+        </div>
+        <p style="color:var(--text-secondary);font-size:13px;line-height:1.5;margin:0 0 14px;">
+          Guarda tu cartera en un <strong>gist privado</strong> de GitHub para tenerla igual en todos tus dispositivos. Necesitas un token con permiso <strong>solo de gists</strong>.
+          <a href="https://github.com/settings/tokens" target="_blank" rel="noopener" style="color:var(--accent-blue);">Crear token</a>.
+        </p>
+        ${connected ? `
+          <div id="sync-status" class="sync-status ok"></div>
+          <div class="sync-actions">
+            <button type="button" id="sync-now-btn" class="add-submit">Sincronizar ahora</button>
+            <button type="button" id="sync-disconnect-btn" class="add-cancel">Desconectar</button>
+          </div>
+        ` : `
+          <label style="font-size:12px;color:var(--text-muted);">Token de GitHub</label>
+          <input type="password" id="sync-token" placeholder="ghp_..." autocomplete="off" class="sync-input">
+          <div id="sync-status" class="sync-status"></div>
+          <div class="sync-actions">
+            <button type="button" id="sync-connect-btn" class="add-submit">Conectar</button>
+            <button type="button" class="add-cancel modal-close">Cancelar</button>
+          </div>
+        `}
+      </div>`;
+    document.body.appendChild(ov);
+    const close = () => ov.remove();
+    ov.addEventListener('click', (e) => { if (e.target === ov || e.target.closest('.modal-close')) close(); });
+    updateSyncStatus(connected ? 'ok' : '');
+
+    const connectBtn = ov.querySelector('#sync-connect-btn');
+    if (connectBtn) connectBtn.addEventListener('click', async () => {
+      const token = ov.querySelector('#sync-token').value.trim();
+      if (!token) { updateSyncStatus('error', 'Pega un token.'); return; }
+      connectBtn.disabled = true;
+      try { await syncConnect(token); close(); openSyncModal(); }
+      catch { connectBtn.disabled = false; }
+    });
+    const nowBtn = ov.querySelector('#sync-now-btn');
+    if (nowBtn) nowBtn.addEventListener('click', async () => { await syncPull(); await syncPush(); });
+    const disBtn = ov.querySelector('#sync-disconnect-btn');
+    if (disBtn) disBtn.addEventListener('click', () => {
+      if (confirm('¿Desconectar el sync de este dispositivo? No borra el gist ni tus datos.')) { syncDisconnect(); close(); }
+    });
   }
 
   function importCsvFile(file) {
@@ -1629,15 +1820,6 @@ const App = (() => {
       if (row) openTokenModal(row.dataset.token);
     });
 
-    const refreshBtn = document.getElementById('refresh-btn');
-    if (refreshBtn) {
-      refreshBtn.addEventListener('click', async () => {
-        refreshBtn.classList.add('spinning');
-        await fetchPrices();
-        refreshBtn.classList.remove('spinning');
-      });
-    }
-
     document.getElementById('export-btn').addEventListener('click', async () => {
       const fmt = await pickFormat('Exportar', '¿Qué quieres exportar?');
       if (fmt === 'json') exportState();
@@ -1663,6 +1845,11 @@ const App = (() => {
 
     const resetBtn = document.getElementById('reset-btn');
     if (resetBtn) resetBtn.addEventListener('click', resetEverything);
+
+    const syncBtn = document.getElementById('sync-btn');
+    if (syncBtn) syncBtn.addEventListener('click', openSyncModal);
+    updateSyncStatus(syncEnabled() ? 'ok' : '');
+    if (syncEnabled()) syncPull();   // al arrancar, baja lo último de la nube
 
     const searchInput = document.getElementById('tx-search');
     if (searchInput) {
