@@ -250,20 +250,17 @@ const App = (() => {
 
   // URLs de precios (simple/price) o sparklines (coins/markets). La directa de
   // CoinGecko SIEMPRE va la primera: con la API key de js/config.js ya responde
-  // CORS desde el navegador (sin key la API gratis bloquea por CORS/429 y se cae
-  // al proxy). El proxy queda solo como respaldo. El _t= rompe cualquier caché.
+  // CORS desde el navegador, en cualquier sitio (GitHub Pages, Netlify, local).
+  // El proxy de Netlify queda solo de respaldo, con URL absoluta. El _t= rompe
+  // cualquier caché.
   const PROXY_LIVE = 'https://portafoliocrypto.netlify.app/.netlify/functions/coingecko';
 
-  // ── SINCRONIZACIÓN EN LA NUBE ──
-  // La cartera vive también en Netlify Blobs (netlify/functions/sync.js).
-  // Al abrir bajamos la nube (si está más actualizada) y cada edición la sube:
-  // así TODOS los dispositivos ven lo mismo, sin editar en cada uno. El
-  // localStorage queda como copia offline. Gana la versión con updatedAt mayor.
+  // ── SINCRONIZACIÓN EN LA NUBE (opcional) ──
+  // La función vive en Netlify (netlify/functions/sync.js). Si está desplegada,
+  // la cartera se comparte entre dispositivos; si no, la llamada falla en
+  // silencio y cada navegador usa su copia local. URL siempre absoluta.
   const SYNC_LIVE = 'https://portafoliocrypto.netlify.app/.netlify/functions/sync';
-  const syncUrl = () =>
-    location.protocol.startsWith('http') && /^(localhost|127\.0\.0\.1)$/.test(location.hostname)
-      ? SYNC_LIVE
-      : '/.netlify/functions/sync';
+  const syncUrl = () => SYNC_LIVE;
 
   let syncTimer = null;
   function cloudPush() {
@@ -315,11 +312,7 @@ const App = (() => {
       ? `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&sparkline=true&price_change_percentage=24h`
       : `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`) + key;
     const urls = [direct];
-    if (location.protocol.startsWith('http') && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
-      urls.push(`/.netlify/functions/coingecko?type=${type}&ids=${ids}`);
-    } else {
-      urls.push(`${PROXY_LIVE}?type=${type}&ids=${ids}`);
-    }
+    urls.push(`${PROXY_LIVE}?type=${type}&ids=${ids}`);
     return urls.map(u => u + (u.includes('?') ? '&' : '?') + '_t=' + Date.now());
   }
 
