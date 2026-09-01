@@ -3,3 +3,6 @@ MAS CRYPTO.xlsx
 
 # Sistema
 .DS_Store
+
+# Artefactos de pruebas con navegador (Playwright MCP)
+.playwright-mcp/

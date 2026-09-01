@@ -14,27 +14,25 @@ const App = (() => {
     ATOM: { name: 'Cosmos',   coingeckoId: 'cosmos',   icon: `${COINGECKO_IMG}/1481/small/cosmos_hub.png`, color: '#8c94a8', cssClass: 'atom' },
     TIA:  { name: 'Celestia', coingeckoId: 'celestia', icon: `${COINGECKO_IMG}/31967/small/tia.jpg`,       color: '#cd9eff', cssClass: 'tia' },
     USDC: { name: 'USD Coin', coingeckoId: 'usd-coin', icon: `${COINGECKO_IMG}/6319/small/usdc.png`,       color: '#2775ca', cssClass: 'usdc' },
+    PI:    { name: 'Pi Network', coingeckoId: 'pi-network', icon: `${COINGECKO_IMG}/54342/small/pi_network.jpg`, color: '#0ecb81', cssClass: 'pi' },
+    ATONE: { name: 'AtomOne', coingeckoId: 'atomone', icon: `${COINGECKO_IMG}/33230/small/atomone_200x200.jpg`, color: '#1e90ff', cssClass: 'atone' },
+    MODE:  { name: 'Mode', coingeckoId: 'mode', icon: `${COINGECKO_IMG}/34979/small/MODE.jpg`, color: '#f0b90b', cssClass: 'mode' },
   };
 
-  // Airdrops: apuntan a la moneda (precio en vivo de CoinGecko vía coingeckoId),
-  // pero SIN cantidades por defecto. El usuario los rellena cuando los tenga.
-  const airdrops = [
-    { token: 'PI', name: 'Pi Network', qty: 0, note: 'Bloqueado ~4 años', coingeckoId: 'pi-network', icon: `${COINGECKO_IMG}/54342/small/pi_network.jpg`, color: '#0ecb81', cssClass: 'pi' },
-    { token: 'ATONE', name: 'ATONE', qty: 0, note: 'Airdrop / staking', coingeckoId: 'atomone', icon: `${COINGECKO_IMG}/33230/small/atomone_200x200.jpg`, color: '#1e90ff', cssClass: 'atone' },
-    { token: 'MODE', name: 'Mode', qty: 0, note: 'Airdrop', coingeckoId: 'mode', icon: `${COINGECKO_IMG}/34979/small/MODE.jpg`, color: '#f0b90b', cssClass: 'mode' },
-  ];
+  // La cartera es UN SOLO monedero. Cada moneda lleva un tag:
+//   'portfolio' → cartera normal
+//   'staking'   → desviada al chart de staking
+//   'airdrop'   → desviada al chart de airdrops
+// Los filtros derivados reemplazan a los antiguos arrays fijos.
 
-  // Staking: apuntan a la moneda pero sin cantidades por defecto (se rellenan).
-  const staking = [
-    { token: 'ATOM', qty: 0, apr: 0, note: 'RE-STAKEAR (no aportar dinero nuevo)' },
-    { token: 'TIA', qty: 0, apr: 0, note: 'Mantener stakeado' },
-  ];
+  const getStakingAssets = () => portfolio.filter(a => a.tag === 'staking');
+  const getAirdropAssets = () => portfolio.filter(a => a.tag === 'airdrop');
 
   // Reparto de custodia: distribución fija, no son datos del usuario.
   const custody = [
-    { name: 'Bit2Me', type: 'Exchange regulado ES', pct: 0.333, color: '#f0b90b', purpose: 'Fiat / Hacienda' },
-    { name: 'Autocustodia', type: 'Claves propias', pct: 0.333, color: '#0ecb81', purpose: 'Largo plazo' },
-    { name: 'Bitget', type: 'Exchange earn', pct: 0.334, color: '#1e90ff', purpose: 'Earn / operativa' },
+    { name: 'Bit2Me', type: 'Exchange regulado ES', pct: 0.30, color: '#f0b90b', purpose: 'Fiat / Hacienda' },
+    { name: 'Autocustodia', type: 'Claves propias', pct: 0.40, color: '#0ecb81', purpose: 'Largo plazo' },
+    { name: 'Bitget', type: 'Exchange earn', pct: 0.30, color: '#1e90ff', purpose: 'Earn / operativa' },
   ];
 
   const cosmosTopPct = 0.35;
@@ -76,6 +74,25 @@ const App = (() => {
   let portfolio = _store.portfolio;
   let transactions = _store.transactions;
   let storeVersion = _store.updatedAt || 0;
+  let showHidden = false;   // mostrar temporalmente las monedas ocultas en la tabla
+
+  // Normaliza activos guardados: tag por defecto y, para monedas conocidas,
+  // refresca coingeckoId/icono/color desde el catálogo COINS. Esto corrige
+  // ids obsoletos guardados antes (p.ej. PI/MODE con id malo → precio 0€).
+  if (Array.isArray(portfolio)) {
+    portfolio.forEach(a => {
+      if (!a) return;
+      if (!a.tag) a.tag = 'portfolio';
+      const cat = COINS[a.token];
+      if (cat) {
+        a.coingeckoId = cat.coingeckoId;   // fuente de verdad del precio en vivo
+        if (!a.icon) a.icon = cat.icon;
+        if (!a.color) a.color = cat.color;
+        if (!a.cssClass) a.cssClass = cat.cssClass;
+        if (!a.name) a.name = cat.name;
+      }
+    });
+  }
 
   // Guarda el estado actual (holdings + movimientos) tras cada edición.
   function persist() {
@@ -121,13 +138,17 @@ const App = (() => {
     return sign + (n * 100).toFixed(2) + '%';
   };
 
+  // APR guardado como fracción (0.12) → texto '12.00%'. Único sitio del formato.
+  const fmtApr = (apr) => `${((apr || 0) * 100).toFixed(2)}%`;
+
   const pnlClass = (n) => n > 0 ? 'positive' : n < 0 ? 'negative' : 'neutral';
 
   function iconHtml(token, cssClass, size = 32) {
-    const all = [...portfolio, ...airdrops];
+    const all = portfolio;
     const asset = all.find(a => a.token === token) || COINS[token];
-    if (asset?.icon) {
-      return `<img src="${asset.icon}" alt="${token}" width="${size}" height="${size}" style="border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="token-icon ${cssClass}" style="display:none;width:${size}px;height:${size}px;font-size:${size * 0.38}px;">${token.substring(0, 2)}</div>`;
+    const icon = asset?.icon || COINS[token]?.icon;
+    if (icon) {
+      return `<img src="${icon}" alt="${token}" width="${size}" height="${size}" style="border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="token-icon ${cssClass}" style="display:none;width:${size}px;height:${size}px;font-size:${size * 0.38}px;">${token.substring(0, 2)}</div>`;
     }
     return `<div class="token-icon ${cssClass}" style="width:${size}px;height:${size}px;font-size:${size * 0.38}px;">${token.substring(0, 2)}</div>`;
   }
@@ -318,7 +339,7 @@ const App = (() => {
   // ── COINGECKO API ──
   // Se recalcula en cada llamada para que una moneda recién añadida (p.ej. USDC)
   // reciba precio en el siguiente tick sin necesidad de recargar.
-  const coingeckoIds = () => [...portfolio, ...airdrops]
+  const coingeckoIds = () => portfolio
     .filter(a => a.coingeckoId)
     .map(a => a.coingeckoId)
     .join(',');
@@ -338,7 +359,7 @@ const App = (() => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
-      [...portfolio, ...airdrops].forEach(asset => {
+      portfolio.forEach(asset => {
         if (data[asset.coingeckoId]) {
           prices[asset.token] = {
             price: data[asset.coingeckoId].usd,
@@ -360,7 +381,7 @@ const App = (() => {
       // Solo rellenamos con precio de compra los tokens que aún no tienen
       // NINGÚN precio (primera carga sin red). Si ya teníamos precio en vivo de
       // una vuelta anterior, lo conservamos en vez de pisarlo con el de compra.
-      [...portfolio, ...airdrops].forEach(asset => {
+      portfolio.forEach(asset => {
         if (!prices[asset.token]) {
           prices[asset.token] = { price: asset.avgPrice || asset.priceUsd || 0, change24h: 0 };
         }
@@ -398,15 +419,13 @@ const App = (() => {
   }
 
   function getTotalAirdropValue() {
-    return airdrops.reduce((sum, a) => sum + getAirdropValue(a), 0);
+    return getAirdropAssets().reduce((sum, a) => sum + getAirdropValue(a), 0);
   }
 
   function getTotalStakingIncomeYearly() {
-    return staking.reduce((sum, s) => {
-      const asset = portfolio.find(a => a.token === s.token);
-      if (!asset) return sum;
-      const p = prices[s.token]?.price || asset.avgPrice;
-      return sum + (s.qty * p * s.apr);
+    return getStakingAssets().reduce((sum, s) => {
+      const p = prices[s.token]?.price || s.avgPrice || 0;
+      return sum + (s.qty * p * (s.apr || 0));
     }, 0);
   }
 
@@ -435,7 +454,9 @@ const App = (() => {
   }
 
   function renderHero() {
-    const totalValue = getTotalPortfolioValue() + getTotalAirdropValue();
+    // portfolio ya incluye TODAS las monedas (también las tag staking/airdrop).
+    // NO sumar getTotalAirdropValue por encima: duplicaría los airdrops.
+    const totalValue = getTotalPortfolioValue();
     const totalCost = getTotalCost();
     const totalPnl = totalValue - totalCost;
     const totalPnlPct = totalCost > 0 ? totalPnl / totalCost : 0;
@@ -474,6 +495,13 @@ const App = (() => {
     cosmosCard.className = cosmosPct > cosmosTopPct ? 'card-value negative' : 'card-value';
 
     document.getElementById('card-staking').textContent = fmtCurrency(stakingMonthly);
+    const stakingSub = document.getElementById('card-staking-sub');
+    if (stakingSub) {
+      const st = getStakingAssets();
+      stakingSub.textContent = st.length
+        ? st.map(s => `${s.token} ${fmtApr(s.apr)}`).join(' + ')
+        : 'Sin staking';
+    }
     document.getElementById('card-airdrops').textContent = fmtCurrency(airdropVal);
   }
 
@@ -543,7 +571,12 @@ const App = (() => {
     const tbody = document.getElementById('asset-tbody');
     const total = getTotalPortfolioValue();
 
-    const sorted = [...portfolio].sort((a, b) => getAssetValue(b) - getAssetValue(a));
+    const hiddenCount = portfolio.filter(a => a.hidden).length;
+    const visible = portfolio.filter(a => showHidden || !a.hidden);
+
+    const badge = document.getElementById('asset-count-badge');
+    if (badge) badge.textContent = `${portfolio.length} activo${portfolio.length === 1 ? '' : 's'}`;
+    const sorted = [...visible].sort((a, b) => getAssetValue(b) - getAssetValue(a));
 
     tbody.innerHTML = sorted.map((asset, i) => {
       const p = prices[asset.token]?.price || asset.avgPrice;
@@ -554,12 +587,12 @@ const App = (() => {
       const weight = total > 0 ? value / total : 0;
 
       return `
-        <tr data-token="${asset.token}" class="fade-in-up" style="cursor:pointer;animation-delay:${i * 0.06}s">
+        <tr data-token="${asset.token}" class="fade-in-up" style="cursor:pointer;animation-delay:${i * 0.06}s;${asset.hidden ? 'opacity:0.45;' : ''}">
           <td>
             <div class="token-cell">
               ${iconHtml(asset.token, asset.cssClass)}
               <div>
-                <div class="token-name">${asset.name}</div>
+                <div class="token-name">${asset.name}${asset.hidden ? ' <span class="hidden-tag">oculta</span>' : ''}</div>
                 <div class="token-symbol">${asset.token}</div>
               </div>
             </div>
@@ -576,22 +609,30 @@ const App = (() => {
       `;
     }).join('');
 
+    if (hiddenCount > 0) {
+      tbody.innerHTML += `
+        <tr class="asset-hidden-toggle">
+          <td colspan="9" style="text-align:center;padding:12px;">
+            <button type="button" id="toggle-hidden-btn" class="link-btn">
+              ${showHidden ? 'Ocultar de nuevo' : `Ver ${hiddenCount} moneda${hiddenCount > 1 ? 's' : ''} oculta${hiddenCount > 1 ? 's' : ''}`}
+            </button>
+          </td>
+        </tr>`;
+      const tbtn = document.getElementById('toggle-hidden-btn');
+      if (tbtn) tbtn.addEventListener('click', () => { showHidden = !showHidden; renderAssetTable(); });
+    }
+
     setTimeout(drawSparklines, 50);
   }
 
   function renderAllocation() {
-    const total = getTotalPortfolioValue() + getTotalAirdropValue();
-
-    const segments = portfolio.map(a => ({
+    const segments = portfolio.filter(a => !a.hidden).map(a => ({
       token: a.token, value: getAssetValue(a), color: a.color,
     }));
 
-    airdrops.forEach(a => {
-      const v = getAirdropValue(a);
-      if (v > 0) segments.push({ token: a.token, value: v, color: a.color });
-    });
-
     segments.sort((a, b) => b.value - a.value);
+
+    const total = segments.reduce((sum, s) => sum + s.value, 0);
 
     const ctx = document.getElementById('allocation-chart').getContext('2d');
     if (chartInstance) chartInstance.destroy();
@@ -681,7 +722,7 @@ const App = (() => {
 
     if (evolutionChart) evolutionChart.destroy();
 
-    const totalNow = (getTotalPortfolioValue() + getTotalAirdropValue());
+    const totalNow = getTotalPortfolioValue();   // ya incluye airdrops/staking; no re-sumar
     const currentVal = currency === 'EUR' ? totalNow * EUR_USD : totalNow;
 
     evolutionChart = new Chart(ctx, {
@@ -741,9 +782,14 @@ const App = (() => {
   }
 
   function renderStaking() {
-    document.getElementById('staking-grid').innerHTML = staking.map((s, i) => {
-      const asset = portfolio.find(a => a.token === s.token);
-      const p = prices[s.token]?.price || asset?.avgPrice || 0;
+    const stakingAssets = getStakingAssets();
+    if (stakingAssets.length === 0) {
+      document.getElementById('staking-grid').innerHTML =
+        '<div class="empty-state">Sin monedas en staking. Marca una moneda como Staking desde su ficha.</div>';
+      return;
+    }
+    document.getElementById('staking-grid').innerHTML = stakingAssets.map((s, i) => {
+      const p = prices[s.token]?.price || s.avgPrice || 0;
       const yearlyIncome = s.qty * p * s.apr;
       const monthlyIncome = yearlyIncome / 12;
 
@@ -751,10 +797,10 @@ const App = (() => {
         <div class="staking-card fade-in-up" style="animation-delay:${i * 0.08}s">
           <div class="staking-card-header">
             <div class="token-info">
-              ${iconHtml(s.token, asset?.cssClass || '', 32)}
+              ${iconHtml(s.token, s.cssClass || '', 32)}
               <span class="token-name">${s.token} Staking</span>
             </div>
-            <span class="staking-apr">${(s.apr * 100).toFixed(2)}% APR</span>
+            <span class="staking-apr">${fmtApr(s.apr)} APR</span>
           </div>
           <div class="staking-stats">
             <div>
@@ -774,14 +820,20 @@ const App = (() => {
               <div class="staking-stat-value positive">${fmtCurrency(monthlyIncome)}</div>
             </div>
           </div>
-          <div style="margin-top:12px;font-size:12px;color:var(--text-muted);">${s.note}</div>
+          <div style="margin-top:12px;font-size:12px;color:var(--text-muted);">${s.note || ''}</div>
         </div>
       `;
     }).join('');
   }
 
   function renderAirdrops() {
-    document.getElementById('airdrop-tbody').innerHTML = airdrops.map(a => {
+    const airdropAssets = getAirdropAssets();
+    const tbody = document.getElementById('airdrop-tbody');
+    if (airdropAssets.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);">Sin airdrops. Marca una moneda como Airdrop desde su ficha.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = airdropAssets.map((a, i) => {
       const price = prices[a.token]?.price || 0;
       const value = getAirdropValue(a);
       return `
@@ -798,7 +850,7 @@ const App = (() => {
           <td class="text-right">${fmt(a.qty, 0)}</td>
           <td class="text-right">${fmtCurrency(price)}</td>
           <td class="text-right">${fmtCurrency(value)}</td>
-          <td style="color:var(--text-muted);font-size:12px;">${a.note}</td>
+          <td style="color:var(--text-muted);font-size:12px;">${a.note || ''}</td>
         </tr>
       `;
     }).join('');
@@ -812,7 +864,10 @@ const App = (() => {
     document.getElementById('custody-legend').innerHTML = custody.map(c =>
       `<div class="custody-legend-item">
         <div class="custody-legend-dot" style="background:${c.color}"></div>
-        <span><strong>${c.name}</strong> — ${c.purpose}</span>
+        <div class="custody-legend-text">
+          <span class="custody-legend-name">${c.name}</span>
+          <span class="custody-legend-purpose">${c.purpose}</span>
+        </div>
       </div>`
     ).join('');
   }
@@ -830,7 +885,7 @@ const App = (() => {
     }
 
     tbody.innerHTML = filtered.slice(0, 20).map(tx => {
-      const allAssets = [...portfolio, ...airdrops];
+      const allAssets = portfolio;
       const txAsset = allAssets.find(a => a.token === tx.token);
       return `
       <tr>
@@ -938,8 +993,7 @@ const App = (() => {
       ? txs.reduce((s, tx) => s + (tx.price * tx.qty), 0) / asset.qty
       : asset.avgPrice;
 
-    const stakingInfo = staking.find(s => s.token === token);
-    const yearlyIncome = stakingInfo ? stakingInfo.qty * p * stakingInfo.apr : 0;
+    const yearlyIncome = asset.tag === 'staking' ? asset.qty * p * (asset.apr || 0) : 0;
 
     const buyVsNow = p > 0 ? ((p - avgBuy) / avgBuy) * 100 : 0;
 
@@ -988,6 +1042,18 @@ const App = (() => {
       </div>
 
       <div class="modal-section">
+        <div class="modal-section-label">Categoría</div>
+        <div class="modal-tag-selector">
+          <button class="tag-btn ${asset.tag === 'portfolio' ? 'active tag-portfolio' : ''}" data-tag="portfolio">Cartera</button>
+          <button class="tag-btn ${asset.tag === 'staking' ? 'active tag-staking' : ''}" data-tag="staking">Staking</button>
+          <button class="tag-btn ${asset.tag === 'airdrop' ? 'active tag-airdrop' : ''}" data-tag="airdrop">Airdrop</button>
+        </div>
+        <div class="modal-tag-hint" id="tag-hint">${asset.tag === 'staking' ? `APR ${fmtApr(asset.apr)} · se desvía al chart de staking` : asset.tag === 'airdrop' ? 'Se desvía al chart de airdrops' : 'Cuenta dentro del portfolio general'}</div>
+        <button type="button" id="hide-btn" class="hide-btn">${asset.hidden ? 'Mostrar en la cartera' : 'Ocultar de la cartera'}</button>
+        <div class="modal-tag-hint">Ocultar solo esconde la moneda de la lista y del gráfico. No cambia el valor total de la cartera.</div>
+      </div>
+
+      <div class="modal-section">
         <div class="modal-section-label">Coste</div>
         <div class="modal-grid-2">
           <div class="modal-stat-card">
@@ -1014,17 +1080,17 @@ const App = (() => {
         </div>
       </div>
 
-      ${stakingInfo ? `
+      ${asset.tag === 'staking' ? `
         <div class="modal-section">
           <div class="modal-section-label">Staking</div>
           <div class="modal-grid-3">
             <div class="modal-stat-card">
               <div class="modal-stat-label">Stakeado</div>
-              <div class="modal-stat-big">${fmt(stakingInfo.qty, 0)} ${token}</div>
+              <div class="modal-stat-big">${fmt(asset.qty, 0)} ${token}</div>
             </div>
             <div class="modal-stat-card">
               <div class="modal-stat-label">APR</div>
-              <div class="modal-stat-big positive">${(stakingInfo.apr * 100).toFixed(2)}%</div>
+              <div class="modal-stat-big positive">${fmtApr(asset.apr)}</div>
             </div>
             <div class="modal-stat-card">
               <div class="modal-stat-label">Ingreso / año</div>
@@ -1032,7 +1098,7 @@ const App = (() => {
               <div class="modal-stat-sub">${fmtCurrency(yearlyIncome / 12)}/mes</div>
             </div>
           </div>
-          <div class="modal-staking-note">${stakingInfo.note}</div>
+          ${asset.note ? `<div class="modal-staking-note">${asset.note}</div>` : ''}
         </div>
       ` : ''}
 
@@ -1063,6 +1129,33 @@ const App = (() => {
     document.getElementById('modal-close-btn').addEventListener('click', closeModal);
     modal.addEventListener('click', (e) => {
       if (e.target === modal) closeModal();
+    });
+
+    document.querySelectorAll('.tag-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const newTag = btn.dataset.tag;
+        if (newTag === asset.tag) return;
+        let apr = asset.apr || 0;
+        if (newTag === 'staking') {
+          const input = prompt(`Introduce el APR de ${token} (en %, solo número, p.ej. 12.5):`, ((asset.apr || 0) * 100));
+          if (input === null) return;
+          const parsed = parseFloat(String(input).replace(',', '.'));
+          apr = (isNaN(parsed) || parsed < 0) ? 0 : parsed / 100;
+        }
+        asset.tag = newTag;
+        asset.apr = apr;
+        persist();
+        closeModal();
+        render();
+      });
+    });
+
+    const hideBtn = document.getElementById('hide-btn');
+    if (hideBtn) hideBtn.addEventListener('click', () => {
+      asset.hidden = !asset.hidden;
+      persist();
+      closeModal();
+      render();
     });
 
     drawModalSparkline(token, asset.color);
@@ -1156,6 +1249,17 @@ const App = (() => {
       : '';
   }
 
+  // Recompensa (staking/airdrop) = monedas gratis: solo cantidad, coste 0€.
+  // Oculta el importe y avisa. Compra/Venta muestran el importe normal.
+  function updateTypeUI() {
+    const isReward = addState.type === 'Recompensa';
+    const amountField = document.getElementById('add-amount-field');
+    if (amountField) amountField.style.display = isReward ? 'none' : '';
+    const priceLive = document.getElementById('add-price-live');
+    if (isReward && priceLive) priceLive.textContent = 'Recompensa: monedas gratis a 0€ (solo suma cantidad, no cuenta como invertido).';
+    else renderAddPrice();
+  }
+
   // Metes € → calcula la cantidad. Metes cantidad → calcula los €. (Precio en vivo.)
   function onAmountInput() {
     const pe = addPriceEur();
@@ -1173,34 +1277,44 @@ const App = (() => {
   // Aplica el efecto de un movimiento sobre las tenencias.
   function applyMovement(tx) {
     const h = portfolio.find(a => a.token === tx.token);
-    if (tx.type === 'Compra') {
-      if (h) { h.qty += tx.qty; h.costUsd += tx.totalUsd; h.avgPrice = h.costUsd / h.qty; }
-      else {
-        const m = COINS[tx.token] || {};
-        portfolio.push({ token: tx.token, name: m.name || tx.token, qty: tx.qty, costUsd: tx.totalUsd, avgPrice: tx.price, coingeckoId: m.coingeckoId, icon: m.icon, color: m.color, cssClass: m.cssClass });
-      }
-    } else { // Venta
+    if (tx.type === 'Venta') {
       if (!h) return;
       h.qty -= tx.qty;
       if (h.qty <= 1e-9) portfolio = portfolio.filter(a => a.token !== tx.token);
       else h.costUsd = h.avgPrice * h.qty;
+      return;
+    }
+    // Compra, Airdrop o cualquier ENTRADA de monedas: suma a la tenencia.
+    // Un airdrop trae coste 0 (moneda gratis) pero es una tenencia real.
+    if (h) {
+      h.qty += tx.qty;
+      h.costUsd += tx.totalUsd;
+      h.avgPrice = h.qty > 0 ? h.costUsd / h.qty : 0;
+    } else {
+      const m = COINS[tx.token] || {};
+      portfolio.push({
+        token: tx.token, name: m.name || tx.token, qty: tx.qty,
+        costUsd: tx.totalUsd, avgPrice: tx.price || 0,
+        coingeckoId: m.coingeckoId, icon: m.icon, color: m.color, cssClass: m.cssClass,
+        tag: 'portfolio',
+      });
     }
   }
 
   // Deshace el efecto (para borrar o editar un movimiento).
   function reverseMovement(tx) {
     const h = portfolio.find(a => a.token === tx.token);
-    if (tx.type === 'Compra') {
-      if (!h) return;
-      h.qty -= tx.qty; h.costUsd -= tx.totalUsd;
-      if (h.qty <= 1e-9) portfolio = portfolio.filter(a => a.token !== tx.token);
-      else h.avgPrice = h.costUsd / h.qty;
-    } else { // revertir una Venta = devolver
+    if (tx.type === 'Venta') { // revertir una Venta = devolver las monedas
       if (h) { h.qty += tx.qty; h.costUsd = h.avgPrice * h.qty; }
       else {
         const m = COINS[tx.token] || {};
         portfolio.push({ token: tx.token, name: m.name || tx.token, qty: tx.qty, costUsd: tx.price * tx.qty, avgPrice: tx.price, coingeckoId: m.coingeckoId, icon: m.icon, color: m.color, cssClass: m.cssClass });
       }
+    } else { // revertir Compra/Airdrop = quitar las monedas
+      if (!h) return;
+      h.qty -= tx.qty; h.costUsd -= tx.totalUsd;
+      if (h.qty <= 1e-9) portfolio = portfolio.filter(a => a.token !== tx.token);
+      else h.avgPrice = h.qty > 0 ? h.costUsd / h.qty : 0;
     }
   }
 
@@ -1217,6 +1331,7 @@ const App = (() => {
     renderAddPrice();
     updateEffective();
     document.querySelectorAll('#add-type button').forEach(b => b.classList.toggle('active', b.dataset.type === addState.type));
+    updateTypeUI();
     document.getElementById('add-modal').classList.add('open');
     document.body.style.overflow = 'hidden';
   }
@@ -1237,14 +1352,20 @@ const App = (() => {
     const date = document.getElementById('add-date').value;
     const qty = parseNum(document.getElementById('add-qty').value);
     const amountEur = parseNum(document.getElementById('add-amount').value);
+    const isReward = type === 'Recompensa';
 
-    if (!date || !(qty > 0) || !(amountEur > 0)) {
-      errEl.textContent = 'Rellena fecha, cantidad e importe (mayores que 0).';
+    if (!date || !(qty > 0)) {
+      errEl.textContent = 'Rellena fecha y cantidad (mayores que 0).';
+      return;
+    }
+    if (!isReward && !(amountEur > 0)) {
+      errEl.textContent = 'Rellena el importe (mayor que 0).';
       return;
     }
 
-    const totalUsd = amountEur / EUR_USD;   // € → $ (la cartera calcula en USD)
-    const priceUsd = totalUsd / qty;
+    // Recompensa = monedas gratis: coste 0€, sin precio de compra.
+    const totalUsd = isReward ? 0 : amountEur / EUR_USD;   // € → $ (la cartera calcula en USD)
+    const priceUsd = isReward ? 0 : totalUsd / qty;
 
     // Si editamos, revertimos primero el movimiento viejo.
     let oldIdx = -1, oldTx = null;
@@ -1347,7 +1468,9 @@ const App = (() => {
         });
         transactions = byDate;
         persist();
-        render();
+        // Pide precios en vivo tras importar: si no, el P&L parte de los precios
+        // de compra (cambio 0 → "$0.00 +0.00%") hasta que pulses refrescar a mano.
+        fetchPrices();
         alert(`Importación completada: ${parsed.length} movimientos.`);
       } catch (e) {
         alert('Error al importar: ' + e.message);
@@ -1385,18 +1508,29 @@ const App = (() => {
       '¿Continuar?'
     );
     if (!ok) return;
+    // Cada paso de limpieza va aislado: si uno falla (SW/caché en mal estado o
+    // bajo file://), NO debe impedir el reload final. Antes, un throw aquí dejaba
+    // el localStorage borrado pero la vista intacta hasta pulsar F5 a mano.
     try {
       localStorage.removeItem(STORE_KEY);
     } catch (e) {
       console.warn('No se pudo limpiar localStorage:', e);
     }
-    if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations();
-      regs.forEach((r) => r.unregister());
+    try {
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        regs.forEach((r) => r.unregister());
+      }
+    } catch (e) {
+      console.warn('No se pudo desregistrar el service worker:', e);
     }
-    if ('caches' in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((k) => caches.delete(k)));
+    try {
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      }
+    } catch (e) {
+      console.warn('No se pudo limpiar la caché:', e);
     }
     location.reload();
   }
@@ -1487,6 +1621,7 @@ const App = (() => {
       if (!b) return;
       addState.type = b.dataset.type;
       document.querySelectorAll('#add-type button').forEach(x => x.classList.toggle('active', x === b));
+      updateTypeUI();
     });
     document.getElementById('add-qty').addEventListener('input', onQtyInput);
     document.getElementById('add-amount').addEventListener('input', onAmountInput);
@@ -1508,7 +1643,7 @@ document.addEventListener('DOMContentLoaded', App.init);
 // ═══════════════════════════════════════════════════════════════
 // PWA — registro del service worker (instalable en móvil)
 // ═══════════════════════════════════════════════════════════════
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   const localOnly = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
   window.addEventListener('load', () => {
     if (localOnly) {
