@@ -1407,6 +1407,33 @@ const App = (() => {
     return out;
   }
 
+  // Restaura la app a cero: borra los movimientos de ESTE navegador, el service
+  // worker y toda la caché del service worker (para que un deploy o archivos
+  // nuevos no se queden atascados sirviendo la versión vieja).
+  async function resetEverything() {
+    const ok = confirm(
+      '¿Restaurar la app?\n\n' +
+      'Se borrarán TODOS los movimientos y datos guardados en ESTE navegador.\n' +
+      'También se elimina el service worker y su caché (adiós a cargar versiones viejas).\n\n' +
+      '¿Continuar?'
+    );
+    if (!ok) return;
+    try {
+      localStorage.removeItem(STORE_KEY);
+    } catch (e) {
+      console.warn('No se pudo limpiar localStorage:', e);
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      regs.forEach((r) => r.unregister());
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+    location.reload();
+  }
+
   // ── INIT ──
   async function init() {
     renderSkeletons();
@@ -1441,6 +1468,9 @@ const App = (() => {
       if (f) importCsvFile(f);
       e.target.value = '';
     });
+
+    const resetBtn = document.getElementById('reset-btn');
+    if (resetBtn) resetBtn.addEventListener('click', resetEverything);
 
     const searchInput = document.getElementById('tx-search');
     if (searchInput) {
