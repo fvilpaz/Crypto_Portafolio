@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-cartera-v2';
+const CACHE_NAME = 'mi-cartera-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -32,6 +32,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return; // deja pasar CDN + API externa
+  // Las funciones (proxy de precios) NUNCA se cachean en el SW: siempre a red,
+  // para que su propia caché de CDN (60s) mande y no sirvamos precios viejos.
+  if (url.pathname.startsWith('/.netlify/functions/')) return;
 
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
