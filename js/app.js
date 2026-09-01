@@ -110,9 +110,7 @@ const App = (() => {
     if (n === null || n === undefined || isNaN(n)) return '—';
     const symbol = currency === 'USD' ? '$' : '€';
     const value = currency === 'EUR' ? n * EUR_USD : n;
-    if (Math.abs(value) >= 1) return symbol + fmt(value);
-    if (Math.abs(value) >= 0.01) return symbol + fmt(value, 4);
-    return symbol + fmt(value, 6);
+    return symbol + fmt(value);
   };
 
   const fmtPct = (n) => {
