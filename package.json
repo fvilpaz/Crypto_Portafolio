@@ -1,9 +1,0 @@
-{
-  "name": "mi-cartera-crypto",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Portfolio tracker personal (PWA de Mi Cartera Crypto).",
-  "dependencies": {
-    "@netlify/blobs": "^8.1.0"
-  }
-}

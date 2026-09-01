@@ -32,9 +32,6 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return; // deja pasar CDN + API externa
-  // Las funciones (proxy de precios) NUNCA se cachean en el SW: siempre a red,
-  // para que los precios lleguen frescos y no sirvamos datos viejos.
-  if (url.pathname.startsWith('/.netlify/functions/')) return;
 
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
