@@ -242,6 +242,7 @@ const App = (() => {
   async function fetchSparklines() {
     try {
       const ids = portfolio.map(a => a.coingeckoId).join(',');
+      if (!ids) return;
       const urls = coingeckoUrls('markets', ids);
       const res = await fetchCoinGecko(urls);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -321,7 +322,15 @@ const App = (() => {
 
   async function fetchPrices() {
     try {
-      const urls = coingeckoUrls('price', coingeckoIds());
+      const ids = coingeckoIds();
+      if (!ids) {
+        // No hay nada en cartera: sin llamada a la API, render vacío limpio.
+        setLiveState(true);
+        updateLastUpdate();
+        render();
+        return;
+      }
+      const urls = coingeckoUrls('price', ids);
       const res = await fetchCoinGecko(urls);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -362,6 +371,7 @@ const App = (() => {
 
   // ── CÁLCULOS ──
   function getAssetValue(asset) {
+    if (!asset) return 0;
     const p = prices[asset.token]?.price || asset.avgPrice;
     return asset.qty * p;
   }
