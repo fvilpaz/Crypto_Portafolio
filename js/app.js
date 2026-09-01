@@ -207,56 +207,10 @@ const App = (() => {
   // cualquier caché.
   const PROXY_LIVE = 'https://portafoliocrypto.netlify.app/.netlify/functions/coingecko';
 
-  // ── SINCRONIZACIÓN EN LA NUBE (opcional) ──
-  // La función vive en Netlify (netlify/functions/sync.js). Si está desplegada,
-  // la cartera se comparte entre dispositivos; si no, la llamada falla en
-  // silencio y cada navegador usa su copia local. URL siempre absoluta.
-  const SYNC_LIVE = 'https://portafoliocrypto.netlify.app/.netlify/functions/sync';
-  const syncUrl = () => SYNC_LIVE;
-
-  let syncTimer = null;
-  function cloudPush() {
-    clearTimeout(syncTimer);
-    syncTimer = setTimeout(async () => {
-      try {
-        await fetch(syncUrl(), {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'x-sync-token': SYNC_TOKEN },
-          body: JSON.stringify({ portfolio, transactions, updatedAt: storeVersion }),
-          cache: 'no-store',
-        });
-      } catch (e) {
-        console.warn('No se pudo subir la cartera a la nube:', e);
-      }
-    }, 600);
-  }
-
-  async function cloudPull() {
-    try {
-      const res = await fetch(syncUrl(), {
-        headers: { 'x-sync-token': SYNC_TOKEN },
-        cache: 'no-store',
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (!data || data.empty || !Array.isArray(data.portfolio) || !Array.isArray(data.transactions)) {
-        // Nube vacía: sembramos con nuestra copia local (el conflicto lo
-        // resolverá updatedAt si otra copia más actual la pisa luego).
-        cloudPush();
-        return;
-      }
-      if ((data.updatedAt || 0) > storeVersion) {
-        portfolio = data.portfolio;
-        transactions = data.transactions;
-        storeVersion = data.updatedAt || 0;
-        saveStore({ portfolio, transactions, updatedAt: storeVersion });
-      } else if (storeVersion > (data.updatedAt || 0)) {
-        cloudPush(); // la copia local es más nueva → la subimos
-      }
-    } catch (e) {
-      console.warn('No se pudo descargar de la nube:', e);
-    }
-  }
+  // Sincronización en la nube retirada: la copia de seguridad vive solo en el
+  // localStorage de cada navegador. No hay llamadas de red extra.
+  const cloudPush = () => {};
+  async function cloudPull() {}
 
   function coingeckoUrls(type, ids) {
     const key = COINGECKO_API_KEY ? `&${COINGECKO_API_PARAM}=${COINGECKO_API_KEY}` : '';
@@ -1531,10 +1485,6 @@ const App = (() => {
     document.getElementById('add-qty').addEventListener('input', onQtyInput);
     document.getElementById('add-amount').addEventListener('input', onAmountInput);
     document.getElementById('add-form').addEventListener('submit', submitAdd);
-
-    // Sincroniza con la nube antes del primer render (con tope de 4 s para no
-    // retrasar la app si la función tarda o no hay red).
-    await Promise.race([cloudPull(), new Promise((r) => setTimeout(r, 4000))]);
 
     await fetchPrices();
     refreshInterval = setInterval(fetchPrices, 60000);
