@@ -1591,7 +1591,7 @@ const App = (() => {
   function applyRemote(data) {
     applyState(data);
     storeVersion = data.updatedAt || Date.now();
-    saveStore({ portfolio, transactions, updatedAt: storeVersion });
+    saveStore({ portfolio, transactions, settings, updatedAt: storeVersion });
   }
 
   function syncSchedulePush() {
