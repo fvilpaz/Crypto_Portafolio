@@ -37,6 +37,16 @@ const App = (() => {
 
   const cosmosTopPct = 0.35;
   const DEFAULT_DCA_TARGET = 175;   // objetivo DCA inicial en €, hasta que lo edites
+  const DEFAULT_DEFENSE_TARGET = 20;   // objetivo de refugio (USDC) en % de la cartera
+
+  // Plantillas de reparto del dinero nuevo: % que va a Refugio / Núcleo / Satélites.
+  const STRATEGIES = {
+    conservadora: { refugio: 50, core: 35, satelites: 15 },
+    moderada:     { refugio: 30, core: 50, satelites: 20 },
+    agresiva:     { refugio: 15, core: 60, satelites: 25 },
+  };
+  const DEFAULT_STRATEGY = 'moderada';
+  const CORE_SPLIT = { BTC: 0.6, ETH: 0.4 };   // objetivo interno del núcleo (BTC primero)
 
   // ── PERSISTENCIA (localStorage) ──
   // La cartera, los movimientos y los airdrops viven SOLO en el navegador.
@@ -74,7 +84,7 @@ const App = (() => {
   const _store = loadStore();
   let portfolio = _store.portfolio;
   let transactions = _store.transactions;
-  let settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET }, _store.settings || {});   // dcaTarget en €
+  let settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, strategy: DEFAULT_STRATEGY }, _store.settings || {});   // dcaTarget en €, defenseTarget en %, strategy = plantilla de reparto
   let storeVersion = _store.updatedAt || 0;
   let showHidden = false;   // mostrar temporalmente las monedas ocultas en la tabla
   let pendingImportFormat = null;   // 'json' | 'csv' elegido antes de abrir el file picker
@@ -428,6 +438,13 @@ const App = (() => {
     return getAirdropAssets().reduce((sum, a) => sum + getAirdropValue(a), 0);
   }
 
+  // Base de reparto: capital invertido (todo menos airdrops, que son coste 0 y
+  // "dinero gratis"). Los cubos (Núcleo/Satélites/Refugio) se miden sobre esto
+  // para que sumen 100% y sean coherentes.
+  function getInvestedValue() {
+    return portfolio.filter(a => a.tag !== 'airdrop').reduce((sum, a) => sum + getAssetValue(a), 0);
+  }
+
   function getTotalStakingIncomeYearly() {
     return getStakingAssets().reduce((sum, s) => {
       const p = prices[s.token]?.price || s.avgPrice || 0;
@@ -436,17 +453,18 @@ const App = (() => {
   }
 
   function getCosmosPct() {
-    const total = getTotalPortfolioValue();
-    if (total === 0) return 0;
+    const invested = getInvestedValue();
+    if (invested === 0) return 0;
     const atomVal = getAssetValue(portfolio.find(a => a.token === 'ATOM'));
     const tiaVal = getAssetValue(portfolio.find(a => a.token === 'TIA'));
-    return (atomVal + tiaVal) / total;
+    return (atomVal + tiaVal) / invested;
   }
 
   // ── RENDER ──
   function render() {
     renderHero();
     renderCards();
+    renderReparto();
     renderDcaSummary();
     renderCosmosBar();
     renderAssetTable();
@@ -488,27 +506,161 @@ const App = (() => {
   }
 
   function renderCards() {
-    const total = getTotalPortfolioValue();
-    const btcEth = getAssetValue(portfolio.find(a => a.token === 'BTC')) + getAssetValue(portfolio.find(a => a.token === 'ETH'));
+    const total = getInvestedValue();   // base de cubos: capital invertido, sin airdrops (suman 100%)
+    const btcAsset = portfolio.find(a => a.token === 'BTC');
+    const ethAsset = portfolio.find(a => a.token === 'ETH');
+    const btcEth = getAssetValue(btcAsset) + getAssetValue(ethAsset);
+    const coreCost = (btcAsset?.costUsd || 0) + (ethAsset?.costUsd || 0);
+    const corePnlPct = coreCost > 0 ? (btcEth - coreCost) / coreCost : 0;
+    const coreWeight = total > 0 ? btcEth / total : 0;
     const cosmosPct = getCosmosPct();
     const stakingMonthly = getTotalStakingIncomeYearly() / 12;
-    const airdropVal = getTotalAirdropValue();
 
-    document.getElementById('card-btceth-pct').textContent = fmtPct(btcEth / total);
-    document.getElementById('card-cosmos-pct').textContent = fmtPct(cosmosPct);
-
-    const cosmosCard = document.getElementById('card-cosmos-pct');
-    cosmosCard.className = cosmosPct > cosmosTopPct ? 'card-value negative' : 'card-value';
-
-    document.getElementById('card-staking').textContent = fmtCurrency(stakingMonthly);
-    const stakingSub = document.getElementById('card-staking-sub');
-    if (stakingSub) {
-      const st = getStakingAssets();
-      stakingSub.textContent = st.length
-        ? st.map(s => `${s.token} ${fmtApr(s.apr)}`).join(' + ')
+    // Núcleo: peso en la cartera (dónde está repartido el dinero), NO ganancia.
+    document.getElementById('card-btceth-pct').textContent = `${(coreWeight * 100).toFixed(1)}%`;
+    const btcEthBar = document.getElementById('btceth-bar-fill');
+    if (btcEthBar) btcEthBar.style.width = `${Math.min(coreWeight * 100, 100)}%`;
+    const iconsEl = document.getElementById('btceth-icons');
+    if (iconsEl && !iconsEl.childElementCount) iconsEl.innerHTML = iconHtml('BTC', 'btc', 30) + iconHtml('ETH', 'eth', 30);
+    const btcEthSub = document.getElementById('card-btceth-sub');
+    if (btcEthSub) {
+      btcEthSub.innerHTML = `${fmtCurrency(btcEth)} · <span class="${pnlClass(corePnlPct)}">${fmtPct(corePnlPct).replace('+', '')} acum.</span>`;
+    }
+    // Satélites (Cosmos ATOM+TIA): peso + tope + la renta de staking que generan.
+    const cosmosNum = document.getElementById('card-cosmos-pct');
+    cosmosNum.textContent = `${(cosmosPct * 100).toFixed(1)}%`;
+    cosmosNum.classList.toggle('negative', cosmosPct > cosmosTopPct);
+    const cosmosIconsEl = document.getElementById('cosmos-icons');
+    if (cosmosIconsEl && !cosmosIconsEl.childElementCount) cosmosIconsEl.innerHTML = iconHtml('ATOM', 'atom', 30) + iconHtml('TIA', 'tia', 30);
+    const cosmosStakingEl = document.getElementById('card-cosmos-staking');
+    if (cosmosStakingEl) {
+      cosmosStakingEl.innerHTML = stakingMonthly > 0
+        ? `<span class="positive">${fmtCurrency(stakingMonthly)}</span> al mes en staking`
         : 'Sin staking';
     }
-    document.getElementById('card-airdrops').textContent = fmtCurrency(airdropVal);
+
+    // Refugio (USDC): peso actual vs objetivo editable (defenseTarget en %).
+    const usdcVal = getAssetValue(portfolio.find(a => a.token === 'USDC'));
+    const defenseTargetFrac = (settings.defenseTarget || 0) / 100;
+    const defenseWeight = total > 0 ? usdcVal / total : 0;
+    const reached = defenseTargetFrac > 0 && defenseWeight >= defenseTargetFrac;
+    document.getElementById('card-defense-pct').textContent = `${(defenseWeight * 100).toFixed(1)}%`;
+    const defenseIconsEl = document.getElementById('defense-icons');
+    if (defenseIconsEl && !defenseIconsEl.childElementCount) defenseIconsEl.innerHTML = iconHtml('USDC', 'usdc', 30);
+    const defenseBar = document.getElementById('defense-bar-fill');
+    if (defenseBar) {
+      defenseBar.style.width = defenseTargetFrac > 0 ? `${Math.min(defenseWeight / defenseTargetFrac * 100, 100)}%` : '0%';
+      defenseBar.className = `progress-fill ${reached ? 'green' : 'blue'}`;
+    }
+    const defenseSub = document.getElementById('card-defense-sub');
+    if (defenseSub) {
+      if (reached) {
+        defenseSub.innerHTML = `<span class="positive">✓ Colchón cubierto (${settings.defenseTarget}%)</span>`;
+      } else {
+        // USDC nuevo para llegar al objetivo (al añadirlo también crece el total).
+        const need = defenseTargetFrac < 1 ? Math.max((defenseTargetFrac * total - usdcVal) / (1 - defenseTargetFrac), 0) : 0;
+        defenseSub.innerHTML = `Objetivo ${settings.defenseTarget}% · faltan ${fmtCurrency(need)} en USDC`;
+      }
+    }
+    const defenseEdit = document.getElementById('defense-edit');
+    if (defenseEdit && !defenseEdit.dataset.bound) {
+      defenseEdit.dataset.bound = '1';
+      defenseEdit.addEventListener('click', editDefenseTarget);
+    }
+  }
+
+  // Calcula el reparto de una plantilla: cuánto va a cada sitio este mes.
+  // Salta Satélites si está en el tope (su parte se reparte al resto) y dentro
+  // del núcleo prioriza el que esté más flojo (BTC, ya que ETH suele estar bien).
+  function computeReparto(strat) {
+    const monthlyUsd = (settings.dcaTarget || 0) / EUR_USD;   // objetivo DCA (€) a USD interno
+    const satBlocked = getCosmosPct() >= (cosmosTopPct - 0.05);
+    const wR = strat.refugio, wC = strat.core, wS = satBlocked ? 0 : strat.satelites;
+    const sum = wR + wC + wS || 1;
+    const toRefugio = monthlyUsd * wR / sum;
+    const toCore = monthlyUsd * wC / sum;
+    const toSat = monthlyUsd * wS / sum;
+
+    const btcVal = getAssetValue(portfolio.find(a => a.token === 'BTC'));
+    const ethVal = getAssetValue(portfolio.find(a => a.token === 'ETH'));
+    const coreAfter = btcVal + ethVal + toCore;
+    const btcGap = Math.max(CORE_SPLIT.BTC * coreAfter - btcVal, 0);
+    const ethGap = Math.max(CORE_SPLIT.ETH * coreAfter - ethVal, 0);
+    const gapSum = btcGap + ethGap;
+    let toBtc, toEth;
+    if (gapSum <= 0) {
+      toBtc = toCore * CORE_SPLIT.BTC; toEth = toCore * CORE_SPLIT.ETH;
+    } else if (gapSum >= toCore) {
+      toBtc = toCore * (btcGap / gapSum); toEth = toCore * (ethGap / gapSum);
+    } else {
+      const rest = toCore - gapSum;
+      toBtc = btcGap + rest * CORE_SPLIT.BTC; toEth = ethGap + rest * CORE_SPLIT.ETH;
+    }
+    return { toBtc, toEth, toRefugio, toSat, satBlocked, monthlyUsd };
+  }
+
+  // Reparto del mes: un desplegable por plantilla y, dentro, cuánto meter en cada
+  // sitio este mes según esa estrategia. Abres las tres para comparar.
+  function renderReparto() {
+    const monthlyUsd = (settings.dcaTarget || 0) / EUR_USD;
+    const hint = document.getElementById('reparto-hint');
+    if (hint) hint.innerHTML = `Tu aportación de <strong>${fmtCurrency(monthlyUsd)}</strong> al mes, repartida según cada estrategia. Despliega para comparar y elige la tuya.`;
+
+    const badge = document.getElementById('reparto-amount-badge');
+    if (badge) badge.textContent = `${fmtCurrency(monthlyUsd)}/mes`;
+
+    const stratWrap = document.getElementById('reparto-strategies');
+    if (stratWrap) {
+      stratWrap.innerHTML = Object.entries(STRATEGIES).map(([key, s]) => {
+        const name = key.charAt(0).toUpperCase() + key.slice(1);
+        const r = computeReparto(s);
+        const rows = [
+          { token: 'BTC',  cssClass: 'btc',  amount: r.toBtc,     label: 'BTC',             idle: 'ya en su sitio' },
+          { token: 'ETH',  cssClass: 'eth',  amount: r.toEth,     label: 'ETH',             idle: 'ya en su sitio' },
+          { token: 'USDC', cssClass: 'usdc', amount: r.toRefugio, label: 'USDC (Refugio)',  idle: 'cubierto' },
+          { token: 'TIA',  cssClass: 'tia',  amount: r.toSat,     label: 'Satélites (TIA)', idle: r.satBlocked ? 'en el tope' : 'sin asignar' },
+        ];
+        const detail = rows.map(row => {
+          const on = row.amount >= 0.01;
+          return `
+            <div class="reparto-row ${on ? '' : 'idle'}">
+              <span class="reparto-coin">${iconHtml(row.token, row.cssClass, 24)}</span>
+              <span class="reparto-name">${row.label}</span>
+              <span class="reparto-amt">${on ? fmtCurrency(row.amount) : row.idle}</span>
+            </div>`;
+        }).join('');
+        return `
+          <details class="strat-block ${key === settings.strategy ? 'active' : ''}" data-strat="${key}" open>
+            <summary class="strat-sum">
+              <div class="strat-head">
+                <span class="strat-name">${name}</span>
+                <span class="strat-head-right">
+                  <span class="strat-legend"><span class="lg-refugio">${s.refugio}</span> · <span class="lg-core">${s.core}</span> · <span class="lg-sat">${s.satelites}</span></span>
+                  <svg class="strat-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </span>
+              </div>
+              <div class="strat-bar">
+                <span class="seg seg-refugio" style="width:${s.refugio}%"></span>
+                <span class="seg seg-core" style="width:${s.core}%"></span>
+                <span class="seg seg-sat" style="width:${s.satelites}%"></span>
+              </div>
+            </summary>
+            <div class="reparto-list">${detail}</div>
+          </details>`;
+      }).join('');
+    }
+    if (stratWrap && !stratWrap.dataset.bound) {
+      stratWrap.dataset.bound = '1';
+      // Clic en una plantilla la marca como la tuya (se guarda y viaja por el gist),
+      // sin re-renderizar para no cerrar los desplegables que tengas abiertos.
+      stratWrap.addEventListener('click', (e) => {
+        const block = e.target.closest('.strat-block');
+        if (!block) return;
+        settings.strategy = block.dataset.strat;
+        persist();
+        stratWrap.querySelectorAll('.strat-block').forEach(b => b.classList.toggle('active', b === block));
+      });
+    }
   }
 
   function editDcaTarget() {
@@ -518,6 +670,17 @@ const App = (() => {
     const val = parseFloat(String(input).replace(',', '.'));
     if (isNaN(val) || val < 0) return;
     settings.dcaTarget = val;
+    persist();
+    render();
+  }
+
+  function editDefenseTarget() {
+    const cur = settings.defenseTarget;
+    const input = prompt('Objetivo de refugio (USDC) en % de la cartera:', cur);
+    if (input === null) return;
+    const val = parseFloat(String(input).replace(',', '.'));
+    if (isNaN(val) || val < 0 || val > 100) return;
+    settings.defenseTarget = val;
     persist();
     render();
   }
@@ -1518,7 +1681,7 @@ const App = (() => {
     }
     portfolio = data.portfolio;
     transactions = data.transactions;
-    if (data.settings) settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET }, data.settings);
+    if (data.settings) settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, strategy: DEFAULT_STRATEGY }, data.settings);
     normalizePortfolio(portfolio);
   }
 

@@ -239,6 +239,7 @@ a:hover { text-decoration: underline; }
   padding: 20px;
   border: 1px solid var(--border);
   transition: border-color 0.2s;
+  position: relative;
 }
 
 .card:hover {
@@ -259,11 +260,183 @@ a:hover { text-decoration: underline; }
   font-weight: 700;
 }
 
+.card-value-suffix {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 6px;
+  letter-spacing: 0;
+}
+
+.card-head-c {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.card-title {
+  width: 100%;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.card[data-glow="green"] .card-title { color: var(--accent-green); }
+.card[data-glow="yellow"] .card-title { color: var(--accent-yellow); }
+.card[data-glow="blue"] .card-title { color: var(--accent-blue); }
+.card[data-glow="purple"] .card-title { color: #cd9eff; }
+
+.card-edit {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  z-index: 1;
+}
+.card-edit:hover { color: var(--text-primary); background: var(--bg-hover); }
+
+.card-coins {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.card-coins img,
+.card-coins .token-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  display: block;
+  opacity: 1;
+}
+
 .card-sub {
   font-size: 13px;
   color: var(--text-secondary);
   margin-top: 4px;
 }
+
+/* ── REPARTO DEL MES ── */
+.reparto-wrap { padding: 4px 2px 2px; }
+.strat-blocks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  align-items: start;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.strat-block {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+/* Cada estrategia con su color (gradiente de riesgo): verde → amarillo → rojo. */
+.strat-block[data-strat="conservadora"] .strat-name { color: var(--accent-green); }
+.strat-block[data-strat="moderada"]     .strat-name { color: var(--accent-yellow); }
+.strat-block[data-strat="agresiva"]     .strat-name { color: var(--accent-red); }
+
+.strat-block[data-strat="conservadora"].active {
+  border-color: var(--accent-green);
+  box-shadow: 0 0 0 1px var(--accent-green), 0 0 20px rgba(14, 203, 129, 0.15);
+}
+.strat-block[data-strat="moderada"].active {
+  border-color: var(--accent-yellow);
+  box-shadow: 0 0 0 1px var(--accent-yellow), 0 0 20px rgba(240, 185, 11, 0.15);
+}
+.strat-block[data-strat="agresiva"].active {
+  border-color: var(--accent-red);
+  box-shadow: 0 0 0 1px var(--accent-red), 0 0 20px rgba(246, 70, 93, 0.15);
+}
+.strat-sum {
+  list-style: none;
+  cursor: pointer;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.strat-sum::-webkit-details-marker { display: none; }
+.strat-sum::marker { content: ''; }
+.strat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.strat-head-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.strat-chevron {
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.strat-block[open] .strat-chevron { transform: rotate(180deg); }
+.strat-name {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.strat-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+.strat-bar .seg { height: 100%; }
+.seg-refugio { background: var(--accent-blue); }
+.seg-core { background: var(--accent-green); }
+.seg-sat { background: var(--accent-yellow); }
+.strat-legend { font-size: 12px; font-weight: 700; }
+.lg-refugio { color: var(--accent-blue); }
+.lg-core { color: var(--accent-green); }
+.lg-sat { color: var(--accent-yellow); }
+.reparto-hint {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0 0 14px;
+  line-height: 1.5;
+}
+.reparto-list {
+  display: grid;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+.reparto-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.reparto-row.idle { opacity: 0.55; }
+.reparto-coin { display: inline-flex; }
+.reparto-coin img,
+.reparto-coin .token-icon { width: 24px; height: 24px; border-radius: 50%; }
+.reparto-name { flex: 1; font-weight: 600; font-size: 14px; }
+.reparto-amt { font-weight: 800; font-size: 15px; letter-spacing: -0.3px; }
+.reparto-row.idle .reparto-amt { font-weight: 600; font-size: 13px; color: var(--text-muted); }
 
 .card-icon {
   width: 36px;
