@@ -242,29 +242,57 @@ const App = (() => {
     requestAnimationFrame(tick);
   }
 
+  // La URL directa a CoinGecko es SIEMPRE la primera opción: así corremos igual
+  // que en local (file://), sin capas intermedias. El proxy de Netlify solo se
+  // añade como respaldo cuando la app está hosteada en http/https (no localhost)
+  // y la directa falla por rate limit (429 en móvil). El _t= al final rompe
+  // cualquier caché que pueda quedar (service worker antiguo, CDN, navegador).
+  function coingeckoUrls(type, ids) {
+    const direct = type === 'markets'
+      ? `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&sparkline=true&price_change_percentage=24h`
+      : `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
+    const urls = [direct];
+    if (location.protocol.startsWith('http') && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+      urls.push(`/.netlify/functions/coingecko?type=${type}&ids=${ids}`);
+    }
+    return urls.map(u => u + (u.includes('?') ? '&' : '?') + '_t=' + Date.now());
+  }
+
   // Fetch a CoinGecko resistente al rate limit (HTTP 429): reintenta hasta 3
   // veces respetando la cabecera Retry-After (o backoff exponencial si no viene).
-  // no-store evita que la PWA sirva una respuesta cacheada.
-  async function fetchCoinGecko(url, retries = 3) {
-    for (let intento = 0; ; intento++) {
-      const res = await fetch(url, { cache: 'no-store' });
-      if (res.ok) return res;
-      if (res.status === 429 && intento < retries) {
-        const retryAfter = parseInt(res.headers.get('retry-after'), 10);
-        const espera = (retryAfter > 0 ? retryAfter : Math.pow(2, intento)) * 1000;
-        await new Promise(r => setTimeout(r, espera));
-        continue;
+  // no-store evita que navegador o PWA sirvan una respuesta cacheada. Si tras
+  // los reintentos la fuente sigue caída, probamos la siguiente URL (el proxy).
+  async function fetchCoinGecko(urls, retries = 3) {
+    if (!Array.isArray(urls)) urls = [urls];
+    let lastErr = null;
+    for (const url of urls) {
+      for (let intento = 0; ; intento++) {
+        try {
+          const res = await fetch(url, { cache: 'no-store' });
+          if (res.ok) return res;
+          if (res.status === 429 && intento < retries) {
+            const retryAfter = parseInt(res.headers.get('retry-after'), 10);
+            const espera = (retryAfter > 0 ? retryAfter : Math.pow(2, intento)) * 1000;
+            await new Promise(r => setTimeout(r, espera));
+            continue;
+          }
+          lastErr = new Error(`HTTP ${res.status}`);
+          break; // ni 429 ni OK → siguiente fuente
+        } catch (e) {
+          lastErr = e;
+          break; // red caída → siguiente fuente
+        }
       }
-      throw new Error(`HTTP ${res.status}`);
     }
+    throw lastErr || new Error('HTTP --');
   }
 
   // ── SPARKLINE DATA ──
   async function fetchSparklines() {
     try {
       const ids = portfolio.map(a => a.coingeckoId).join(',');
-      const url = `/.netlify/functions/coingecko?type=markets&ids=${ids}`;
-      const res = await fetchCoinGecko(url);
+      const urls = coingeckoUrls('markets', ids);
+      const res = await fetchCoinGecko(urls);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       data.forEach(coin => {
@@ -342,8 +370,8 @@ const App = (() => {
 
   async function fetchPrices() {
     try {
-      const url = `/.netlify/functions/coingecko?type=price&ids=${coingeckoIds()}`;
-      const res = await fetchCoinGecko(url);
+      const urls = coingeckoUrls('price', coingeckoIds());
+      const res = await fetchCoinGecko(urls);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
@@ -1329,8 +1357,11 @@ const App = (() => {
           const qty = parseFloat(get('qty'));
           const price = parseFloat(get('price'));
           const totalUsd = parseFloat(get('totalUsd')) || qty * price;
-          if (!token || !type || !(qty > 0) || !(price > 0)) continue;
-          parsed.push({ date, token, type, price, qty, totalUsd });
+          // OJO: NO exigir price > 0. Los airdrops y las compras gratis (precio 0,
+          // p.ej. ATOM/BTC recibidos) son tenencias reales; si se descartan aquí,
+          // al reconstruir la cartera desde el CSV faltan y el total sale más bajo.
+          if (!token || !type || !(qty > 0)) continue;
+          parsed.push({ date, token, type, price: price > 0 ? price : 0, qty, totalUsd: totalUsd > 0 ? totalUsd : 0 });
         }
         if (!parsed.length) throw new Error('No se encontraron movimientos válidos en el CSV.');
 
