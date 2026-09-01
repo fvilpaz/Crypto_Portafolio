@@ -242,12 +242,29 @@ const App = (() => {
     requestAnimationFrame(tick);
   }
 
+  // Fetch a CoinGecko resistente al rate limit (HTTP 429): reintenta hasta 3
+  // veces respetando la cabecera Retry-After (o backoff exponencial si no viene).
+  // no-store evita que la PWA sirva una respuesta cacheada.
+  async function fetchCoinGecko(url, retries = 3) {
+    for (let intento = 0; ; intento++) {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (res.ok) return res;
+      if (res.status === 429 && intento < retries) {
+        const retryAfter = parseInt(res.headers.get('retry-after'), 10);
+        const espera = (retryAfter > 0 ? retryAfter : Math.pow(2, intento)) * 1000;
+        await new Promise(r => setTimeout(r, espera));
+        continue;
+      }
+      throw new Error(`HTTP ${res.status}`);
+    }
+  }
+
   // ── SPARKLINE DATA ──
   async function fetchSparklines() {
     try {
       const ids = portfolio.map(a => a.coingeckoId).join(',');
       const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&sparkline=true&price_change_percentage=24h`;
-      const res = await fetch(url, { cache: 'no-store' });
+      const res = await fetchCoinGecko(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       data.forEach(coin => {
@@ -326,9 +343,7 @@ const App = (() => {
   async function fetchPrices() {
     try {
       const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoIds()}&vs_currencies=usd&include_24hr_change=true`;
-      // no-store evita que el navegador (sobre todo la PWA en el móvil) sirva
-      // una respuesta cacheada: siempre pedimos el precio fresco a la red.
-      const res = await fetch(url, { cache: 'no-store' });
+      const res = await fetchCoinGecko(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
@@ -863,7 +878,7 @@ const App = (() => {
     }
     if (!ok) {
       const el = document.getElementById('last-update');
-      if (el) el.textContent = 'Sin conexión con CoinGecko — precios no actualizados';
+      if (el) el.textContent = 'Sin conexión — reintentando…';
     }
   }
 
