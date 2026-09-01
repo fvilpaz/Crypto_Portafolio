@@ -16,13 +16,6 @@ const App = (() => {
     USDC: { name: 'USD Coin', coingeckoId: 'usd-coin', icon: `${COINGECKO_IMG}/6319/small/usdc.png`,       color: '#2775ca', cssClass: 'usdc' },
   };
 
-  const SEED_PORTFOLIO = [
-    { token: 'BTC', name: 'Bitcoin', qty: 0.014246, costUsd: 879.44, avgPrice: 61732.42, coingeckoId: 'bitcoin', icon: `${COINGECKO_IMG}/1/small/bitcoin.png`, color: '#f7931a', cssClass: 'btc' },
-    { token: 'ETH', name: 'Ethereum', qty: 0.5145, costUsd: 968.17, avgPrice: 1881.78, coingeckoId: 'ethereum', icon: `${COINGECKO_IMG}/279/small/ethereum.png`, color: '#627eea', cssClass: 'eth' },
-    { token: 'ATOM', name: 'Cosmos', qty: 713.68, costUsd: 1123.15, avgPrice: 1.5737, coingeckoId: 'cosmos', icon: `${COINGECKO_IMG}/1481/small/cosmos_hub.png`, color: '#8c94a8', cssClass: 'atom' },
-    { token: 'TIA', name: 'Celestia', qty: 423.85, costUsd: 213.47, avgPrice: 0.5036, coingeckoId: 'celestia', icon: `${COINGECKO_IMG}/31967/small/tia.jpg`, color: '#cd9eff', cssClass: 'tia' },
-  ];
-
   const airdrops = [
     { token: 'PI', name: 'Pi Network', qty: 969.79, priceUsd: 0.08997, note: 'Bloqueado ~4 años', coingeckoId: 'pi-network', icon: `${COINGECKO_IMG}/54342/small/pi_network.jpg`, color: '#0ecb81', cssClass: 'pi' },
     { token: 'ATONE', name: 'ATONE', qty: 13.27, priceUsd: 0.1357, note: 'Airdrop / staking', coingeckoId: 'atomone', icon: `${COINGECKO_IMG}/33230/small/atomone_200x200.jpg`, color: '#1e90ff', cssClass: 'atone' },
@@ -42,48 +35,7 @@ const App = (() => {
 
   const cosmosTopPct = 0.35;
 
-  const SEED_TRANSACTIONS = [
-    { date: '2024-02-03', token: 'BTC', type: 'Compra', price: 43.18, qty: 0.000532, totalUsd: 0.02 },
-    { date: '2024-02-28', token: 'BTC', type: 'Compra', price: 0, qty: 0.00023, totalUsd: 0 },
-    { date: '2024-09-16', token: 'MODE', type: 'Compra', price: 0, qty: 349, totalUsd: 0 },
-    { date: '2024-09-16', token: 'MODE', type: 'Compra', price: 0, qty: 676, totalUsd: 0 },
-    { date: '2024-10-21', token: 'MODE', type: 'Compra', price: 0, qty: 246, totalUsd: 0 },
-    { date: '2025-09-01', token: 'PI', type: 'Compra', price: 0, qty: 969.79, totalUsd: 0 },
-    { date: '2025-09-01', token: 'ETH', type: 'Compra', price: 1539.8, qty: 0.274, totalUsd: 421.91 },
-    { date: '2025-09-02', token: 'ETH', type: 'Compra', price: 4629.12, qty: 0.0192, totalUsd: 88.88 },
-    { date: '2025-10-01', token: 'ETH', type: 'Compra', price: 4629.12, qty: 0.018, totalUsd: 83.32 },
-    { date: '2025-10-15', token: 'ATONE', type: 'Airdrop', price: 0, qty: 10.27, totalUsd: 0 },
-    { date: '2025-10-31', token: 'ATOM', type: 'Compra', price: 2.9952, qty: 18.19, totalUsd: 54.48 },
-    { date: '2025-10-31', token: 'TIA', type: 'Compra', price: 0.9103, qty: 56.25, totalUsd: 51.2 },
-    { date: '2025-11-04', token: 'TIA', type: 'Compra', price: 0.57, qty: 31, totalUsd: 17.67 },
-    { date: '2025-12-06', token: 'TIA', type: 'Compra', price: 0.5765, qty: 60.46, totalUsd: 34.86 },
-    { date: '2025-12-06', token: 'ATOM', type: 'Compra', price: 2.2432, qty: 9.25, totalUsd: 20.75 },
-    { date: '2025-12-06', token: 'ATOM', type: 'Compra', price: 2.2432, qty: 15.53, totalUsd: 34.84 },
-    { date: '2026-01-27', token: 'TIA', type: 'Compra', price: 0.438, qty: 136, totalUsd: 59.58 },
-    { date: '2026-01-27', token: 'ATOM', type: 'Compra', price: 2.2049, qty: 27, totalUsd: 59.53 },
-    { date: '2026-02-27', token: 'BTC', type: 'Compra', price: 65992.28, qty: 0.001714, totalUsd: 113.11 },
-    { date: '2026-03-01', token: 'BTC', type: 'Compra', price: 66557.79, qty: 0.0031, totalUsd: 206.33 },
-    { date: '2026-04-02', token: 'ATOM', type: 'Compra', price: 1.6438, qty: 30, totalUsd: 49.31 },
-    { date: '2026-04-21', token: 'ATOM', type: 'Compra', price: 1.8064, qty: 93, totalUsd: 167.99 },
-    { date: '2026-06-02', token: 'ATOM', type: 'Compra', price: 1.886, qty: 51, totalUsd: 96.19 },
-    { date: '2026-06-02', token: 'TIA', type: 'Compra', price: 0.3927, qty: 57, totalUsd: 22.39 },
-    { date: '2026-06-02', token: 'BTC', type: 'Compra', price: 69395.87, qty: 0.0007, totalUsd: 48.58 },
-    { date: '2026-06-02', token: 'ETH', type: 'Compra', price: 1977.56, qty: 0.025, totalUsd: 49.44 },
-    { date: '2026-06-04', token: 'ETH', type: 'Compra', price: 1751.03, qty: 0.06, totalUsd: 105.06 },
-    { date: '2026-06-04', token: 'BTC', type: 'Compra', price: 62719.33, qty: 0.0012, totalUsd: 75.26 },
-    { date: '2026-07-02', token: 'ETH', type: 'Compra', price: 1654.52, qty: 0.016, totalUsd: 26.47 },
-    { date: '2026-07-02', token: 'BTC', type: 'Compra', price: 61242.18, qty: 0.0004, totalUsd: 24.5 },
-    { date: '2026-07-02', token: 'ATOM', type: 'Compra', price: 1.559, qty: 17.71, totalUsd: 27.61 },
-    { date: '2026-07-02', token: 'TIA', type: 'Compra', price: 0.3745, qty: 74.14, totalUsd: 27.77 },
-    { date: '2026-07-17', token: 'ATOM', type: 'Compra', price: 0, qty: 45, totalUsd: 0 },
-    { date: '2026-07-17', token: 'ATOM', type: 'Compra', price: 1.5048, qty: 407, totalUsd: 612.45 },
-    { date: '2026-07-20', token: 'BTC', type: 'Compra', price: 64793.41, qty: 0.00517, totalUsd: 334.98 },
-    { date: '2026-07-20', token: 'ETH', type: 'Compra', price: 1887.94, qty: 0.0593, totalUsd: 111.95 },
-    { date: '2026-07-31', token: 'ETH', type: 'Compra', price: 1887.06, qty: 0.043, totalUsd: 81.14 },
-    { date: '2026-07-31', token: 'BTC', type: 'Compra', price: 63885.09, qty: 0.0012, totalUsd: 76.66 },
-  ];
-
-  // ── PERSISTENCIA (localStorage con semilla) ──
+  // ── PERSISTENCIA (localStorage) ──
   // Los holdings y movimientos viven ahora en el navegador. La primera vez se
   // siembran con los arrays de arriba; a partir de ahí mandan los datos guardados.
   const STORE_KEY = 'miCartera.v1';
@@ -112,10 +64,10 @@ const App = (() => {
     } catch (e) {
       console.warn('localStorage ilegible, uso la semilla:', e);
     }
-    // Primera vez (o datos corruptos): parte de la semilla y la persiste.
-    const seed = { portfolio: clone(SEED_PORTFOLIO), transactions: clone(SEED_TRANSACTIONS), updatedAt: 0 };
-    saveStore(seed);
-    return seed;
+    // Primera vez (o datos corruptos): parte de cartera vacía.
+    const empty = { portfolio: [], transactions: [], updatedAt: 0 };
+    saveStore(empty);
+    return empty;
   }
 
   const _store = loadStore();
