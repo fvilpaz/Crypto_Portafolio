@@ -75,12 +75,14 @@ const App = (() => {
   let transactions = _store.transactions;
   let storeVersion = _store.updatedAt || 0;
   let showHidden = false;   // mostrar temporalmente las monedas ocultas en la tabla
+  let pendingImportFormat = null;   // 'json' | 'csv' elegido antes de abrir el file picker
 
-  // Normaliza activos guardados: tag por defecto y, para monedas conocidas,
-  // refresca coingeckoId/icono/color desde el catálogo COINS. Esto corrige
-  // ids obsoletos guardados antes (p.ej. PI/MODE con id malo → precio 0€).
-  if (Array.isArray(portfolio)) {
-    portfolio.forEach(a => {
+  // Normaliza activos (al cargar y al importar un JSON): tag por defecto y, para
+  // monedas conocidas, refresca coingeckoId/icono/color desde el catálogo COINS.
+  // Corrige ids obsoletos guardados antes (p.ej. PI/MODE con id malo → precio 0€).
+  function normalizePortfolio(list) {
+    if (!Array.isArray(list)) return;
+    list.forEach(a => {
       if (!a) return;
       if (!a.tag) a.tag = 'portfolio';
       const cat = COINS[a.token];
@@ -93,6 +95,7 @@ const App = (() => {
       }
     });
   }
+  normalizePortfolio(portfolio);
 
   // Guarda el estado actual (holdings + movimientos) tras cada edición.
   function persist() {
@@ -549,12 +552,12 @@ const App = (() => {
 
     if (cosmosPct > cosmosTopPct * 100) {
       bar.className = 'progress-fill red';
-      label.textContent = `${cosmosPct.toFixed(1)}% / 35% — TOPE SUPERADO`;
+      label.textContent = `${cosmosPct.toFixed(1)}% / 35% · TOPE SUPERADO`;
       label.className = 'cosmos-label negative';
       if (banner) { banner.style.display = 'flex'; banner.innerHTML = '⚠️ Cosmos por encima del 35%. No añadir dinero nuevo.'; }
     } else if (cosmosPct > (cosmosTopPct - 0.05) * 100) {
       bar.className = 'progress-fill yellow';
-      label.textContent = `${cosmosPct.toFixed(1)}% / 35% — Cerca del tope`;
+      label.textContent = `${cosmosPct.toFixed(1)}% / 35% · Cerca del tope`;
       label.className = 'cosmos-label';
       label.style.color = 'var(--accent-yellow)';
       if (banner) banner.style.display = 'none';
@@ -927,11 +930,11 @@ const App = (() => {
     const dot = document.querySelector('.live-dot');
     if (dot) {
       dot.classList.toggle('offline', !ok);
-      dot.title = ok ? 'Precios en vivo' : 'Sin conexión con CoinGecko — precios no actualizados';
+      dot.title = ok ? 'Precios en vivo' : 'Sin conexión con CoinGecko · precios no actualizados';
     }
     if (!ok) {
       const el = document.getElementById('last-update');
-      if (el) el.textContent = 'Sin conexión — reintentando…';
+      if (el) el.textContent = 'Sin conexión · reintentando…';
     }
   }
 
@@ -1238,7 +1241,7 @@ const App = (() => {
     const pe = addPriceEur();
     document.getElementById('add-price-live').textContent = pe > 0
       ? `Precio ${addState.token} en vivo: ${pe.toLocaleString('es-ES', { maximumFractionDigits: pe < 1 ? 6 : 2 })} €/ud`
-      : `Sin precio de ${addState.token} todavía — metelo a mano`;
+      : `Sin precio de ${addState.token} todavía. Mételo a mano`;
   }
 
   function updateEffective() {
@@ -1427,6 +1430,81 @@ const App = (() => {
     URL.revokeObjectURL(url);
   }
 
+  // Mini-modal para elegir formato (JSON completo vs CSV de movimientos).
+  // Devuelve 'json' | 'csv' | null (si cancela).
+  function pickFormat(title, subtitle) {
+    return new Promise((resolve) => {
+      const ov = document.createElement('div');
+      ov.className = 'modal-overlay open';
+      ov.innerHTML = `
+        <div class="modal" style="max-width:440px;">
+          <div class="add-modal-head">
+            <h3>${title}</h3>
+            <button type="button" class="modal-close" aria-label="Cerrar">&times;</button>
+          </div>
+          <p style="color:var(--text-secondary);font-size:13px;margin:0 0 16px;">${subtitle}</p>
+          <div class="format-choice">
+            <button type="button" data-fmt="json" class="format-btn">
+              <span class="format-btn-title">JSON · todo</span>
+              <span class="format-btn-sub">Monedas, tags, ocultos, APR y movimientos. Para llevar tu cartera a otro dispositivo.</span>
+            </button>
+            <button type="button" data-fmt="csv" class="format-btn">
+              <span class="format-btn-title">CSV · movimientos</span>
+              <span class="format-btn-sub">Solo el histórico de compras/ventas/recompensas.</span>
+            </button>
+          </div>
+        </div>`;
+      document.body.appendChild(ov);
+      const done = (val) => { ov.remove(); resolve(val); };
+      ov.addEventListener('click', (e) => {
+        if (e.target === ov || e.target.closest('.modal-close')) return done(null);
+        const b = e.target.closest('[data-fmt]');
+        if (b) done(b.dataset.fmt);
+      });
+    });
+  }
+
+  // Export/import COMPLETO en JSON: todo el estado (monedas con tags/ocultos/APR
+  // + movimientos). Sirve para llevar tu cartera idéntica a otro dispositivo.
+  function exportState() {
+    const state = {
+      schema: 'mi-cartera', version: 1,
+      exportedAt: new Date().toISOString(),
+      portfolio, transactions,
+    };
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mi-cartera-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function importState(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!data || !Array.isArray(data.portfolio) || !Array.isArray(data.transactions)) {
+          throw new Error('No es un backup de Mi Cartera (falta portfolio/transactions).');
+        }
+        if (!confirm(`Se restaurará TODO: ${data.portfolio.length} monedas y ${data.transactions.length} movimientos (con tags, ocultos y APR). Reemplaza lo que tengas ahora. ¿Continuar?`)) return;
+        portfolio = data.portfolio;
+        transactions = data.transactions;
+        normalizePortfolio(portfolio);
+        persist();
+        fetchPrices();   // precios en vivo tras restaurar
+        alert(`Restaurado: ${portfolio.length} monedas y ${transactions.length} movimientos.`);
+      } catch (e) {
+        alert('Error al importar el JSON: ' + e.message);
+      }
+    };
+    reader.readAsText(file);
+  }
+
   function importCsvFile(file) {
     const reader = new FileReader();
     reader.onload = () => {
@@ -1560,14 +1638,27 @@ const App = (() => {
       });
     }
 
-    document.getElementById('export-btn').addEventListener('click', exportCsv);
-    document.getElementById('import-btn').addEventListener('click', () => {
-      document.getElementById('import-file').click();
+    document.getElementById('export-btn').addEventListener('click', async () => {
+      const fmt = await pickFormat('Exportar', '¿Qué quieres exportar?');
+      if (fmt === 'json') exportState();
+      else if (fmt === 'csv') exportCsv();
+    });
+    document.getElementById('import-btn').addEventListener('click', async () => {
+      const fmt = await pickFormat('Importar', '¿Qué vas a importar?');
+      if (!fmt) return;
+      pendingImportFormat = fmt;
+      const inp = document.getElementById('import-file');
+      inp.accept = fmt === 'json' ? '.json,application/json' : '.csv,text/csv';
+      inp.click();
     });
     document.getElementById('import-file').addEventListener('change', (e) => {
       const f = e.target.files && e.target.files[0];
-      if (f) importCsvFile(f);
+      if (f) {
+        if (pendingImportFormat === 'json') importState(f);
+        else importCsvFile(f);
+      }
       e.target.value = '';
+      pendingImportFormat = null;
     });
 
     const resetBtn = document.getElementById('reset-btn');
