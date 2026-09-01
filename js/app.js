@@ -247,7 +247,7 @@ const App = (() => {
     try {
       const ids = portfolio.map(a => a.coingeckoId).join(',');
       const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&sparkline=true&price_change_percentage=24h`;
-      const res = await fetch(url);
+      const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       data.forEach(coin => {
@@ -326,7 +326,9 @@ const App = (() => {
   async function fetchPrices() {
     try {
       const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoIds()}&vs_currencies=usd&include_24hr_change=true`;
-      const res = await fetch(url);
+      // no-store evita que el navegador (sobre todo la PWA en el móvil) sirva
+      // una respuesta cacheada: siempre pedimos el precio fresco a la red.
+      const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
@@ -339,6 +341,7 @@ const App = (() => {
         }
       });
 
+      setLiveState(true);
       updateLastUpdate();
       render();
       if (Object.keys(sparklineData).length === 0) {
@@ -348,11 +351,18 @@ const App = (() => {
       }
     } catch (err) {
       console.warn('CoinGecko fetch failed:', err.message);
+      // Solo rellenamos con precio de compra los tokens que aún no tienen
+      // NINGÚN precio (primera carga sin red). Si ya teníamos precio en vivo de
+      // una vuelta anterior, lo conservamos en vez de pisarlo con el de compra.
       [...portfolio, ...airdrops].forEach(asset => {
         if (!prices[asset.token]) {
           prices[asset.token] = { price: asset.avgPrice || asset.priceUsd || 0, change24h: 0 };
         }
       });
+      // Avisamos visualmente de que los precios NO son en vivo, para no confundir
+      // un total con precio de compra con uno real.
+      setLiveState(false);
+      render();
     }
   }
 
@@ -843,12 +853,28 @@ const App = (() => {
       `Actualizado: ${now.toLocaleTimeString('es-ES')} ${now.toLocaleDateString('es-ES')}`;
   }
 
+  // Marca visualmente si los precios son en vivo (punto verde) o si la última
+  // llamada a CoinGecko falló y podrían estar desactualizados (punto rojo + aviso).
+  function setLiveState(ok) {
+    const dot = document.querySelector('.live-dot');
+    if (dot) {
+      dot.classList.toggle('offline', !ok);
+      dot.title = ok ? 'Precios en vivo' : 'Sin conexión con CoinGecko — precios no actualizados';
+    }
+    if (!ok) {
+      const el = document.getElementById('last-update');
+      if (el) el.textContent = 'Sin conexión con CoinGecko — precios no actualizados';
+    }
+  }
+
   // ── TOGGLE MONEDA ──
+  // Un único botón: muestra la moneda activa y al pulsarlo alterna a la otra.
   function setCurrency(c) {
     currency = c;
-    document.querySelectorAll('.currency-toggle button').forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.currency === c);
-    });
+    const glyph = document.getElementById('currency-glyph');
+    const code = document.getElementById('currency-code');
+    if (glyph) glyph.textContent = c === 'USD' ? '$' : '€';
+    if (code) code.textContent = c;
     render();
   }
 
@@ -1336,8 +1362,8 @@ const App = (() => {
   async function init() {
     renderSkeletons();
 
-    document.querySelectorAll('.currency-toggle button').forEach(btn => {
-      btn.addEventListener('click', () => setCurrency(btn.dataset.currency));
+    document.getElementById('currency-switch').addEventListener('click', () => {
+      setCurrency(currency === 'USD' ? 'EUR' : 'USD');
     });
 
     setupSortable('asset-table');

@@ -123,33 +123,55 @@ a:hover { text-decoration: underline; }
   #app-link { padding: 8px 10px; gap: 0; }
 }
 
-.currency-toggle {
-  display: flex;
+.currency-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
   background: var(--bg-card);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
   border: 1px solid var(--border);
-}
-
-.currency-toggle button {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  padding: 6px 14px;
+  border-radius: 999px;
+  color: var(--text-primary);
+  font-family: inherit;
   font-size: 13px;
   font-weight: 600;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: all 0.2s;
-  font-family: inherit;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.1s ease;
 }
 
-.currency-toggle button.active {
-  background: var(--accent-yellow);
+.currency-switch:hover {
+  border-color: var(--accent-yellow);
+  background: var(--bg-hover);
+}
+
+.currency-switch:active {
+  transform: scale(0.97);
+}
+
+.currency-switch:focus-visible {
+  outline: none;
+  border-color: var(--accent-yellow);
+  box-shadow: 0 0 0 3px var(--accent-yellow-bg);
+}
+
+.currency-switch__glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-yellow), #f7931a);
   color: #0b0e11;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
 }
 
-.currency-toggle button:hover:not(.active) {
-  color: var(--text-primary);
+.currency-switch__code {
+  min-width: 30px;
+  text-align: left;
 }
 
 .last-update {
@@ -613,6 +635,10 @@ tbody td {
   border-radius: 50%;
   display: inline-block;
   animation: pulse 2s ease-in-out infinite;
+}
+
+.live-dot.offline {
+  background: var(--accent-red);
 }
 
 @keyframes pulse {

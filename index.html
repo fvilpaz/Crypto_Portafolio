@@ -42,10 +42,10 @@
         <input type="file" id="import-file" accept=".csv,text/csv" style="display:none">
         <span class="last-update" id="last-update">Cargando...</span>
         <span class="live-dot" title="Precios en vivo"></span>
-        <div class="currency-toggle">
-          <button data-currency="USD" class="active">USD</button>
-          <button data-currency="EUR">EUR</button>
-        </div>
+        <button class="currency-switch" id="currency-switch" type="button" aria-label="Cambiar moneda" title="Cambiar moneda">
+          <span class="currency-switch__glyph" id="currency-glyph">$</span>
+          <span class="currency-switch__code" id="currency-code">USD</span>
+        </button>
       </div>
     </div>
   </header>

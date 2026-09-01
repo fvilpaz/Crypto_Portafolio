@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-cartera-v1';
+const CACHE_NAME = 'mi-cartera-v2';
 const ASSETS = [
   './',
   './index.html',
