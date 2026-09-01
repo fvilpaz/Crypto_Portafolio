@@ -5,7 +5,7 @@ Mi Cartera Crypto is a live cryptocurrency portfolio tracker. It shows what you
 CoinGecko. It covers current positions, DCA, staking, airdrops and the rotations
 that shaped the portfolio.
 
-🔗 **Live:** [portafoliocrypto.netlify.app](https://portafoliocrypto.netlify.app/)
+🔗 **Live:** [fvilpaz.github.io/Crypto_Portafolio](https://fvilpaz.github.io/Crypto_Portafolio/)
 
 ---
 
@@ -56,19 +56,22 @@ are intentionally not merged. The apps cross-link, nothing more.
 - CSS3 (Custom Properties, dark theme)
 - Vanilla JavaScript
 - [Chart.js](https://www.chartjs.org/) for the charts
-- [CoinGecko API](https://www.coingecko.com/en/api) for live prices (keyless)
+- [CoinGecko API](https://www.coingecko.com/en/api) for live prices (direct call, API key)
 - Service Worker + Web App Manifest (installable, offline app shell)
 
 ---
 
 ## 💾 Data
 
-Live **prices** come from CoinGecko at runtime. Your **holdings and movements**
-currently live as seed data in `js/app.js` (the `portfolio` and `transactions`
-arrays). No backend, no tracking, full privacy.
+Live **prices** come from CoinGecko at runtime (direct call with an API key, no
+proxy or backend in between). Your **holdings and movements** live only in your
+browser (`localStorage`). No backend, no tracking, full privacy.
 
-To change what you hold today, you edit those arrays and redeploy (a `git push`
-now triggers an automatic Netlify deploy).
+To load your movements, use **Import CSV** (CoinGecko transaction export); to back
+them up or move them between devices, use **Export CSV**. The app starts empty and
+only shows what you add — no seed data.
+
+A `git push` to `master` triggers an automatic **GitHub Pages** deploy.
 
 ---
 

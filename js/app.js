@@ -79,7 +79,6 @@ const App = (() => {
   function persist() {
     storeVersion = Date.now();
     saveStore({ portfolio, transactions, updatedAt: storeVersion });
-    cloudPush(); // copia de seguridad en la nube, para el resto de dispositivos
   }
 
   // Cada movimiento necesita un id estable para poder editar/borrar por fila.
@@ -201,31 +200,19 @@ const App = (() => {
   }
 
   // URLs de precios (simple/price) o sparklines (coins/markets). La directa de
-  // CoinGecko SIEMPRE va la primera: con la API key de js/config.js ya responde
-  // CORS desde el navegador, en cualquier sitio (GitHub Pages, Netlify, local).
-  // El proxy de Netlify queda solo de respaldo, con URL absoluta. El _t= rompe
-  // cualquier caché.
-  const PROXY_LIVE = 'https://portafoliocrypto.netlify.app/.netlify/functions/coingecko';
-
-  // Sincronización en la nube retirada: la copia de seguridad vive solo en el
-  // localStorage de cada navegador. No hay llamadas de red extra.
-  const cloudPush = () => {};
-  async function cloudPull() {}
-
+  // CoinGecko funciona desde el navegador gracias a la API key de js/config.js
+  // (responde CORS). Sin proxy de por medio. El _t= rompe cualquier caché.
   function coingeckoUrls(type, ids) {
     const key = COINGECKO_API_KEY ? `&${COINGECKO_API_PARAM}=${COINGECKO_API_KEY}` : '';
     const direct = (type === 'markets'
       ? `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&sparkline=true&price_change_percentage=24h`
       : `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`) + key;
-    const urls = [direct];
-    urls.push(`${PROXY_LIVE}?type=${type}&ids=${ids}`);
-    return urls.map(u => u + (u.includes('?') ? '&' : '?') + '_t=' + Date.now());
+    return [direct + '&_t=' + Date.now()];
   }
 
   // Fetch a CoinGecko resistente al rate limit (HTTP 429): reintenta hasta 3
   // veces respetando la cabecera Retry-After (o backoff exponencial si no viene).
-  // no-store evita que navegador o PWA sirvan una respuesta cacheada. Si tras
-  // los reintentos la fuente sigue caída, probamos la siguiente URL (el proxy).
+  // no-store evita que navegador o PWA sirvan una respuesta cacheada.
   async function fetchCoinGecko(urls, retries = 3) {
     if (!Array.isArray(urls)) urls = [urls];
     let lastErr = null;
@@ -1373,9 +1360,9 @@ const App = (() => {
   // nuevos no se queden atascados sirviendo la versión vieja).
   async function resetEverything() {
     const ok = confirm(
-      '¿Restaurar la app?\n\n' +
-      'Se borrarán TODOS los movimientos y datos guardados en ESTE navegador.\n' +
-      'También se elimina el service worker y su caché (adiós a cargar versiones viejas).\n\n' +
+      '¿Poner la app a cero?\n\n' +
+      'Se borrarán TODOS los movimientos, holdings y datos guardados en ESTE navegador.\n' +
+      'También se elimina el service worker y toda la caché.\n\n' +
       '¿Continuar?'
     );
     if (!ok) return;

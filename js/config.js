@@ -13,12 +13,3 @@
 // ═════════════════════════════════════════════════════════════════
 const COINGECKO_API_KEY = 'CG-dS5gDGZESCtRDctynZwxfDfu';
 const COINGECKO_API_PARAM = 'x_cg_demo_api_key';
-
-// ═════════════════════════════════════════════════════════════════
-// CONFIG — Sincronización en la nube
-//
-// Token compartido con la función netlify/functions/sync.js. Evita que
-// un extraño lea o sobrescriba tu cartera por casualidad. Vive en el
-// frontend (JS visible), así que NO es seguridad real.
-// ═════════════════════════════════════════════════════════════════
-const SYNC_TOKEN = 'tok_micartera_N3f9kQ2vXa8pR7dL';

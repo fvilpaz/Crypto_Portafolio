@@ -1,4 +1,0 @@
-# Sitio estático servido desde la raíz del repo + funciones serverless.
-[build]
-  publish = "."
-  functions = "netlify/functions"
