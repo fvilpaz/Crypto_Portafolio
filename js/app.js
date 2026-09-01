@@ -242,23 +242,22 @@ const App = (() => {
     requestAnimationFrame(tick);
   }
 
-  // URLs de precios (simple/price) o sparklines (coins/markets).
-  //  - En Netlify el proxy va el primero: corre en el servidor, sin CORS, con
-  //    reintentos ante 429. La directa de CoinGecko queda de respaldo.
-  //  - En local (file:// o localhost) la directa va primero; si CoinGecko la
-  //    bloquea (429/CORS sin cabecera), se cae al proxy del deploy, que responde
-  //    con Access-Control-Allow-Origin: * y precios frescos. Solo si AMBOS fallan
-  //    la app cae a los precios de compra (y muestra el aviso).
-  // El _t= al final rompe cualquier caché (service worker, CDN, navegador).
+  // URLs de precios (simple/price) o sparklines (coins/markets). La directa de
+  // CoinGecko SIEMPRE va la primera: con la API key de js/config.js ya responde
+  // CORS desde el navegador (sin key la API gratis bloquea por CORS/429 y se cae
+  // al proxy). El proxy queda solo como respaldo. El _t= rompe cualquier caché.
   const PROXY_LIVE = 'https://portafoliocrypto.netlify.app/.netlify/functions/coingecko';
   function coingeckoUrls(type, ids) {
-    const direct = type === 'markets'
+    const key = COINGECKO_API_KEY ? `&${COINGECKO_API_PARAM}=${COINGECKO_API_KEY}` : '';
+    const direct = (type === 'markets'
       ? `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&sparkline=true&price_change_percentage=24h`
-      : `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`;
-    const isProd = location.protocol.startsWith('http') && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-    const urls = isProd
-      ? [`/.netlify/functions/coingecko?type=${type}&ids=${ids}`, direct]
-      : [direct, `${PROXY_LIVE}?type=${type}&ids=${ids}`];
+      : `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`) + key;
+    const urls = [direct];
+    if (location.protocol.startsWith('http') && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) {
+      urls.push(`/.netlify/functions/coingecko?type=${type}&ids=${ids}`);
+    } else {
+      urls.push(`${PROXY_LIVE}?type=${type}&ids=${ids}`);
+    }
     return urls.map(u => u + (u.includes('?') ? '&' : '?') + '_t=' + Date.now());
   }
 
