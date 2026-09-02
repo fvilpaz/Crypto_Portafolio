@@ -143,9 +143,8 @@ const App = (() => {
 
   const fmtCurrency = (n) => {
     if (n === null || n === undefined || isNaN(n)) return '—';
-    const symbol = currency === 'USD' ? '$' : '€';
     const value = currency === 'EUR' ? n * EUR_USD : n;
-    return symbol + fmt(value);
+    return currency === 'EUR' ? fmt(value) + ' €' : '$' + fmt(value);
   };
 
   const fmtPct = (n) => {
@@ -694,15 +693,15 @@ const App = (() => {
       .filter(tx => tx.date.startsWith(monthKey) && tx.type === 'Compra' && tx.totalUsd > 0)
       .reduce((sum, tx) => sum + tx.totalUsd, 0);
 
-    const symbol = currency === 'USD' ? '$' : '€';
     const invested = currency === 'EUR' ? investedUsd * EUR_USD : investedUsd;
     const target = currency === 'EUR' ? dcaTargetEur : dcaTargetEur / EUR_USD;
     const pct = target > 0 ? Math.min((invested / target) * 100, 100) : 0;
     const remaining = Math.max(target - invested, 0);
+    const symFmt = (v, d = 2) => currency === 'EUR' ? fmt(v, d) + ' €' : '$' + fmt(v, d);
 
     // Cabecera: objetivo siempre en € (es como lo piensa el usuario).
     const headerDca = document.getElementById('header-dca');
-    if (headerDca) headerDca.textContent = `€${fmt(dcaTargetEur, 0)}`;
+    if (headerDca) headerDca.textContent = `${fmt(dcaTargetEur, 0)} €`;
 
     const el = document.getElementById('dca-summary');
     if (!el) return;
@@ -712,8 +711,8 @@ const App = (() => {
         <button type="button" class="dca-edit" id="dca-amount" title="Editar objetivo mensual" aria-label="Editar objetivo mensual">✎</button>
       </div>
       <div class="dca-amount">
-        <span class="dca-invested">${symbol}${fmt(invested, 2)}</span>
-        <span class="dca-target">de ${symbol}${fmt(target, 2)}</span>
+        <span class="dca-invested">${symFmt(invested)}</span>
+        <span class="dca-target">de ${symFmt(target)}</span>
       </div>
       <div class="dca-bar">
         <div class="dca-fill ${pct >= 100 ? 'complete' : ''}" style="width:${pct}%"></div>
@@ -721,7 +720,7 @@ const App = (() => {
       <div class="dca-footer">
         ${pct >= 100
           ? '<span class="positive">✓ Mes completo</span>'
-          : `<span style="color:var(--text-muted)">Faltan ${symbol}${fmt(remaining, 2)}</span>`}
+          : `<span style="color:var(--text-muted)">Faltan ${symFmt(remaining)}</span>`}
       </div>
     `;
     const amountEl = document.getElementById('dca-amount');
