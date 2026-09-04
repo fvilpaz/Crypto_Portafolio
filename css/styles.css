@@ -735,6 +735,24 @@ tbody td {
 }
 
 /* ── WARNING BANNER ── */
+.portfolio-health { margin-bottom: 20px; }
+.health-wrap { display: flex; flex-direction: column; gap: 10px; }
+.health-labels { display: flex; gap: 20px; flex-wrap: wrap; }
+.health-label-item { display: flex; align-items: center; gap: 5px; font-size: 13px; }
+.health-icon { font-size: 11px; }
+.health-label-name { font-weight: 600; color: var(--text-secondary); }
+.health-label-pct { font-weight: 700; }
+.health-label-target { color: var(--text-muted); font-size: 12px; }
+.health-bar-wrap { position: relative; }
+.health-bar { display: flex; height: 10px; border-radius: 6px; overflow: hidden; background: var(--border); }
+.health-seg { height: 100%; transition: width 0.5s ease; }
+.health-mark {
+  position: absolute; top: -4px; bottom: -4px;
+  width: 2px; background: var(--bg-main);
+  border-radius: 1px; transform: translateX(-50%);
+  pointer-events: none;
+}
+
 .warning-banner {
   background: var(--accent-yellow-bg);
   border: 1px solid rgba(240, 185, 11, 0.3);

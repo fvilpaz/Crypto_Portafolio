@@ -471,6 +471,7 @@ const App = (() => {
   function render() {
     renderHero();
     renderCards();
+    renderHealthBar();
     renderReparto();
     renderDcaSummary();
     renderCosmosBar();
@@ -584,6 +585,71 @@ const App = (() => {
       defenseEdit.dataset.bound = '1';
       defenseEdit.addEventListener('click', editDefenseTarget);
     }
+  }
+
+  function renderHealthBar() {
+    const el = document.getElementById('portfolio-health');
+    if (!el) return;
+
+    const strat = STRATEGIES[settings.strategy || DEFAULT_STRATEGY];
+    const total = getInvestedValue();
+    if (total === 0) { el.innerHTML = ''; return; }
+
+    const btcVal  = getAssetValue(portfolio.find(a => a.token === 'BTC'));
+    const ethVal  = getAssetValue(portfolio.find(a => a.token === 'ETH'));
+    const usdcVal = getAssetValue(portfolio.find(a => a.token === 'USDC'));
+    const satVal  = SATELLITE_TOKENS.reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t)), 0);
+
+    const corePct  = (btcVal + ethVal) / total * 100;
+    const satPct   = satVal / total * 100;
+    const refugPct = usdcVal / total * 100;
+    const otherPct = Math.max(0, 100 - corePct - satPct - refugPct);
+
+    // Objetivos de la estrategia activa
+    const tCore  = strat.core;
+    const tSat   = strat.satelites;
+    const tRefug = strat.refugio;
+
+    // Cada segmento puede pasarse de su objetivo (se pone rojo) o quedarse corto
+    function seg(pct, target, colorBase, label) {
+      const diff = pct - target;  // positivo = por encima, negativo = por debajo
+      let color, icon, iconColor;
+      if (diff >= -2)      { color = `var(--accent-${colorBase})`; icon = '✓'; iconColor = 'var(--accent-green)'; }
+      else if (diff >= -8) { color = 'var(--accent-yellow)';        icon = '▼'; iconColor = 'var(--accent-yellow)'; }
+      else                 { color = 'var(--accent-red)';           icon = '▼'; iconColor = 'var(--accent-red)'; }
+      return { pct, target, color, label, icon, iconColor };
+    }
+
+    const segs = [
+      seg(corePct,  tCore,  'green',  'Nucleo'),
+      seg(satPct,   tSat,   'yellow', 'Satelites'),
+      seg(refugPct, tRefug, 'blue',   'Refugio'),
+    ];
+
+    // Marcas de objetivo: posiciones acumuladas
+    const mark1 = tCore;
+    const mark2 = tCore + tSat;
+
+    el.innerHTML = `
+      <div class="health-wrap">
+        <div class="health-labels">
+          ${segs.map(s => `
+            <div class="health-label-item">
+              <span class="health-icon" style="color:${s.iconColor}">${s.icon}</span>
+              <span class="health-label-name">${s.label}</span>
+              <span class="health-label-pct" style="color:${s.color}">${s.pct.toFixed(1)}%</span>
+              <span class="health-label-target">/ ${s.target}%</span>
+            </div>`).join('')}
+        </div>
+        <div class="health-bar-wrap">
+          <div class="health-bar">
+            ${segs.map(s => `<div class="health-seg" style="width:${s.pct.toFixed(2)}%;background:${s.color}"></div>`).join('')}
+            ${otherPct > 0.1 ? `<div class="health-seg" style="width:${otherPct.toFixed(2)}%;background:var(--border)"></div>` : ''}
+          </div>
+          <div class="health-mark" style="left:${mark1}%" title="Objetivo nucleo ${tCore}%"></div>
+          <div class="health-mark" style="left:${mark2}%" title="Objetivo satelites ${tSat}%"></div>
+        </div>
+      </div>`;
   }
 
   // Calcula el reparto de una plantilla: cuánto va a cada sitio este mes.
