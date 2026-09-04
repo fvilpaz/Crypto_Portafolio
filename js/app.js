@@ -17,7 +17,12 @@ const App = (() => {
     PI:    { name: 'Pi Network', coingeckoId: 'pi-network', icon: `${COINGECKO_IMG}/54342/small/pi_network.jpg`, color: '#0ecb81', cssClass: 'pi' },
     ATONE: { name: 'AtomOne', coingeckoId: 'atomone', icon: `${COINGECKO_IMG}/33230/small/atomone_200x200.jpg`, color: '#1e90ff', cssClass: 'atone' },
     MODE:  { name: 'Mode', coingeckoId: 'mode', icon: `${COINGECKO_IMG}/34979/small/MODE.jpg`, color: '#f0b90b', cssClass: 'mode' },
+    SOL:   { name: 'Solana', coingeckoId: 'solana', icon: `${COINGECKO_IMG}/4128/small/solana.png`, color: '#9945ff', cssClass: 'sol' },
   };
+
+  // Tokens que cuentan como satelites (todo lo que no es BTC, ETH ni USDC).
+  // Anadir aqui cada nuevo satelite que entre en la cartera.
+  const SATELLITE_TOKENS = ['ATOM', 'TIA', 'SOL'];
 
   // La cartera es UN SOLO monedero. Cada moneda lleva un tag:
 //   'portfolio' → cartera normal
@@ -46,7 +51,8 @@ const App = (() => {
     agresiva:     { refugio: 15, core: 60, satelites: 25 },
   };
   const DEFAULT_STRATEGY = 'moderada';
-  const CORE_SPLIT = { BTC: 0.6, ETH: 0.4 };   // objetivo interno del núcleo (BTC primero)
+  const CORE_SPLIT = { BTC: 0.6, ETH: 0.4 };   // objetivo interno del nucleo (BTC primero)
+  const SAT_SPLIT  = { SOL: 0.5, ATOM: 0.3, TIA: 0.2 };  // objetivo interno dentro del cubo satelites
 
   // ── PERSISTENCIA (localStorage) ──
   // La cartera, los movimientos y los airdrops viven SOLO en el navegador.
@@ -451,13 +457,15 @@ const App = (() => {
     }, 0);
   }
 
-  function getCosmosPct() {
+  function getSatPct() {
     const invested = getInvestedValue();
     if (invested === 0) return 0;
-    const atomVal = getAssetValue(portfolio.find(a => a.token === 'ATOM'));
-    const tiaVal = getAssetValue(portfolio.find(a => a.token === 'TIA'));
-    return (atomVal + tiaVal) / invested;
+    const satVal = SATELLITE_TOKENS.reduce((sum, tok) => {
+      return sum + getAssetValue(portfolio.find(a => a.token === tok));
+    }, 0);
+    return satVal / invested;
   }
+  const getCosmosPct = getSatPct;   // alias para no romper llamadas internas
 
   // ── RENDER ──
   function render() {
@@ -525,12 +533,16 @@ const App = (() => {
     if (btcEthSub) {
       btcEthSub.innerHTML = `${fmtCurrency(btcEth)} · <span class="${pnlClass(corePnlPct)}">${fmtPct(corePnlPct).replace('+', '')} acum.</span>`;
     }
-    // Satélites (Cosmos ATOM+TIA): peso + tope + la renta de staking que generan.
+    // Satelites: todos los tokens de SATELLITE_TOKENS presentes en la cartera.
     const cosmosNum = document.getElementById('card-cosmos-pct');
     cosmosNum.textContent = `${(cosmosPct * 100).toFixed(1)}%`;
     cosmosNum.classList.toggle('negative', cosmosPct > cosmosTopPct);
     const cosmosIconsEl = document.getElementById('cosmos-icons');
-    if (cosmosIconsEl && !cosmosIconsEl.childElementCount) cosmosIconsEl.innerHTML = iconHtml('ATOM', 'atom', 30) + iconHtml('TIA', 'tia', 30);
+    if (cosmosIconsEl && !cosmosIconsEl.childElementCount) {
+      cosmosIconsEl.innerHTML = SATELLITE_TOKENS
+        .map(tok => { const c = COINS[tok]; return c ? iconHtml(tok, c.cssClass, 30) : ''; })
+        .join('');
+    }
     const cosmosStakingEl = document.getElementById('card-cosmos-staking');
     if (cosmosStakingEl) {
       cosmosStakingEl.innerHTML = stakingMonthly > 0
@@ -595,7 +607,29 @@ const App = (() => {
       const rest = toCore - gapSum;
       toBtc = btcGap + rest * CORE_SPLIT.BTC; toEth = ethGap + rest * CORE_SPLIT.ETH;
     }
-    return { toBtc, toEth, toRefugio, toSat, satBlocked, monthlyUsd };
+
+    // Gap-logic para satelites: mismo mecanismo que el nucleo.
+    const satTokens = Object.keys(SAT_SPLIT);
+    const satVals = {};
+    satTokens.forEach(tok => { satVals[tok] = getAssetValue(portfolio.find(a => a.token === tok)); });
+    const satTotal = satTokens.reduce((s, tok) => s + satVals[tok], 0);
+    const satAfter = satTotal + toSat;
+    const satGaps = {};
+    satTokens.forEach(tok => { satGaps[tok] = Math.max(SAT_SPLIT[tok] * satAfter - satVals[tok], 0); });
+    const satGapSum = satTokens.reduce((s, tok) => s + satGaps[tok], 0);
+    const satAlloc = {};
+    satTokens.forEach(tok => {
+      if (satGapSum <= 0) {
+        satAlloc[tok] = toSat * SAT_SPLIT[tok];
+      } else if (satGapSum >= toSat) {
+        satAlloc[tok] = toSat * (satGaps[tok] / satGapSum);
+      } else {
+        const rest = toSat - satGapSum;
+        satAlloc[tok] = satGaps[tok] + rest * SAT_SPLIT[tok];
+      }
+    });
+
+    return { toBtc, toEth, toRefugio, toSat, satAlloc, satBlocked, monthlyUsd };
   }
 
   // Reparto del mes: un desplegable por plantilla y, dentro, cuánto meter en cada
@@ -613,11 +647,16 @@ const App = (() => {
       stratWrap.innerHTML = Object.entries(STRATEGIES).map(([key, s]) => {
         const name = key.charAt(0).toUpperCase() + key.slice(1);
         const r = computeReparto(s);
+        const satRows = SATELLITE_TOKENS.map(tok => {
+          const c = COINS[tok] || { cssClass: tok.toLowerCase() };
+          const amount = r.satAlloc?.[tok] ?? 0;
+          return { token: tok, cssClass: c.cssClass, amount, label: `${tok} (Satelite)`, idle: r.satBlocked ? 'en el tope' : 'en objetivo' };
+        });
         const rows = [
-          { token: 'BTC',  cssClass: 'btc',  amount: r.toBtc,     label: 'BTC',             idle: 'ya en su sitio' },
-          { token: 'ETH',  cssClass: 'eth',  amount: r.toEth,     label: 'ETH',             idle: 'ya en su sitio' },
-          { token: 'USDC', cssClass: 'usdc', amount: r.toRefugio, label: 'USDC (Refugio)',  idle: 'cubierto' },
-          { token: 'TIA',  cssClass: 'tia',  amount: r.toSat,     label: 'Satélites (TIA)', idle: r.satBlocked ? 'en el tope' : 'sin asignar' },
+          { token: 'BTC',  cssClass: 'btc',  amount: r.toBtc,     label: 'BTC',            idle: 'ya en su sitio' },
+          { token: 'ETH',  cssClass: 'eth',  amount: r.toEth,     label: 'ETH',            idle: 'ya en su sitio' },
+          { token: 'USDC', cssClass: 'usdc', amount: r.toRefugio, label: 'USDC (Refugio)', idle: 'cubierto' },
+          ...satRows,
         ];
         const detail = rows.map(row => {
           const on = row.amount >= 0.01;
@@ -740,7 +779,7 @@ const App = (() => {
       bar.className = 'progress-fill red';
       label.textContent = `${cosmosPct.toFixed(1)}% / 35% · TOPE SUPERADO`;
       label.className = 'cosmos-label negative';
-      if (banner) { banner.style.display = 'flex'; banner.innerHTML = '⚠️ Cosmos por encima del 35%. No añadir dinero nuevo.'; }
+      if (banner) { banner.style.display = 'flex'; banner.innerHTML = '⚠️ Satelites por encima del 35%. No añadir dinero nuevo.'; }
     } else if (cosmosPct > (cosmosTopPct - 0.05) * 100) {
       bar.className = 'progress-fill yellow';
       label.textContent = `${cosmosPct.toFixed(1)}% / 35% · Cerca del tope`;
