@@ -612,12 +612,13 @@ const App = (() => {
 
     // Cada segmento puede pasarse de su objetivo (se pone rojo) o quedarse corto
     function seg(pct, target, colorBase, label) {
-      const diff = pct - target;  // positivo = por encima, negativo = por debajo
-      let color, icon, iconColor;
-      if (diff >= -2)      { color = `var(--accent-${colorBase})`; icon = '✓'; iconColor = 'var(--accent-green)'; }
-      else if (diff >= -8) { color = 'var(--accent-yellow)';        icon = '▼'; iconColor = 'var(--accent-yellow)'; }
-      else                 { color = 'var(--accent-red)';           icon = '▼'; iconColor = 'var(--accent-red)'; }
-      return { pct, target, color, label, icon, iconColor };
+      const ratio = target > 0 ? pct / target : 1;  // 0=vacio, 1=en objetivo, >1=pasado
+      let color;
+      if (ratio >= 1)         color = `var(--accent-${colorBase})`;  // verde/amarillo/azul segun cubo
+      else if (ratio >= 0.85) color = '#f0b90b';   // amarillo
+      else if (ratio >= 0.6)  color = '#e87c2a';   // naranja
+      else                    color = '#f6465d';   // rojo
+      return { pct, target, color, label };
     }
 
     const segs = [
