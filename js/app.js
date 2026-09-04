@@ -647,24 +647,47 @@ const App = (() => {
       stratWrap.innerHTML = Object.entries(STRATEGIES).map(([key, s]) => {
         const name = key.charAt(0).toUpperCase() + key.slice(1);
         const r = computeReparto(s);
+        // Progreso actual de cada token respecto a su objetivo
+        const coreTotal = getAssetValue(portfolio.find(a => a.token === 'BTC')) + getAssetValue(portfolio.find(a => a.token === 'ETH'));
+        const satTotal  = SATELLITE_TOKENS.reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t)), 0);
+        const invTotal  = getInvestedValue();
+        const defFrac   = (settings.defenseTarget || 0) / 100;
+
+        function rowProgress(token) {
+          const val = getAssetValue(portfolio.find(a => a.token === token));
+          if (token === 'BTC') return coreTotal > 0 ? Math.min((val / coreTotal) / CORE_SPLIT.BTC, 1) : 0;
+          if (token === 'ETH') return coreTotal > 0 ? Math.min((val / coreTotal) / CORE_SPLIT.ETH, 1) : 0;
+          if (token === 'USDC') return defFrac > 0 && invTotal > 0 ? Math.min((val / invTotal) / defFrac, 1) : 0;
+          const split = SAT_SPLIT[token];
+          return (split > 0 && satTotal > 0) ? Math.min((val / satTotal) / split, 1) : 0;
+        }
+
         const satRows = SATELLITE_TOKENS.map(tok => {
           const c = COINS[tok] || { cssClass: tok.toLowerCase() };
           const amount = r.satAlloc?.[tok] ?? 0;
-          return { token: tok, cssClass: c.cssClass, amount, label: tok, idle: r.satBlocked ? 'en el tope' : 'en objetivo' };
+          return { token: tok, cssClass: c.cssClass, amount, label: tok };
         });
         const rows = [
-          { token: 'BTC',  cssClass: 'btc',  amount: r.toBtc,     label: 'BTC',            idle: 'ya en su sitio' },
-          { token: 'ETH',  cssClass: 'eth',  amount: r.toEth,     label: 'ETH',            idle: 'ya en su sitio' },
-          { token: 'USDC', cssClass: 'usdc', amount: r.toRefugio, label: 'USDC', idle: 'cubierto' },
+          { token: 'BTC',  cssClass: 'btc',  amount: r.toBtc,     label: 'BTC'  },
+          { token: 'ETH',  cssClass: 'eth',  amount: r.toEth,     label: 'ETH'  },
+          { token: 'USDC', cssClass: 'usdc', amount: r.toRefugio, label: 'USDC' },
           ...satRows,
         ];
         const detail = rows.map(row => {
           const on = row.amount >= 0.01;
+          const prog = rowProgress(row.token);
+          const pct = (prog * 100).toFixed(0);
+          const barColor = prog >= 1 ? 'var(--accent-green)' : prog >= 0.8 ? 'var(--accent-yellow)' : 'var(--accent-blue)';
           return `
             <div class="reparto-row ${on ? '' : 'idle'}">
               <span class="reparto-coin">${iconHtml(row.token, row.cssClass, 24)}</span>
-              <span class="reparto-name">${row.label}</span>
-              <span class="reparto-amt">${on ? fmtCurrency(row.amount) : row.idle}</span>
+              <div class="reparto-mid">
+                <span class="reparto-name">${row.label}</span>
+                <div class="reparto-prog-wrap">
+                  <div class="reparto-prog-bar" style="width:${pct}%;background:${barColor}"></div>
+                </div>
+              </div>
+              <span class="reparto-amt">${on ? fmtCurrency(row.amount) : `${pct}%`}</span>
             </div>`;
         }).join('');
         return `
