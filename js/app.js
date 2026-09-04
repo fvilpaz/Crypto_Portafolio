@@ -523,15 +523,21 @@ const App = (() => {
     const cosmosPct = getCosmosPct();
     const stakingMonthly = getTotalStakingIncomeYearly() / 12;
 
-    // Núcleo: peso en la cartera (dónde está repartido el dinero), NO ganancia.
+    // Nucleo: peso en la cartera vs objetivo de la estrategia activa.
+    const coreTarget = (STRATEGIES[settings.strategy || DEFAULT_STRATEGY]?.core || 0);
+    const coreOverTarget = coreTarget > 0 && (coreWeight * 100) > coreTarget + 5;
     document.getElementById('card-btceth-pct').textContent = `${(coreWeight * 100).toFixed(1)}%`;
     const btcEthBar = document.getElementById('btceth-bar-fill');
-    if (btcEthBar) btcEthBar.style.width = `${Math.min(coreWeight * 100, 100)}%`;
+    if (btcEthBar) {
+      btcEthBar.style.width = `${coreTarget > 0 ? Math.min(coreWeight * 100 / coreTarget * 100, 100) : Math.min(coreWeight * 100, 100)}%`;
+      btcEthBar.className = `progress-fill ${coreOverTarget ? 'yellow' : 'green'}`;
+    }
     const iconsEl = document.getElementById('btceth-icons');
     if (iconsEl && !iconsEl.childElementCount) iconsEl.innerHTML = iconHtml('BTC', 'btc', 30) + iconHtml('ETH', 'eth', 30);
     const btcEthSub = document.getElementById('card-btceth-sub');
     if (btcEthSub) {
-      btcEthSub.innerHTML = `${fmtCurrency(btcEth)} · <span class="${pnlClass(corePnlPct)}">${fmtPct(corePnlPct).replace('+', '')} acum.</span>`;
+      const targetLabel = coreTarget > 0 ? ` · obj. ${coreTarget}%` : '';
+      btcEthSub.innerHTML = `${fmtCurrency(btcEth)}${targetLabel} · <span class="${pnlClass(corePnlPct)}">${fmtPct(corePnlPct).replace('+', '')} acum.</span>`;
     }
     // Satelites: todos los tokens de SATELLITE_TOKENS presentes en la cartera.
     const cosmosNum = document.getElementById('card-cosmos-pct');
