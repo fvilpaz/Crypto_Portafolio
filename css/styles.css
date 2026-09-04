@@ -489,13 +489,16 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--border);
   border-radius: 10px;
 }
-.reparto-row.idle { opacity: 0.55; }
-.reparto-coin { display: inline-flex; }
+.reparto-row.idle { opacity: 0.6; }
+.reparto-coin { display: inline-flex; flex-shrink: 0; }
 .reparto-coin img,
 .reparto-coin .token-icon { width: 24px; height: 24px; border-radius: 50%; }
-.reparto-name { flex: 1; font-weight: 600; font-size: 14px; }
-.reparto-amt { font-weight: 800; font-size: 15px; letter-spacing: -0.3px; }
-.reparto-row.idle .reparto-amt { font-weight: 600; font-size: 13px; color: var(--text-muted); }
+.reparto-mid { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.reparto-name { font-weight: 600; font-size: 14px; }
+.reparto-prog-wrap { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.reparto-prog-bar { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+.reparto-amt { font-weight: 800; font-size: 15px; letter-spacing: -0.3px; flex-shrink: 0; }
+.reparto-row.idle .reparto-amt { font-weight: 500; font-size: 13px; color: var(--text-muted); }
 
 .card-icon {
   width: 36px;
