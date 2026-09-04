@@ -471,7 +471,6 @@ const App = (() => {
   function render() {
     renderHero();
     renderCards();
-    renderHealthBar();
     renderReparto();
     renderDcaSummary();
     renderCosmosBar();
@@ -524,15 +523,33 @@ const App = (() => {
     const cosmosPct = getCosmosPct();
     const stakingMonthly = getTotalStakingIncomeYearly() / 12;
 
+    // Pone (o actualiza) una marca vertical en la barra al % del objetivo
+    function setBarMark(wrapId, targetPct) {
+      const wrap = document.getElementById(wrapId);
+      if (!wrap) return;
+      let mark = wrap.querySelector('.card-bar-mark');
+      if (!mark) { mark = document.createElement('div'); mark.className = 'card-bar-mark'; wrap.appendChild(mark); }
+      mark.style.left = `${Math.min(Math.max(targetPct, 0), 100)}%`;
+    }
+
+    // Color de barra segun ratio actual/objetivo: rojo-naranja-amarillo-verde
+    function barColor(ratio) {
+      if (ratio >= 1)    return '#0ecb81';  // verde: en objetivo o superado
+      if (ratio >= 0.85) return '#f0b90b';  // amarillo
+      if (ratio >= 0.6)  return '#e87c2a';  // naranja
+      return '#f6465d';                     // rojo
+    }
+
     // Nucleo: peso en la cartera vs objetivo de la estrategia activa.
     const coreTarget = (STRATEGIES[settings.strategy || DEFAULT_STRATEGY]?.core || 0);
-    const coreOverTarget = coreTarget > 0 && (coreWeight * 100) > coreTarget + 5;
     document.getElementById('card-btceth-pct').textContent = `${(coreWeight * 100).toFixed(1)}%`;
     const btcEthBar = document.getElementById('btceth-bar-fill');
     if (btcEthBar) {
-      btcEthBar.style.width = `${coreTarget > 0 ? Math.min(coreWeight * 100 / coreTarget * 100, 100) : Math.min(coreWeight * 100, 100)}%`;
-      btcEthBar.className = `progress-fill ${coreOverTarget ? 'yellow' : 'green'}`;
+      btcEthBar.style.width = `${Math.min(coreWeight * 100, 100)}%`;
+      btcEthBar.style.background = barColor(coreTarget > 0 ? (coreWeight * 100) / coreTarget : 1);
+      btcEthBar.className = 'progress-fill';
     }
+    setBarMark('btceth-bar-wrap', coreTarget);
     const iconsEl = document.getElementById('btceth-icons');
     if (iconsEl && !iconsEl.childElementCount) iconsEl.innerHTML = iconHtml('BTC', 'btc', 30) + iconHtml('ETH', 'eth', 30);
     const btcEthSub = document.getElementById('card-btceth-sub');
@@ -567,9 +584,12 @@ const App = (() => {
     if (defenseIconsEl && !defenseIconsEl.childElementCount) defenseIconsEl.innerHTML = iconHtml('USDC', 'usdc', 30);
     const defenseBar = document.getElementById('defense-bar-fill');
     if (defenseBar) {
-      defenseBar.style.width = defenseTargetFrac > 0 ? `${Math.min(defenseWeight / defenseTargetFrac * 100, 100)}%` : '0%';
-      defenseBar.className = `progress-fill ${reached ? 'green' : 'blue'}`;
+      const defRatio = defenseTargetFrac > 0 ? defenseWeight / defenseTargetFrac : 1;
+      defenseBar.style.width = `${Math.min(defenseWeight * 100, 100)}%`;
+      defenseBar.style.background = barColor(defRatio);
+      defenseBar.className = 'progress-fill';
     }
+    setBarMark('defense-bar-wrap', settings.defenseTarget || 0);
     const defenseSub = document.getElementById('card-defense-sub');
     if (defenseSub) {
       if (reached) {
@@ -585,73 +605,6 @@ const App = (() => {
       defenseEdit.dataset.bound = '1';
       defenseEdit.addEventListener('click', editDefenseTarget);
     }
-  }
-
-  function renderHealthBar() {
-    const el = document.getElementById('portfolio-health');
-    if (!el) return;
-
-    const strat = STRATEGIES[settings.strategy || DEFAULT_STRATEGY];
-    const total = getInvestedValue();
-    if (total === 0) { el.innerHTML = ''; return; }
-
-    const btcVal  = getAssetValue(portfolio.find(a => a.token === 'BTC'));
-    const ethVal  = getAssetValue(portfolio.find(a => a.token === 'ETH'));
-    const usdcVal = getAssetValue(portfolio.find(a => a.token === 'USDC'));
-    const satVal  = SATELLITE_TOKENS.reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t)), 0);
-
-    const corePct  = (btcVal + ethVal) / total * 100;
-    const satPct   = satVal / total * 100;
-    const refugPct = usdcVal / total * 100;
-    const otherPct = Math.max(0, 100 - corePct - satPct - refugPct);
-
-    // Objetivos de la estrategia activa
-    const tCore  = strat.core;
-    const tSat   = strat.satelites;
-    const tRefug = strat.refugio;
-
-    // Cada segmento puede pasarse de su objetivo (se pone rojo) o quedarse corto
-    function seg(pct, target, colorBase, label) {
-      const ratio = target > 0 ? pct / target : 1;  // 0=vacio, 1=en objetivo, >1=pasado
-      let color;
-      if (ratio >= 1)         color = `var(--accent-${colorBase})`;  // verde/amarillo/azul segun cubo
-      else if (ratio >= 0.85) color = '#f0b90b';   // amarillo
-      else if (ratio >= 0.6)  color = '#e87c2a';   // naranja
-      else                    color = '#f6465d';   // rojo
-      return { pct, target, color, label };
-    }
-
-    const segs = [
-      seg(corePct,  tCore,  'green',  'Nucleo'),
-      seg(satPct,   tSat,   'yellow', 'Satelites'),
-      seg(refugPct, tRefug, 'blue',   'Refugio'),
-    ];
-
-    // Marcas de objetivo: posiciones acumuladas
-    const mark1 = tCore;
-    const mark2 = tCore + tSat;
-
-    el.innerHTML = `
-      <div class="health-wrap">
-        ${segs.map(s => {
-          const fillPct = Math.min(s.pct, 100);
-          const markPct = s.target;
-          return `
-          <div class="health-row">
-            <div class="health-row-head">
-              <span class="health-label-name">${s.label}</span>
-              <span class="health-label-pct" style="color:${s.color}">${s.pct.toFixed(1)}%</span>
-              <span class="health-label-target">/ obj. ${s.target}%</span>
-            </div>
-            <div class="health-bar-wrap">
-              <div class="health-bar">
-                <div class="health-seg" style="width:${fillPct.toFixed(2)}%;background:${s.color}"></div>
-              </div>
-              <div class="health-mark" style="left:${markPct}%"></div>
-            </div>
-          </div>`;
-        }).join('')}
-      </div>`;
   }
 
   // Calcula el reparto de una plantilla: cuánto va a cada sitio este mes.
@@ -870,26 +823,33 @@ const App = (() => {
     const banner = document.getElementById('cosmos-warning');
     if (!bar || !label) return;
 
-    bar.style.width = `${Math.min(cosmosPct, 100)}%`;
+    const satTarget = STRATEGIES[settings.strategy || DEFAULT_STRATEGY]?.satelites || 20;
+    const satRatio = satTarget > 0 ? cosmosPct / satTarget : 1;
+    const overTop = cosmosPct > cosmosTopPct * 100;
+    const nearTop = cosmosPct > (cosmosTopPct - 0.05) * 100;
 
-    if (cosmosPct > cosmosTopPct * 100) {
-      bar.className = 'progress-fill red';
-      label.textContent = `${cosmosPct.toFixed(1)}% / 35% · TOPE SUPERADO`;
-      label.className = 'cosmos-label negative';
-      if (banner) { banner.style.display = 'flex'; banner.innerHTML = '⚠️ Satelites por encima del 35%. No añadir dinero nuevo.'; }
-    } else if (cosmosPct > (cosmosTopPct - 0.05) * 100) {
-      bar.className = 'progress-fill yellow';
-      label.textContent = `${cosmosPct.toFixed(1)}% / 35% · Cerca del tope`;
-      label.className = 'cosmos-label';
-      label.style.color = 'var(--accent-yellow)';
-      if (banner) banner.style.display = 'none';
-    } else {
-      bar.className = 'progress-fill green';
-      label.textContent = `${cosmosPct.toFixed(1)}% / 35%`;
-      label.className = 'cosmos-label';
-      label.style.color = 'var(--accent-green)';
-      if (banner) banner.style.display = 'none';
-    }
+    // Para satelites el objetivo es un rango: alcanzar satTarget pero no superar cosmosTopPct.
+    // Color: verde si en rango, amarillo si cerca del tope, rojo si lo supera.
+    let barCol;
+    if (overTop)       barCol = '#f6465d';
+    else if (nearTop)  barCol = '#f0b90b';
+    else if (satRatio >= 1) barCol = '#0ecb81';
+    else if (satRatio >= 0.85) barCol = '#f0b90b';
+    else if (satRatio >= 0.6)  barCol = '#e87c2a';
+    else               barCol = '#f6465d';
+
+    bar.style.width = `${Math.min(cosmosPct, 100)}%`;
+    bar.style.background = barCol;
+    bar.className = 'progress-fill';
+    setBarMark('cosmos-bar-wrap', satTarget);
+
+    const labelText = overTop ? `${cosmosPct.toFixed(1)}% / 35% · TOPE SUPERADO`
+                    : nearTop ? `${cosmosPct.toFixed(1)}% / 35% · Cerca del tope`
+                    : `${cosmosPct.toFixed(1)}% / 35%`;
+    label.textContent = labelText;
+    label.className = 'cosmos-label';
+    label.style.color = barCol;
+    if (banner) { banner.style.display = overTop ? 'flex' : 'none'; if (overTop) banner.innerHTML = '⚠️ Satelites por encima del 35%. No añadir dinero nuevo.'; }
   }
 
   function renderAssetTable() {

@@ -654,14 +654,27 @@ tbody td {
   height: 6px;
   background: var(--bg-card);
   border-radius: 3px;
-  overflow: hidden;
+  overflow: visible;
   margin-top: 8px;
+  position: relative;
+}
+.card-bar-mark {
+  position: absolute;
+  top: -4px; bottom: -4px;
+  width: 2px;
+  background: var(--text-secondary);
+  border-radius: 1px;
+  transform: translateX(-50%);
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .progress-fill {
   height: 100%;
   border-radius: 3px;
   transition: width 0.6s ease;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .progress-fill.green { background: var(--accent-green); }
