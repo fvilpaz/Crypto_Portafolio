@@ -632,23 +632,24 @@ const App = (() => {
 
     el.innerHTML = `
       <div class="health-wrap">
-        <div class="health-labels">
-          ${segs.map(s => `
-            <div class="health-label-item">
-              <span class="health-icon" style="color:${s.iconColor}">${s.icon}</span>
+        ${segs.map(s => {
+          const fillPct = Math.min(s.pct, 100);
+          const markPct = s.target;
+          return `
+          <div class="health-row">
+            <div class="health-row-head">
               <span class="health-label-name">${s.label}</span>
               <span class="health-label-pct" style="color:${s.color}">${s.pct.toFixed(1)}%</span>
-              <span class="health-label-target">/ ${s.target}%</span>
-            </div>`).join('')}
-        </div>
-        <div class="health-bar-wrap">
-          <div class="health-bar">
-            ${segs.map(s => `<div class="health-seg" style="width:${s.pct.toFixed(2)}%;background:${s.color}"></div>`).join('')}
-            ${otherPct > 0.1 ? `<div class="health-seg" style="width:${otherPct.toFixed(2)}%;background:var(--border)"></div>` : ''}
-          </div>
-          <div class="health-mark" style="left:${mark1}%" title="Objetivo nucleo ${tCore}%"></div>
-          <div class="health-mark" style="left:${mark2}%" title="Objetivo satelites ${tSat}%"></div>
-        </div>
+              <span class="health-label-target">/ obj. ${s.target}%</span>
+            </div>
+            <div class="health-bar-wrap">
+              <div class="health-bar">
+                <div class="health-seg" style="width:${fillPct.toFixed(2)}%;background:${s.color}"></div>
+              </div>
+              <div class="health-mark" style="left:${markPct}%"></div>
+            </div>
+          </div>`;
+        }).join('')}
       </div>`;
   }
 

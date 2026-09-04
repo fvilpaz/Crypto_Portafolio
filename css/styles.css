@@ -737,20 +737,19 @@ tbody td {
 /* ── WARNING BANNER ── */
 .portfolio-health { margin-bottom: 20px; }
 .health-wrap { display: flex; flex-direction: column; gap: 10px; }
-.health-labels { display: flex; gap: 20px; flex-wrap: wrap; }
-.health-label-item { display: flex; align-items: center; gap: 5px; font-size: 13px; }
-.health-icon { font-size: 11px; }
-.health-label-name { font-weight: 600; color: var(--text-secondary); }
+.health-row { display: flex; flex-direction: column; gap: 6px; }
+.health-row-head { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.health-label-name { font-weight: 600; color: var(--text-secondary); min-width: 72px; }
 .health-label-pct { font-weight: 700; }
 .health-label-target { color: var(--text-muted); font-size: 12px; }
 .health-bar-wrap { position: relative; }
-.health-bar { display: flex; height: 10px; border-radius: 6px; overflow: hidden; background: var(--border); }
-.health-seg { height: 100%; transition: width 0.5s ease; }
+.health-bar { height: 8px; border-radius: 6px; background: var(--border); overflow: visible; position: relative; }
+.health-seg { height: 100%; border-radius: 6px; transition: width 0.5s ease; max-width: 100%; }
 .health-mark {
-  position: absolute; top: -4px; bottom: -4px;
-  width: 2px; background: var(--bg-main);
+  position: absolute; top: -5px; bottom: -5px;
+  width: 2px; background: var(--text-secondary);
   border-radius: 1px; transform: translateX(-50%);
-  pointer-events: none;
+  pointer-events: none; opacity: 0.7;
 }
 
 .warning-banner {
