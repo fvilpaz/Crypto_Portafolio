@@ -512,6 +512,21 @@ const App = (() => {
     `;
   }
 
+  function setBarMark(wrapId, targetPct) {
+    const wrap = document.getElementById(wrapId);
+    if (!wrap || !targetPct) return;
+    let mark = wrap.querySelector('.card-bar-mark');
+    if (!mark) { mark = document.createElement('div'); mark.className = 'card-bar-mark'; wrap.appendChild(mark); }
+    mark.style.left = `${Math.min(Math.max(targetPct, 0), 100)}%`;
+  }
+
+  function barColor(ratio, okColor) {
+    if (ratio >= 1)    return okColor || '#0ecb81';
+    if (ratio >= 0.85) return '#f0b90b';
+    if (ratio >= 0.6)  return '#e87c2a';
+    return '#f6465d';
+  }
+
   function renderCards() {
     const total = getInvestedValue();   // base de cubos: capital invertido, sin airdrops (suman 100%)
     const btcAsset = portfolio.find(a => a.token === 'BTC');
@@ -524,38 +539,26 @@ const App = (() => {
     const stakingMonthly = getTotalStakingIncomeYearly() / 12;
 
     // Pone (o actualiza) una marca vertical en la barra al % del objetivo
-    function setBarMark(wrapId, targetPct) {
-      const wrap = document.getElementById(wrapId);
-      if (!wrap) return;
-      let mark = wrap.querySelector('.card-bar-mark');
-      if (!mark) { mark = document.createElement('div'); mark.className = 'card-bar-mark'; wrap.appendChild(mark); }
-      mark.style.left = `${Math.min(Math.max(targetPct, 0), 100)}%`;
-    }
-
-    // Color de barra segun ratio actual/objetivo: rojo-naranja-amarillo-verde
-    function barColor(ratio) {
-      if (ratio >= 1)    return '#0ecb81';  // verde: en objetivo o superado
-      if (ratio >= 0.85) return '#f0b90b';  // amarillo
-      if (ratio >= 0.6)  return '#e87c2a';  // naranja
-      return '#f6465d';                     // rojo
-    }
-
     // Nucleo: peso en la cartera vs objetivo de la estrategia activa.
     const coreTarget = (STRATEGIES[settings.strategy || DEFAULT_STRATEGY]?.core || 0);
     document.getElementById('card-btceth-pct').textContent = `${(coreWeight * 100).toFixed(1)}%`;
     const btcEthBar = document.getElementById('btceth-bar-fill');
     if (btcEthBar) {
       btcEthBar.style.width = `${Math.min(coreWeight * 100, 100)}%`;
-      btcEthBar.style.background = barColor(coreTarget > 0 ? (coreWeight * 100) / coreTarget : 1);
+      btcEthBar.style.background = barColor(coreTarget > 0 ? (coreWeight * 100) / coreTarget : 1, 'var(--accent-green)');
       btcEthBar.className = 'progress-fill';
     }
     setBarMark('btceth-bar-wrap', coreTarget);
+    const btcEthLabel = document.getElementById('btceth-bar-label');
+    if (btcEthLabel) {
+      btcEthLabel.textContent = `Objetivo ${coreTarget}%`;
+      btcEthLabel.style.color = barColor(coreTarget > 0 ? (coreWeight * 100) / coreTarget : 1, 'var(--accent-green)');
+    }
     const iconsEl = document.getElementById('btceth-icons');
     if (iconsEl && !iconsEl.childElementCount) iconsEl.innerHTML = iconHtml('BTC', 'btc', 30) + iconHtml('ETH', 'eth', 30);
     const btcEthSub = document.getElementById('card-btceth-sub');
     if (btcEthSub) {
-      const targetLabel = coreTarget > 0 ? ` · obj. ${coreTarget}%` : '';
-      btcEthSub.innerHTML = `${fmtCurrency(btcEth)}${targetLabel} · <span class="${pnlClass(corePnlPct)}">${fmtPct(corePnlPct).replace('+', '')} acum.</span>`;
+      btcEthSub.innerHTML = '';
     }
     // Satelites: todos los tokens de SATELLITE_TOKENS presentes en la cartera.
     const cosmosNum = document.getElementById('card-cosmos-pct');
@@ -569,9 +572,7 @@ const App = (() => {
     }
     const cosmosStakingEl = document.getElementById('card-cosmos-staking');
     if (cosmosStakingEl) {
-      cosmosStakingEl.innerHTML = stakingMonthly > 0
-        ? `<span class="positive">${fmtCurrency(stakingMonthly)}</span> al mes en staking`
-        : 'Sin staking';
+      cosmosStakingEl.innerHTML = '';
     }
 
     // Refugio (USDC): peso actual vs objetivo editable (defenseTarget en %).
@@ -583,23 +584,23 @@ const App = (() => {
     const defenseIconsEl = document.getElementById('defense-icons');
     if (defenseIconsEl && !defenseIconsEl.childElementCount) defenseIconsEl.innerHTML = iconHtml('USDC', 'usdc', 30);
     const defenseBar = document.getElementById('defense-bar-fill');
+    const defRatio = defenseTargetFrac > 0 ? defenseWeight / defenseTargetFrac : 1;
     if (defenseBar) {
-      const defRatio = defenseTargetFrac > 0 ? defenseWeight / defenseTargetFrac : 1;
       defenseBar.style.width = `${Math.min(defenseWeight * 100, 100)}%`;
-      defenseBar.style.background = barColor(defRatio);
+      defenseBar.style.background = barColor(defRatio, 'var(--accent-blue)');
       defenseBar.className = 'progress-fill';
     }
     setBarMark('defense-bar-wrap', settings.defenseTarget || 0);
-    const defenseSub = document.getElementById('card-defense-sub');
-    if (defenseSub) {
-      if (reached) {
-        defenseSub.innerHTML = `<span class="positive">✓ Colchón cubierto (${settings.defenseTarget}%)</span>`;
-      } else {
-        // USDC nuevo para llegar al objetivo (al añadirlo también crece el total).
-        const need = defenseTargetFrac < 1 ? Math.max((defenseTargetFrac * total - usdcVal) / (1 - defenseTargetFrac), 0) : 0;
-        defenseSub.innerHTML = `Objetivo ${settings.defenseTarget}% · faltan ${fmtCurrency(need)} en USDC`;
-      }
+    const need = defenseTargetFrac < 1 ? Math.max((defenseTargetFrac * total - usdcVal) / (1 - defenseTargetFrac), 0) : 0;
+    const defenseLabel = document.getElementById('defense-bar-label');
+    if (defenseLabel) {
+      defenseLabel.textContent = reached
+        ? `Objetivo ${settings.defenseTarget}% · Cubierto`
+        : `Objetivo ${settings.defenseTarget}% · Faltan ${fmtCurrency(need)}`;
+      defenseLabel.style.color = barColor(defRatio, 'var(--accent-blue)');
     }
+    const defenseSub = document.getElementById('card-defense-sub');
+    if (defenseSub) defenseSub.innerHTML = reached ? `<span class="positive">✓ Colchon cubierto</span>` : '';
     const defenseEdit = document.getElementById('defense-edit');
     if (defenseEdit && !defenseEdit.dataset.bound) {
       defenseEdit.dataset.bound = '1';
@@ -831,25 +832,20 @@ const App = (() => {
     // Para satelites el objetivo es un rango: alcanzar satTarget pero no superar cosmosTopPct.
     // Color: verde si en rango, amarillo si cerca del tope, rojo si lo supera.
     let barCol;
-    if (overTop)       barCol = '#f6465d';
-    else if (nearTop)  barCol = '#f0b90b';
-    else if (satRatio >= 1) barCol = '#0ecb81';
-    else if (satRatio >= 0.85) barCol = '#f0b90b';
-    else if (satRatio >= 0.6)  barCol = '#e87c2a';
-    else               barCol = '#f6465d';
+    if (overTop)            barCol = '#f6465d';
+    else if (nearTop)       barCol = '#f0b90b';
+    else                    barCol = barColor(satRatio, 'var(--accent-yellow)');
 
     bar.style.width = `${Math.min(cosmosPct, 100)}%`;
     bar.style.background = barCol;
     bar.className = 'progress-fill';
-    setBarMark('cosmos-bar-wrap', satTarget);
+    setBarMark('cosmos-bar-wrap', cosmosTopPct * 100);
 
-    const labelText = overTop ? `${cosmosPct.toFixed(1)}% / 35% · TOPE SUPERADO`
-                    : nearTop ? `${cosmosPct.toFixed(1)}% / 35% · Cerca del tope`
-                    : `${cosmosPct.toFixed(1)}% / 35%`;
+    const labelText = `Objetivo 35%`;
     label.textContent = labelText;
     label.className = 'cosmos-label';
     label.style.color = barCol;
-    if (banner) { banner.style.display = overTop ? 'flex' : 'none'; if (overTop) banner.innerHTML = '⚠️ Satelites por encima del 35%. No añadir dinero nuevo.'; }
+    if (banner) banner.style.display = 'none';
   }
 
   function renderAssetTable() {
@@ -1569,6 +1565,9 @@ const App = (() => {
     }).join('');
 
     const bucketTotal = b.tokens.reduce((s, tok) => s + getAssetValue(portfolio.find(a => a.token === tok)), 0);
+    const bucketCost  = b.tokens.reduce((s, tok) => s + (portfolio.find(a => a.token === tok)?.costUsd || 0), 0);
+    const bucketPnl   = bucketTotal - bucketCost;
+    const bucketPnlPct = bucketCost > 0 ? bucketPnl / bucketCost : 0;
     const bucketPct = total > 0 ? bucketTotal / total : 0;
 
     document.getElementById('modal-header').innerHTML = `
@@ -1581,6 +1580,10 @@ const App = (() => {
             </div>
           </div>
           <button class="modal-close" id="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-hero-price">
+          <span class="modal-price ${pnlClass(bucketPnl)}">${fmtCurrency(bucketPnl)}</span>
+          <span class="modal-change-badge ${pnlClass(bucketPnl)}">${fmtPct(bucketPnlPct)} P&amp;L acum.</span>
         </div>
       </div>`;
 

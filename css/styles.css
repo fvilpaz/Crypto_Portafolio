@@ -661,11 +661,10 @@ tbody td {
 .card-bar-mark {
   position: absolute;
   top: -4px; bottom: -4px;
-  width: 2px;
-  background: var(--text-secondary);
-  border-radius: 1px;
+  width: 3px;
+  background: rgba(255,255,255,0.55);
+  border-radius: 2px;
   transform: translateX(-50%);
-  opacity: 0.6;
   pointer-events: none;
 }
 
