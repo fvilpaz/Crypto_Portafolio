@@ -1556,7 +1556,7 @@ const App = (() => {
           </div>
           <div class="bucket-row-right">
             <div class="bucket-row-val">${fmtCurrency(val)}</div>
-            <div class="bucket-row-pnl ${pnlClass(pnl)}">${fmtPct(pnlPct)} · ${fmtCurrency(pnl)}</div>
+            <div class="bucket-row-pnl ${pnlClass(pnl)}">${pnl >= 0 ? 'Ganancias' : 'Perdidas'} ${fmtPct(Math.abs(pnlPct))} · ${fmtCurrency(Math.abs(pnl))}</div>
             <div class="bucket-row-bar">
               <div class="bucket-bar-fill" style="width:${(bucketWeight * 100).toFixed(1)}%;background:${c.color || 'var(--accent-blue)'}"></div>
             </div>
@@ -1583,7 +1583,7 @@ const App = (() => {
         </div>
         <div class="modal-hero-price">
           <span class="modal-price ${pnlClass(bucketPnl)}">${fmtCurrency(bucketPnl)}</span>
-          <span class="modal-change-badge ${pnlClass(bucketPnl)}">${fmtPct(bucketPnlPct)} P&amp;L acum.</span>
+          <span class="modal-change-badge ${pnlClass(bucketPnl)}">${bucketPnl >= 0 ? 'Ganancias' : 'Perdidas'} ${fmtPct(Math.abs(bucketPnlPct))}</span>
         </div>
       </div>`;
 
