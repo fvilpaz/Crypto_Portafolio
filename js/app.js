@@ -1456,6 +1456,86 @@ const App = (() => {
     document.body.style.overflow = '';
   }
 
+  function openBucketModal(bucket) {
+    const total = getInvestedValue();
+    const buckets = {
+      core: {
+        label: 'Nucleo',
+        color: 'var(--accent-green)',
+        tokens: ['BTC', 'ETH'],
+        target: null,
+      },
+      satelites: {
+        label: 'Satelites',
+        color: 'var(--accent-yellow)',
+        tokens: SATELLITE_TOKENS,
+        target: 35,
+      },
+      refugio: {
+        label: 'Refugio',
+        color: 'var(--accent-blue)',
+        tokens: ['USDC'],
+        target: settings.defenseTarget || null,
+      },
+    };
+    const b = buckets[bucket];
+    if (!b) return;
+
+    const rows = b.tokens.map(tok => {
+      const asset = portfolio.find(a => a.token === tok);
+      const c = COINS[tok] || {};
+      const val = getAssetValue(asset);
+      const cost = asset?.costUsd || 0;
+      const pnl = val - cost;
+      const pnlPct = cost > 0 ? pnl / cost : 0;
+      const weight = total > 0 ? val / total : 0;
+      const bucketTotal = b.tokens.reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t)), 0);
+      const bucketWeight = bucketTotal > 0 ? val / bucketTotal : 0;
+      const split = SAT_SPLIT?.[tok] ?? null;
+      return `
+        <div class="bucket-row">
+          <div class="bucket-row-left">
+            ${iconHtml(tok, c.cssClass || tok.toLowerCase(), 36)}
+            <div class="bucket-row-info">
+              <div class="bucket-row-name">${c.name || tok} <span class="bucket-row-sym">${tok}</span></div>
+              <div class="bucket-row-sub">${(weight * 100).toFixed(1)}% cartera${split !== null ? ` · objetivo ${(split * 100).toFixed(0)}% cubo` : ''}</div>
+            </div>
+          </div>
+          <div class="bucket-row-right">
+            <div class="bucket-row-val">${fmtCurrency(val)}</div>
+            <div class="bucket-row-pnl ${pnlClass(pnl)}">${fmtPct(pnlPct)} · ${fmtCurrency(pnl)}</div>
+            <div class="bucket-row-bar">
+              <div class="bucket-bar-fill" style="width:${(bucketWeight * 100).toFixed(1)}%;background:${c.color || 'var(--accent-blue)'}"></div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    const bucketTotal = b.tokens.reduce((s, tok) => s + getAssetValue(portfolio.find(a => a.token === tok)), 0);
+    const bucketPct = total > 0 ? bucketTotal / total : 0;
+
+    document.getElementById('modal-header').innerHTML = `
+      <div class="modal-hero" style="border-left:4px solid ${b.color}">
+        <div class="modal-hero-top">
+          <div class="modal-token-cell">
+            <div>
+              <div class="modal-token-name">${b.label}</div>
+              <div class="modal-token-symbol">${fmtCurrency(bucketTotal)} · ${(bucketPct * 100).toFixed(1)}% de la cartera${b.target ? ` · tope ${b.target}%` : ''}</div>
+            </div>
+          </div>
+          <button class="modal-close" id="modal-close-btn">&times;</button>
+        </div>
+      </div>`;
+
+    document.getElementById('modal-body').innerHTML = `<div class="bucket-list">${rows}</div>`;
+
+    const modal = document.getElementById('token-modal');
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+  }
+
   // ── AÑADIR MOVIMIENTO (Compra / Venta) ──
   let addState = { token: 'BTC', type: 'Compra' };
   let editingId = null;
@@ -2079,6 +2159,12 @@ const App = (() => {
 
     setupSortable('asset-table');
     setupSortable('tx-table');
+
+    document.getElementById('sec-cartera').addEventListener('click', (e) => {
+      if (e.target.closest('.card-edit')) return;
+      const card = e.target.closest('.card[data-bucket]');
+      if (card) openBucketModal(card.dataset.bucket);
+    });
 
     document.getElementById('asset-tbody').addEventListener('click', (e) => {
       const row = e.target.closest('tr[data-token]');
