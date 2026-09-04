@@ -650,12 +650,12 @@ const App = (() => {
         const satRows = SATELLITE_TOKENS.map(tok => {
           const c = COINS[tok] || { cssClass: tok.toLowerCase() };
           const amount = r.satAlloc?.[tok] ?? 0;
-          return { token: tok, cssClass: c.cssClass, amount, label: `${tok} (Satelite)`, idle: r.satBlocked ? 'en el tope' : 'en objetivo' };
+          return { token: tok, cssClass: c.cssClass, amount, label: tok, idle: r.satBlocked ? 'en el tope' : 'en objetivo' };
         });
         const rows = [
           { token: 'BTC',  cssClass: 'btc',  amount: r.toBtc,     label: 'BTC',            idle: 'ya en su sitio' },
           { token: 'ETH',  cssClass: 'eth',  amount: r.toEth,     label: 'ETH',            idle: 'ya en su sitio' },
-          { token: 'USDC', cssClass: 'usdc', amount: r.toRefugio, label: 'USDC (Refugio)', idle: 'cubierto' },
+          { token: 'USDC', cssClass: 'usdc', amount: r.toRefugio, label: 'USDC', idle: 'cubierto' },
           ...satRows,
         ];
         const detail = rows.map(row => {
