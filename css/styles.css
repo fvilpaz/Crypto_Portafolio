@@ -623,6 +623,7 @@ tbody td {
 .token-icon.pi { background: #0ecb8122; color: #0ecb81; }
 .token-icon.atone { background: #1e90ff22; color: #1e90ff; }
 .token-icon.mode { background: #f0b90b22; color: #f0b90b; }
+.token-icon.sol  { background: #9945ff22; color: #9945ff; }
 
 .token-icon img {
   border-radius: 50%;
