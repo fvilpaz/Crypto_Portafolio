@@ -791,21 +791,7 @@ const App = (() => {
     }
     const defenseSub = document.getElementById('card-defense-sub');
     if (defenseSub) defenseSub.innerHTML = reached ? `<span class="positive">✓ Colchon cubierto</span>` : '';
-    const defenseEdit = document.getElementById('defense-edit');
-    if (defenseEdit && !defenseEdit.dataset.bound) {
-      defenseEdit.dataset.bound = '1';
-      defenseEdit.addEventListener('click', editDefenseTarget);
-    }
-    const coreEdit = document.getElementById('core-edit');
-    if (coreEdit && !coreEdit.dataset.bound) {
-      coreEdit.dataset.bound = '1';
-      coreEdit.addEventListener('click', editCoreTarget);
-    }
-    const satEdit = document.getElementById('sat-edit');
-    if (satEdit && !satEdit.dataset.bound) {
-      satEdit.dataset.bound = '1';
-      satEdit.addEventListener('click', editSatTarget);
-    }
+    // listeners de edición de cubos — se registran en init(), no aquí
   }
 
   // Calcula el reparto de una plantilla: cuánto va a cada sitio este mes.
@@ -2597,6 +2583,10 @@ const App = (() => {
 
     setupSortable('asset-table');
     setupSortable('tx-table');
+
+    document.getElementById('defense-edit').addEventListener('click', e => { e.stopPropagation(); editDefenseTarget(); });
+    document.getElementById('core-edit').addEventListener('click',    e => { e.stopPropagation(); editCoreTarget(); });
+    document.getElementById('sat-edit').addEventListener('click',     e => { e.stopPropagation(); editSatTarget(); });
 
     document.getElementById('sec-cartera').addEventListener('click', (e) => {
       if (e.target.closest('.card-edit')) return;
