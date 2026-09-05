@@ -53,8 +53,7 @@ const App = (() => {
     agresiva:     { refugio: 15, core: 60, satelites: 25 },
   };
   const DEFAULT_STRATEGY = 'moderada';
-  const CORE_SPLIT = { BTC: 0.6, ETH: 0.4 };   // objetivo interno del nucleo (BTC primero)
-  const SAT_SPLIT  = { SOL: 0.5, ATOM: 0.3, TIA: 0.2 };  // objetivo interno dentro del cubo satelites
+  // coreSplit y satSplit ahora viven en settings (editables y persistidos)
 
   // ── PERSISTENCIA (localStorage) ──
   // La cartera, los movimientos y los airdrops viven SOLO en el navegador.
@@ -138,7 +137,7 @@ const App = (() => {
   const _store = loadStore();
   let portfolio = _store.portfolio;
   let transactions = _store.transactions;
-  let settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, coreTarget: DEFAULT_CORE_TARGET, satTarget: DEFAULT_SAT_TARGET, strategy: DEFAULT_STRATEGY }, _store.settings || {});   // dcaTarget en €, defenseTarget en %, strategy = plantilla de reparto
+  let settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, coreTarget: DEFAULT_CORE_TARGET, satTarget: DEFAULT_SAT_TARGET, strategy: DEFAULT_STRATEGY, coreSplit: { BTC: 0.6, ETH: 0.4 }, satSplit: { SOL: 0.5, ATOM: 0.3, TIA: 0.2 } }, _store.settings || {});   // dcaTarget en €, defenseTarget en %, strategy = plantilla de reparto
   let storeVersion = _store.updatedAt || 0;
   let showHidden = false;   // mostrar temporalmente las monedas ocultas en la tabla
   let pendingImportFormat = null;   // 'json' | 'csv' elegido antes de abrir el file picker
@@ -824,37 +823,37 @@ const App = (() => {
     const btcVal = getAssetValue(portfolio.find(a => a.token === 'BTC'));
     const ethVal = getAssetValue(portfolio.find(a => a.token === 'ETH'));
     const coreAfter = btcVal + ethVal + toCore;
-    const btcGap = Math.max(CORE_SPLIT.BTC * coreAfter - btcVal, 0);
-    const ethGap = Math.max(CORE_SPLIT.ETH * coreAfter - ethVal, 0);
+    const btcGap = Math.max(settings.coreSplit.BTC * coreAfter - btcVal, 0);
+    const ethGap = Math.max(settings.coreSplit.ETH * coreAfter - ethVal, 0);
     const gapSum = btcGap + ethGap;
     let toBtc, toEth;
     if (gapSum <= 0) {
-      toBtc = toCore * CORE_SPLIT.BTC; toEth = toCore * CORE_SPLIT.ETH;
+      toBtc = toCore * settings.coreSplit.BTC; toEth = toCore * settings.coreSplit.ETH;
     } else if (gapSum >= toCore) {
       toBtc = toCore * (btcGap / gapSum); toEth = toCore * (ethGap / gapSum);
     } else {
       const rest = toCore - gapSum;
-      toBtc = btcGap + rest * CORE_SPLIT.BTC; toEth = ethGap + rest * CORE_SPLIT.ETH;
+      toBtc = btcGap + rest * settings.coreSplit.BTC; toEth = ethGap + rest * settings.coreSplit.ETH;
     }
 
     // Gap-logic para satelites: mismo mecanismo que el nucleo.
-    const satTokens = Object.keys(SAT_SPLIT);
+    const satTokens = Object.keys(settings.satSplit);
     const satVals = {};
     satTokens.forEach(tok => { satVals[tok] = getAssetValue(portfolio.find(a => a.token === tok)); });
     const satTotal = satTokens.reduce((s, tok) => s + satVals[tok], 0);
     const satAfter = satTotal + toSat;
     const satGaps = {};
-    satTokens.forEach(tok => { satGaps[tok] = Math.max(SAT_SPLIT[tok] * satAfter - satVals[tok], 0); });
+    satTokens.forEach(tok => { satGaps[tok] = Math.max(settings.satSplit[tok] * satAfter - satVals[tok], 0); });
     const satGapSum = satTokens.reduce((s, tok) => s + satGaps[tok], 0);
     const satAlloc = {};
     satTokens.forEach(tok => {
       if (satGapSum <= 0) {
-        satAlloc[tok] = toSat * SAT_SPLIT[tok];
+        satAlloc[tok] = toSat * settings.satSplit[tok];
       } else if (satGapSum >= toSat) {
         satAlloc[tok] = toSat * (satGaps[tok] / satGapSum);
       } else {
         const rest = toSat - satGapSum;
-        satAlloc[tok] = satGaps[tok] + rest * SAT_SPLIT[tok];
+        satAlloc[tok] = satGaps[tok] + rest * settings.satSplit[tok];
       }
     });
 
@@ -884,10 +883,10 @@ const App = (() => {
 
         function rowProgress(token) {
           const val = getAssetValue(portfolio.find(a => a.token === token));
-          if (token === 'BTC') return coreTotal > 0 ? Math.min((val / coreTotal) / CORE_SPLIT.BTC, 1) : 0;
-          if (token === 'ETH') return coreTotal > 0 ? Math.min((val / coreTotal) / CORE_SPLIT.ETH, 1) : 0;
+          if (token === 'BTC') return coreTotal > 0 ? Math.min((val / coreTotal) / settings.coreSplit.BTC, 1) : 0;
+          if (token === 'ETH') return coreTotal > 0 ? Math.min((val / coreTotal) / settings.coreSplit.ETH, 1) : 0;
           if (token === 'USDC') return defFrac > 0 && invTotal > 0 ? Math.min((val / invTotal) / defFrac, 1) : 0;
-          const split = SAT_SPLIT[token];
+          const split = settings.satSplit[token];
           return (split > 0 && satTotal > 0) ? Math.min((val / satTotal) / split, 1) : 0;
         }
 
@@ -976,23 +975,59 @@ const App = (() => {
   }
 
   function editCoreTarget() {
-    const cur = settings.coreTarget ?? DEFAULT_CORE_TARGET;
-    const input = prompt('Objetivo de núcleo (BTC+ETH) en % de la cartera:', cur);
-    if (input === null) return;
-    const val = parseFloat(String(input).replace(',', '.'));
-    if (isNaN(val) || val < 0 || val > 100) return;
-    settings.coreTarget = val;
+    const curTarget = settings.coreTarget ?? DEFAULT_CORE_TARGET;
+    const curBtc = Math.round((settings.coreSplit.BTC || 0.6) * 100);
+    const curEth = Math.round((settings.coreSplit.ETH || 0.4) * 100);
+
+    const inputTarget = prompt('Objetivo de núcleo (BTC+ETH) en % de la cartera:', curTarget);
+    if (inputTarget === null) return;
+    const valTarget = parseFloat(String(inputTarget).replace(',', '.'));
+    if (isNaN(valTarget) || valTarget < 0 || valTarget > 100) return;
+
+    const inputBtc = prompt(`% de BTC dentro del núcleo (el resto va a ETH):\nActual: BTC ${curBtc}% / ETH ${curEth}%`, curBtc);
+    if (inputBtc === null) return;
+    const valBtc = parseFloat(String(inputBtc).replace(',', '.'));
+    if (isNaN(valBtc) || valBtc < 0 || valBtc > 100) return;
+
+    settings.coreTarget = valTarget;
+    settings.coreSplit = { BTC: valBtc / 100, ETH: (100 - valBtc) / 100 };
     persist();
     render();
   }
 
   function editSatTarget() {
-    const cur = settings.satTarget ?? DEFAULT_SAT_TARGET;
-    const input = prompt('Objetivo de satélites en % de la cartera:', cur);
-    if (input === null) return;
-    const val = parseFloat(String(input).replace(',', '.'));
-    if (isNaN(val) || val < 0 || val > 100) return;
-    settings.satTarget = val;
+    const curTarget = settings.satTarget ?? DEFAULT_SAT_TARGET;
+    const inputTarget = prompt('Objetivo de satélites en % de la cartera:', curTarget);
+    if (inputTarget === null) return;
+    const valTarget = parseFloat(String(inputTarget).replace(',', '.'));
+    if (isNaN(valTarget) || valTarget < 0 || valTarget > 100) return;
+
+    const curSplit = settings.satSplit || { SOL: 0.5, ATOM: 0.3, TIA: 0.2 };
+    const tokens = Object.keys(curSplit);
+    const curStr = tokens.map(t => `${t}:${Math.round(curSplit[t] * 100)}`).join(', ');
+    const inputSplit = prompt(
+      `Reparto dentro de satélites (formato TOKEN:%, separados por coma, deben sumar 100):\nEjemplo: SOL:100  o  SOL:50,ATOM:30,TIA:20`,
+      curStr
+    );
+    if (inputSplit === null) return;
+
+    const newSplit = {};
+    let total = 0;
+    for (const part of inputSplit.split(',')) {
+      const [tok, pct] = part.trim().split(':');
+      if (!tok || !pct) continue;
+      const v = parseFloat(pct.replace(',', '.'));
+      if (isNaN(v) || v < 0) continue;
+      newSplit[tok.trim().toUpperCase()] = v / 100;
+      total += v;
+    }
+    if (Math.abs(total - 100) > 1 || Object.keys(newSplit).length === 0) {
+      alert(`Los porcentajes deben sumar 100. Suma actual: ${total}%`);
+      return;
+    }
+
+    settings.satTarget = valTarget;
+    settings.satSplit = newSplit;
     persist();
     render();
   }
@@ -1793,7 +1828,7 @@ const App = (() => {
       const weight = total > 0 ? val / total : 0;
       const bucketTotal = b.tokens.reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t)), 0);
       const bucketWeight = bucketTotal > 0 ? val / bucketTotal : 0;
-      const split = SAT_SPLIT?.[tok] ?? null;
+      const split = settings.satSplit?.[tok] ?? null;
       return `
         <div class="bucket-row">
           <div class="bucket-row-left">
