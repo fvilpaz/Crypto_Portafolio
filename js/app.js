@@ -968,37 +968,40 @@ const App = (() => {
     const ov = document.createElement('div');
     ov.className = 'modal-overlay open';
     ov.innerHTML = `
-      <div class="modal" style="max-width:420px;">
+      <div class="modal" style="max-width:440px;">
         <div class="add-modal-head">
-          <h3 style="color:${color}">${title}</h3>
+          <h3 style="color:${color};margin:0;">${title}</h3>
           <button type="button" class="modal-close" aria-label="Cerrar">&times;</button>
         </div>
 
-        <label style="font-size:12px;color:var(--text-muted);margin-bottom:4px;display:block;">% objetivo del cubo en la cartera</label>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
-          <input type="number" id="bucket-target" min="0" max="100" step="1" value="${curTarget}"
-            style="width:70px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:16px;font-weight:600;padding:6px 10px;outline:none;">
-          <span style="color:var(--text-muted);font-size:14px;">%</span>
-        </div>
-
-        <label style="font-size:12px;color:var(--text-muted);margin-bottom:8px;display:block;">Monedas del cubo y su reparto interno</label>
-
-        <div style="position:relative;margin-bottom:16px;">
-          <div class="search-wrap">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="bucket-search" class="tx-search" placeholder="Buscar moneda..." style="width:100%;">
+        <div style="margin-top:20px;">
+          <label style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;margin-bottom:8px;">% objetivo del cubo en la cartera</label>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input type="number" id="bucket-target" min="0" max="100" step="1" value="${curTarget}"
+              style="width:80px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:22px;font-weight:700;padding:8px 12px;outline:none;text-align:center;">
+            <span style="color:var(--text-muted);font-size:18px;">%</span>
           </div>
-          <div id="bucket-suggestions" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:100;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.3);"></div>
         </div>
 
-        <div id="bucket-tokens" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
-
-        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted);margin-bottom:16px;padding-top:12px;border-top:1px solid var(--border);">
-          <span>Total asignado: <strong id="bucket-total" style="color:var(--text-primary)">0%</strong></span>
-          <span id="bucket-warn" style="color:var(--accent-red);display:none;">Debe sumar 100%</span>
+        <div style="margin-top:24px;">
+          <label style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;margin-bottom:10px;">Monedas y reparto interno</label>
+          <div style="position:relative;margin-bottom:12px;">
+            <div class="search-wrap" style="cursor:text;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="bucket-search" class="tx-search" placeholder="Añadir moneda..." style="width:100%;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+            <div id="bucket-suggestions" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:200;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);max-height:180px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);"></div>
+          </div>
+          <div id="bucket-tokens" style="display:flex;flex-direction:column;gap:8px;"></div>
         </div>
 
-        <div class="sync-actions">
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted);margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+          <span>Total asignado: <strong id="bucket-total" style="color:var(--text-primary);font-size:14px;">0%</strong></span>
+          <span id="bucket-warn" style="color:var(--accent-red);display:none;font-weight:600;">Debe sumar 100%</span>
+        </div>
+
+        <div class="sync-actions" style="margin-top:20px;">
           <button type="button" id="bucket-save" class="add-submit">Guardar</button>
           <button type="button" class="add-cancel modal-close">Cancelar</button>
         </div>
@@ -1016,14 +1019,16 @@ const App = (() => {
       document.getElementById('bucket-total').textContent = `${Math.round(total)}%`;
       document.getElementById('bucket-warn').style.display = Math.abs(total - 100) > 1 && Object.keys(tokenMap).length > 0 ? '' : 'none';
       document.getElementById('bucket-tokens').innerHTML = Object.entries(tokenMap).map(([tok, frac]) => `
-        <div style="display:flex;align-items:center;gap:10px;background:var(--bg-input);border-radius:var(--radius-sm);padding:8px 10px;">
-          ${iconHtml(tok, COINS[tok]?.cssClass || '', 24)}
-          <span style="flex:1;font-weight:600;font-size:13px;">${tok}</span>
+        <div style="display:flex;align-items:center;gap:12px;background:var(--bg-input);border-radius:var(--radius-sm);padding:10px 14px;">
+          ${iconHtml(tok, COINS[tok]?.cssClass || '', 26)}
+          <span style="flex:1;font-weight:600;font-size:14px;">${tok}</span>
           <input type="number" min="0" max="100" step="1" value="${Math.round(frac * 100)}"
             data-tok="${tok}"
-            style="width:60px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;padding:4px 8px;outline:none;text-align:right;">
-          <span style="color:var(--text-muted);font-size:12px;">%</span>
-          <button type="button" data-remove="${tok}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0 2px;">×</button>
+            style="width:64px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:15px;font-weight:600;padding:5px 10px;outline:none;text-align:center;">
+          <span style="color:var(--text-muted);font-size:13px;">%</span>
+          <button type="button" class="tx-btn tx-del" data-remove="${tok}" title="Quitar" aria-label="Quitar">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
+          </button>
         </div>`).join('');
 
       // eventos de los inputs y botones de borrar
