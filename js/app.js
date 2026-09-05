@@ -2740,6 +2740,11 @@ const App = (() => {
     document.getElementById('add-amount').addEventListener('input', onAmountInput);
     document.getElementById('add-form').addEventListener('submit', submitAdd);
 
+    // Render inmediato con snapshot cacheado — no espera a la API.
+    // El usuario ve sus movimientos y cartera al instante; los precios
+    // se actualizan en cuanto llega la respuesta de CoinGecko.
+    render();
+
     await fetchPrices();
     refreshInterval = setInterval(fetchPrices, 270000);  // 270s = ~320 llamadas/día a CoinGecko
 
