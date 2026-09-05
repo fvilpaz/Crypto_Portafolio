@@ -2584,12 +2584,14 @@ const App = (() => {
     setupSortable('asset-table');
     setupSortable('tx-table');
 
-    document.getElementById('defense-edit').addEventListener('click', e => { e.stopPropagation(); editDefenseTarget(); });
-    document.getElementById('core-edit').addEventListener('click',    e => { e.stopPropagation(); editCoreTarget(); });
-    document.getElementById('sat-edit').addEventListener('click',     e => { e.stopPropagation(); editSatTarget(); });
-
     document.getElementById('sec-cartera').addEventListener('click', (e) => {
-      if (e.target.closest('.card-edit')) return;
+      const editBtn = e.target.closest('.card-edit');
+      if (editBtn) {
+        if (editBtn.id === 'core-edit')    editCoreTarget();
+        else if (editBtn.id === 'sat-edit')    editSatTarget();
+        else if (editBtn.id === 'defense-edit') editDefenseTarget();
+        return;
+      }
       const card = e.target.closest('.card[data-bucket]');
       if (card) openBucketModal(card.dataset.bucket);
     });
