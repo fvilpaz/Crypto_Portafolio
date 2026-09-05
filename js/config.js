@@ -28,14 +28,14 @@ const COINGECKO_API_PARAM = 'x_cg_demo_api_key';
 // localStorage (hasta 20 min), que se sobrescribe en cada tick bueno.
 // ═════════════════════════════════════════════════════════════════
 const PRICE_SOURCES = {
-  BTC:     { binance: 'BTCUSDT',  okx: 'BTC-USDT',  llama: 'bitcoin' },
-  ETH:     { binance: 'ETHUSDT',  okx: 'ETH-USDT',  llama: 'ethereum' },
-  SOL:     { binance: 'SOLUSDT',  okx: 'SOL-USDT',  llama: 'solana' },
-  ATOM:    { binance: 'ATOMUSDT', okx: 'ATOM-USDT', llama: 'cosmos' },
-  TIA:     { binance: 'TIAUSDT',  okx: 'TIA-USDT',  llama: 'celestia' },
-  USDC:    { binance: 'USDCUSDT', okx: 'USDC-USDT', llama: 'usd-coin' },
-  PI:      { binance: null,       okx: 'PI-USDT',   llama: 'pi-network' },
-  ATOMONE: { binance: null,       okx: null,        llama: 'atomone' },
-  ATONE:   { binance: null,       okx: null,        llama: 'atomone' },
-  MODE:    { binance: null,       okx: null,        llama: 'mode' },
+  BTC:     { binance: 'BTCUSDT',  kraken: 'XBTUSD',  llama: 'bitcoin' },
+  ETH:     { binance: 'ETHUSDT',  kraken: 'ETHUSD',  llama: 'ethereum' },
+  SOL:     { binance: 'SOLUSDT',  kraken: 'SOLUSD',  llama: 'solana' },
+  ATOM:    { binance: 'ATOMUSDT', kraken: 'ATOMUSD', llama: 'cosmos' },
+  TIA:     { binance: 'TIAUSDT',  kraken: null,      llama: 'celestia' },
+  USDC:    { binance: 'USDCUSDT', kraken: 'USDCUSD', llama: 'usd-coin' },
+  PI:      { binance: null,       kraken: null,      llama: 'pi-network' },
+  ATOMONE: { binance: null,       kraken: null,      llama: 'atomone' },
+  ATONE:   { binance: null,       kraken: null,      llama: 'atomone' },
+  MODE:    { binance: null,       kraken: null,      llama: 'mode' },
 };

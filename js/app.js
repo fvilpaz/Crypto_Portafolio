@@ -386,7 +386,27 @@ const App = (() => {
     return out;
   }
 
-  // DeFiLlama: agregador DEX con CORS abierto y sin key. Un solo batch de ids.
+  // Kraken: sin key, CORS abierto. Par formato XBTUSD para BTC, resto normal.
+  async function fetchFromKraken(pairs) {
+    if (!pairs.length) return {};
+    const out = {};
+    await Promise.all(pairs.map(async ({ token, pair }) => {
+      try {
+        const res = await fetch(`https://api.kraken.com/0/public/Ticker?pair=${pair}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const d = await res.json();
+        const ticker = Object.values(d.result || {})[0];
+        if (ticker) {
+          const price = parseFloat(ticker.c[0]);
+          const open = parseFloat(ticker.o);
+          if (price > 0) out[token] = { price, change24h: open > 0 ? ((price - open) / open) * 100 : 0 };
+        }
+      } catch (e) { /* fallo silencioso */ }
+    }));
+    return out;
+  }
+
+  // DeFiLlama: agregador con CORS abierto y sin key. Un solo batch de ids.
   async function fetchFromLlama(ids) {
     if (!ids.length) return {};
     const key = ids.map(id => `coingecko:${id}`).join(',');
@@ -400,21 +420,47 @@ const App = (() => {
     return out;
   }
 
-  // Rellena los tokens que CoinGecko no ha dado esta ronda. Orden por token:
-  // Binance → OKX → DeFiLlama. Devuelve Map<token → {price, change24h}>.
+  // Lanza Binance, Kraken y DeFiLlama en paralelo y devuelve la media
+  // de los precios recibidos por cada token. Más fuentes = más estable.
   async function fillMissingFromFallbacks(assets) {
     const fetched = new Map();
-    const llamaAssets = assets.filter(a => (PRICE_SOURCES[a.token] || {}).llama);
 
-    if (llamaAssets.length) {
-      try {
-        const res = await fetchFromLlama(llamaAssets.map(a => PRICE_SOURCES[a.token].llama));
-        llamaAssets.forEach(a => {
-          const v = res[`coingecko:${PRICE_SOURCES[a.token].llama}`];
-          if (v) fetched.set(a.token, v);
-        });
-      } catch (e) { console.warn('DeFiLlama:', e.message); }
-    }
+    const binanceAssets = assets.filter(a => (PRICE_SOURCES[a.token] || {}).binance);
+    const krakenAssets  = assets.filter(a => (PRICE_SOURCES[a.token] || {}).kraken);
+    const llamaAssets   = assets.filter(a => (PRICE_SOURCES[a.token] || {}).llama);
+
+    const [binanceRes, krakenRes, llamaRes] = await Promise.all([
+      binanceAssets.length
+        ? fetchFromBinance(binanceAssets.map(a => PRICE_SOURCES[a.token].binance))
+            .catch(() => ({}))
+        : {},
+      krakenAssets.length
+        ? fetchFromKraken(krakenAssets.map(a => ({ token: a.token, pair: PRICE_SOURCES[a.token].kraken })))
+            .catch(() => ({}))
+        : {},
+      llamaAssets.length
+        ? fetchFromLlama(llamaAssets.map(a => PRICE_SOURCES[a.token].llama))
+            .catch(() => ({}))
+        : {},
+    ]);
+
+    // Por cada token, promediar todos los precios recibidos.
+    assets.forEach(a => {
+      const src = PRICE_SOURCES[a.token] || {};
+      const prices = [];
+      const changes = [];
+      const b = src.binance && binanceRes[src.binance];
+      const k = krakenRes[a.token];
+      const l = src.llama && llamaRes[`coingecko:${src.llama}`];
+      if (b) { prices.push(b.price); changes.push(b.change24h); }
+      if (k) { prices.push(k.price); changes.push(k.change24h); }
+      if (l) { prices.push(l.price); changes.push(0); }
+      if (prices.length > 0) {
+        const avg = p => p.reduce((s, v) => s + v, 0) / p.length;
+        fetched.set(a.token, { price: avg(prices), change24h: avg(changes) });
+      }
+    });
+
     return fetched;
   }
 
