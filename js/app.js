@@ -58,6 +58,12 @@ const App = (() => {
   // La cartera, los movimientos y los airdrops viven SOLO en el navegador.
   // Primera vez: todo a 0. Nada de datos hardcodeados en el código.
   const STORE_KEY = 'miCartera.v1';
+
+  // Snapshot de precios en vivo (último tick bueno). Sobrevive al rate limit
+  // de CoinGecko: si todas las fuentes fallan, se usan estos precios hasta 20 min.
+  const PRICE_CACHE_KEY = 'miCartera.prices.v1';
+  const CACHE_MAX_MIN = 20;   // ventana en la que el snapshot se considera utilizable
+
   const clone = (x) => JSON.parse(JSON.stringify(x));
 
   function saveStore(data) {
@@ -87,6 +93,46 @@ const App = (() => {
     return empty;
   }
 
+  // ── SNAPSHOT DE PRECIOS (fallback al rate limit) ──
+  // Guarda solo los precios que vinieron de una API (nunca avgPrice de compra).
+  function loadCachedPrices() {
+    try {
+      const raw = localStorage.getItem(PRICE_CACHE_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d && d.prices && typeof d.prices === 'object') {
+          return { ts: d.ts || 0, prices: d.prices };
+        }
+      }
+    } catch (e) {
+      console.warn('Snapshot de precios ilegible:', e);
+    }
+    return { ts: 0, prices: {} };
+  }
+
+  function saveCachedPrices() {
+    // Guarda cada token con su propio timestamp de adquisición (prices[t].ts):
+    // si un tick falla pero los datos vivos aún son recientes, la edad del
+    // snapshot refleja el cambio real y no "renueva" un precio viejo.
+    const snap = {};
+    let newest = 0;
+    liveTokens.forEach(t => {
+      const p = prices[t];
+      if (p && p.price > 0) {
+        snap[t] = { price: p.price, change24h: p.change24h || 0, ts: p.ts || 0 };
+        newest = Math.max(newest, p.ts || 0);
+      }
+    });
+    if (Object.keys(snap).length === 0) return;
+    try {
+      const ts = newest || Date.now();
+      localStorage.setItem(PRICE_CACHE_KEY, JSON.stringify({ ts, prices: snap }));
+      cachedPrices = { ts, prices: snap };
+    } catch (e) {
+      console.warn('No se pudo guardar el snapshot de precios:', e);
+    }
+  }
+
   const _store = loadStore();
   let portfolio = _store.portfolio;
   let transactions = _store.transactions;
@@ -98,12 +144,15 @@ const App = (() => {
   // Normaliza activos (al cargar y al importar un JSON): tag por defecto y, para
   // monedas conocidas, refresca coingeckoId/icono/color desde el catálogo COINS.
   // Corrige ids obsoletos guardados antes (p.ej. PI/MODE con id malo → precio 0€).
+  // 'ATOMONE' es como mucha gente guardó AtomOne en el export; aquí se alía al
+  // símbolo del catálogo ('ATONE') para que recupere coingeckoId y precio en vivo.
+  const TOKEN_ALIASES = { ATOMONE: 'ATONE' };
   function normalizePortfolio(list) {
     if (!Array.isArray(list)) return;
     list.forEach(a => {
       if (!a) return;
       if (!a.tag) a.tag = 'portfolio';
-      const cat = COINS[a.token];
+      const cat = COINS[a.token] || COINS[TOKEN_ALIASES[a.token]];
       if (cat) {
         a.coingeckoId = cat.coingeckoId;   // fuente de verdad del precio en vivo
         if (!a.icon) a.icon = cat.icon;
@@ -129,6 +178,13 @@ const App = (() => {
   // ── ESTADO ──
   let currency = 'USD';
   let prices = {};
+  let liveTokens = new Set();   // tokens con precio confirmado por API en esta sesión
+  let cachedPrices = loadCachedPrices();
+  // Siembra inicial: al abrir, ya se ve el último snapshot guardado mientras
+  // llega el primer precio vivo. El render usa price/change24h, ignora 'ts'.
+  Object.entries(cachedPrices.prices).forEach(([t, p]) => {
+    if (p && p.price > 0) prices[t] = { price: p.price, change24h: p.change24h || 0, ts: p.ts || 0 };
+  });
   let sparklineData = {};
   let chartInstance = null;
   let evolutionChart = null;
@@ -255,10 +311,10 @@ const App = (() => {
     return [direct + '&_t=' + Date.now()];
   }
 
-  // Fetch a CoinGecko resistente al rate limit (HTTP 429): reintenta hasta 3
-  // veces respetando la cabecera Retry-After (o backoff exponencial si no viene).
-  // no-store evita que navegador o PWA sirvan una respuesta cacheada.
-  async function fetchCoinGecko(urls, retries = 3) {
+  // Fetch a CoinGecko resistente al rate limit (HTTP 429): reintenta un par de
+  // veces respetando Retry-After (o backoff exponencial si no viene) y pasa el
+  // turno a los fallbacks cuanto antes. no-store evita caché navegador/PWA.
+  async function fetchCoinGecko(urls, retries = 2) {
     if (!Array.isArray(urls)) urls = [urls];
     let lastErr = null;
     for (const url of urls) {
@@ -281,6 +337,103 @@ const App = (() => {
       }
     }
     throw lastErr || new Error('HTTP --');
+  }
+
+  // Aplica un precio de API (vivo) y lo marca para persistirlo en el snapshot.
+  // Nunca guarda avgPrice de compra: evitaría que el total cayera a precio de compra.
+  function applyPrice(token, price, change24h) {
+    if (typeof price !== 'number' || !isFinite(price) || price <= 0) return;
+    prices[token] = {
+      price,
+      change24h: change24h || 0,
+      ts: Date.now(),
+    };
+    liveTokens.add(token);
+  }
+
+  // ── FALLBACKS SIN API KEY ──
+  // Binance: un batch en /ticker/24hr da precio + cambio de todos los pares.
+  async function fetchFromBinance(symbols) {
+    if (!symbols.length) return {};
+    const q = encodeURIComponent(JSON.stringify(symbols));
+    const res = await fetch(`https://api.binance.com/api/v3/ticker/24hr?symbols=${q}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`Binance HTTP ${res.status}`);
+    const data = await res.json();
+    const out = {};
+    (Array.isArray(data) ? data : [data]).forEach(d => {
+      const last = parseFloat(d.lastPrice);
+      if (last > 0) out[d.symbol] = { price: last, change24h: parseFloat(d.priceChangePercent) || 0 };
+    });
+    return out;
+  }
+
+  // OKX: un ticker por instId (PI Network y similares no cotizan en Binance).
+  async function fetchFromOkx(instIds) {
+    const out = {};
+    await Promise.all(instIds.map(async (instId) => {
+      try {
+        const res = await fetch(`https://www.okx.com/api/v5/market/ticker?instId=${instId}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const d = await res.json();
+        const t = d?.data?.[0];
+        if (t && parseFloat(t.last) > 0) {
+          const last = parseFloat(t.last);
+          const open = parseFloat(t.open24h);
+          out[instId] = { price: last, change24h: open > 0 ? ((last - open) / open) * 100 : 0 };
+        }
+      } catch (e) { /* un fallo no tumba el resto */ }
+    }));
+    return out;
+  }
+
+  // DeFiLlama: agregador DEX con CORS abierto y sin key. Un solo batch de ids.
+  async function fetchFromLlama(ids) {
+    if (!ids.length) return {};
+    const key = ids.map(id => `coingecko:${id}`).join(',');
+    const res = await fetch(`https://coins.llama.fi/prices/current/${key}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`DeFiLlama HTTP ${res.status}`);
+    const d = await res.json();
+    const out = {};
+    Object.entries(d.coins || {}).forEach(([k, v]) => {
+      if (v && parseFloat(v.price) > 0) out[k] = { price: v.price, change24h: 0 };
+    });
+    return out;
+  }
+
+  // Rellena los tokens que CoinGecko no ha dado esta ronda. Orden por token:
+  // Binance → OKX → DeFiLlama. Devuelve Map<token → {price, change24h}>.
+  async function fillMissingFromFallbacks(assets) {
+    const fetched = new Map();
+    const bySrc = { binance: [], okx: [], llama: [] };
+
+    assets.forEach(a => {
+      const src = PRICE_SOURCES[a.token] || {};
+      if (src.binance) bySrc.binance.push({ token: a.token, sym: src.binance });
+      if (src.okx) bySrc.okx.push({ token: a.token, inst: src.okx });
+      if (src.llama) bySrc.llama.push({ token: a.token, id: src.llama });
+    });
+
+    if (bySrc.binance.length) {
+      try {
+        const res = await fetchFromBinance(bySrc.binance.map(x => x.sym));
+        bySrc.binance.forEach(x => { const v = res[x.sym]; if (v) fetched.set(x.token, v); });
+      } catch (e) { console.warn('Fallback Binance:', e.message); }
+    }
+    const okxNeeded = bySrc.okx.filter(x => !fetched.has(x.token));
+    if (okxNeeded.length) {
+      try {
+        const res = await fetchFromOkx(okxNeeded.map(x => x.inst));
+        okxNeeded.forEach(x => { const v = res[x.inst]; if (v) fetched.set(x.token, v); });
+      } catch (e) { console.warn('Fallback OKX:', e.message); }
+    }
+    const llamaNeeded = bySrc.llama.filter(x => !fetched.has(x.token));
+    if (llamaNeeded.length) {
+      try {
+        const res = await fetchFromLlama(llamaNeeded.map(x => x.id));
+        llamaNeeded.forEach(x => { const v = res[`coingecko:${x.id}`]; if (v) fetched.set(x.token, v); });
+      } catch (e) { console.warn('Fallback DeFiLlama:', e.message); }
+    }
+    return fetched;
   }
 
   // ── SPARKLINE DATA ──
@@ -358,59 +511,86 @@ const App = (() => {
   }
 
   // ── COINGECKO API ──
-  // Se recalcula en cada llamada para que una moneda recién añadida (p.ej. USDC)
-  // reciba precio en el siguiente tick sin necesidad de recargar.
-  const coingeckoIds = () => portfolio
-    .filter(a => a.coingeckoId)
-    .map(a => a.coingeckoId)
-    .join(',');
-
+  let fetchingPrices = false;   // evita ticks solapados (interval 60s + refresh manual)
   async function fetchPrices() {
+    if (fetchingPrices) return;
+    fetchingPrices = true;
     try {
-      const ids = coingeckoIds();
-      if (!ids) {
-        // No hay nada en cartera: sin llamada a la API, render vacío limpio.
-        setLiveState(true);
-        updateLastUpdate();
-        render();
-        return;
-      }
-      const urls = coingeckoUrls('price', ids);
-      const res = await fetchCoinGecko(urls);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      await fetchPricesImpl();
+    } finally {
+      fetchingPrices = false;
+    }
+  }
 
-      portfolio.forEach(asset => {
-        if (data[asset.coingeckoId]) {
-          prices[asset.token] = {
-            price: data[asset.coingeckoId].usd,
-            change24h: data[asset.coingeckoId].usd_24h_change || 0,
-          };
-        }
-      });
-
-      setLiveState(true);
+  async function fetchPricesImpl() {
+    const assets = portfolio.filter(a => a.coingeckoId);
+    if (assets.length === 0) {
+      // No hay nada en cartera: sin llamadas, render vacío limpio.
+      setLiveState('ok');
       updateLastUpdate();
       render();
-      if (Object.keys(sparklineData).length === 0) {
-        fetchSparklines().then(() => {
-          render();
+      return;
+    }
+
+    const gotThisRound = new Map();   // token → {price, change24h} obtenidos AHORA
+
+    // CoinGecko y Binance/fallbacks en paralelo: el primero en responder gana.
+    // Así si CoinGecko tarda o da 429, Binance ya tiene los precios listos.
+    const cgPromise = (async () => {
+      try {
+        const urls = coingeckoUrls('price', assets.map(a => a.coingeckoId).join(','));
+        const res = await fetchCoinGecko(urls);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const out = new Map();
+        assets.forEach(a => {
+          const c = data[a.coingeckoId];
+          if (c && c.usd > 0) out.set(a.token, { price: c.usd, change24h: c.usd_24h_change || 0 });
         });
+        return out;
+      } catch (err) {
+        console.warn('CoinGecko fetch failed:', err.message);
+        return new Map();
       }
-    } catch (err) {
-      console.warn('CoinGecko fetch failed:', err.message);
-      // Solo rellenamos con precio de compra los tokens que aún no tienen
-      // NINGÚN precio (primera carga sin red). Si ya teníamos precio en vivo de
-      // una vuelta anterior, lo conservamos en vez de pisarlo con el de compra.
-      portfolio.forEach(asset => {
-        if (!prices[asset.token]) {
-          prices[asset.token] = { price: asset.avgPrice || asset.priceUsd || 0, change24h: 0 };
-        }
+    })();
+
+    const fbPromise = fillMissingFromFallbacks(assets);
+
+    // Esperar ambos y mezclar: CoinGecko tiene prioridad si llegó con datos.
+    const [cgResults, fbResults] = await Promise.all([cgPromise, fbPromise]);
+    fbResults.forEach((v, t) => { if (!gotThisRound.has(t)) gotThisRound.set(t, v); });
+    cgResults.forEach((v, t) => gotThisRound.set(t, v));   // CG sobreescribe si es mejor
+
+    // Aplica los vivos y guarda el snapshot en localStorage (se sobrescribe).
+    gotThisRound.forEach((v, t) => applyPrice(t, v.price, v.change24h));
+    saveCachedPrices();
+
+    // Token sin precio vivo en esta ronda → muestra el último snapshot guardado
+    // (si existe). El render ya cae a avgPrice como último recurso.
+    const notLive = assets.filter(a => !gotThisRound.has(a.token));
+
+    const cacheMins = cachedPrices.ts
+      ? Math.max(0, Math.floor((Date.now() - cachedPrices.ts) / 60000))
+      : null;
+    const missingAny = assets.filter(a => !(prices[a.token] && prices[a.token].price > 0));
+
+    // Estado del punto: verde si toda la cartera tiene precio de este tick; ámbar
+    // si algo viene del snapshot; rojo solo si no hay ni precio ni snapshot.
+    let mode = 'ok';
+    let mins = null;
+    if (missingAny.length > 0 && !cachedPrices.ts) {
+      mode = 'error';
+    } else if (notLive.length > 0 && cachedPrices.ts) {
+      mode = 'stale';
+      mins = cacheMins;
+    }
+    setLiveState(mode, mins);
+    if (mode === 'ok') updateLastUpdate();
+    render();
+    if (Object.keys(sparklineData).length === 0) {
+      fetchSparklines().then(() => {
+        render();
       });
-      // Avisamos visualmente de que los precios NO son en vivo, para no confundir
-      // un total con precio de compra con uno real.
-      setLiveState(false);
-      render();
     }
   }
 
@@ -1218,17 +1398,44 @@ const App = (() => {
       `Actualizado: ${now.toLocaleTimeString('es-ES')} ${now.toLocaleDateString('es-ES')}`;
   }
 
-  // Marca visualmente si los precios son en vivo (punto verde) o si la última
-  // llamada a CoinGecko falló y podrían estar desactualizados (punto rojo + aviso).
-  function setLiveState(ok) {
+  // Marca visualmente la frescura de los precios:
+//   'ok'    → punto verde: toda la cartera con precio vivo en el último tick.
+//   'stale' → punto ámbar: parte de los precios viene del snapshot guardado
+//             (hasta 20 min tras el último tick bueno).
+// Formatos de antigüedad legibles: <60 min → "X min", <24 h → "X h", luego días.
+  const humanAge = (mins) => {
+    if (mins == null) return '?';
+    if (mins < 60) return `${mins} min`;
+    const h = Math.floor(mins / 60);
+    if (h < 24) return `${h} h ${mins % 60} min`;
+    const d = Math.floor(h / 24);
+    return `${d} día${d > 1 ? 's' : ''} ${h % 24} h`;
+  };
+
+  // Marca visualmente la frescura de los precios:
+//   'ok'    → punto verde: toda la cartera con precio vivo en el último tick.
+//   'stale' → punto ámbar: parte de los precios viene del snapshot guardado
+//             (hasta 20 min tras el último tick bueno).
+//   'error' → punto rojo: sin conexión y sin snapshot que mostrar.
+  function setLiveState(mode, mins) {
     const dot = document.querySelector('.live-dot');
     if (dot) {
-      dot.classList.toggle('offline', !ok);
-      dot.title = ok ? 'Precios en vivo' : 'Sin conexión con CoinGecko · precios no actualizados';
+      dot.classList.toggle('offline', mode === 'error');
+      dot.classList.toggle('stale', mode === 'stale');
+      dot.title = mode === 'ok'
+        ? 'Precios en vivo'
+        : mode === 'stale'
+          ? `Precios del último snapshot · hace ${humanAge(mins)}`
+          : 'Sin conexión y sin precio guardado';
     }
-    if (!ok) {
-      const el = document.getElementById('last-update');
-      if (el) el.textContent = 'Sin conexión · reintentando…';
+    const el = document.getElementById('last-update');
+    if (!el) return;
+    if (mode === 'stale') {
+      el.textContent = mins != null
+        ? `Precios guardados desde hace ${humanAge(mins)} (API caída)`
+        : 'Precios guardados (API caída)';
+    } else if (mode === 'error') {
+      el.textContent = 'Sin conexión · sin precio guardado';
     }
   }
 
@@ -2194,6 +2401,27 @@ const App = (() => {
   // ── INIT ──
   async function init() {
     renderSkeletons();
+
+    // Arranque con lo que ya hay en disco: si existe snapshot de precios, se
+    // pinta YA (en vez de dejar skeleton 10 s mientras el primer fetch agota
+    // retries). El estado del punto refleja su antigüedad y el fetch siguiente
+    // lo actualizará a los precios vivos.
+    if (Object.keys(prices).length > 0) {
+      const mins = cachedPrices.ts
+        ? Math.max(0, Math.floor((Date.now() - cachedPrices.ts) / 60000))
+        : null;
+      if (cachedPrices.ts && mins > CACHE_MAX_MIN) setLiveState('stale', mins);
+      render();
+    }
+
+    const refreshBtn = document.getElementById('refresh-prices');
+    if (refreshBtn) refreshBtn.addEventListener('click', () => fetchPrices());
+
+    // Al volver a la pestaña (viene del background) refresca al momento; en
+    // background los ticks se dilatan y era fácil quedarse con precios viejos.
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) fetchPrices();
+    });
 
     document.getElementById('currency-switch').addEventListener('click', () => {
       setCurrency(currency === 'USD' ? 'EUR' : 'USD');
