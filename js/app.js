@@ -40,7 +40,7 @@ const App = (() => {
     { name: 'Bitget', type: 'Exchange earn', pct: 0.30, color: '#1e90ff', purpose: 'Earn / operativa' },
   ];
 
-  const cosmosTopPct = 0.35;
+  const cosmosTopPct = () => (settings.satTarget ?? DEFAULT_SAT_TARGET) / 100;
   const DEFAULT_DCA_TARGET = 175;   // objetivo DCA inicial en €, hasta que lo edites
   const DEFAULT_DEFENSE_TARGET = 20;   // objetivo de refugio (USDC) en % de la cartera
   const DEFAULT_CORE_TARGET = 60;      // objetivo de núcleo (BTC+ETH) en % de la cartera
@@ -753,7 +753,7 @@ const App = (() => {
     // Satelites: todos los tokens de SATELLITE_TOKENS presentes en la cartera.
     const cosmosNum = document.getElementById('card-cosmos-pct');
     cosmosNum.textContent = `${(cosmosPct * 100).toFixed(1)}%`;
-    cosmosNum.classList.toggle('negative', cosmosPct > cosmosTopPct);
+    cosmosNum.classList.toggle('negative', cosmosPct > cosmosTopPct());
     const cosmosIconsEl = document.getElementById('cosmos-icons');
     if (cosmosIconsEl && !cosmosIconsEl.childElementCount) {
       cosmosIconsEl.innerHTML = SATELLITE_TOKENS
@@ -799,7 +799,7 @@ const App = (() => {
   // del núcleo prioriza el que esté más flojo (BTC, ya que ETH suele estar bien).
   function computeReparto(strat) {
     const monthlyUsd = (settings.dcaTarget || 0) / EUR_USD;   // objetivo DCA (€) a USD interno
-    const satBlocked = getCosmosPct() >= (cosmosTopPct - 0.05);
+    const satBlocked = getCosmosPct() >= (cosmosTopPct() - 0.05);
     const wR = strat.refugio, wC = strat.core, wS = satBlocked ? 0 : strat.satelites;
     const sum = wR + wC + wS || 1;
     const toRefugio = monthlyUsd * wR / sum;
@@ -974,36 +974,40 @@ const App = (() => {
           <button type="button" class="modal-close" aria-label="Cerrar">&times;</button>
         </div>
 
-        <div style="margin-top:20px;">
-          <label style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;margin-bottom:8px;">% objetivo del cubo en la cartera</label>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <input type="number" id="bucket-target" min="0" max="100" step="1" value="${curTarget}"
-              style="width:80px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:22px;font-weight:700;padding:8px 12px;outline:none;text-align:center;">
-            <span style="color:var(--text-muted);font-size:18px;">%</span>
-          </div>
-        </div>
+        <div style="padding:0 24px 24px;">
 
-        <div style="margin-top:24px;">
-          <label style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;margin-bottom:10px;">Monedas y reparto interno</label>
-          <div style="position:relative;margin-bottom:12px;">
-            <div class="search-wrap" style="cursor:text;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input type="text" id="bucket-search" class="tx-search" placeholder="Añadir moneda..." style="width:100%;">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+          <div style="margin-top:20px;">
+            <label style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;margin-bottom:10px;">% objetivo del cubo en la cartera</label>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input type="number" id="bucket-target" min="0" max="100" step="1" value="${curTarget}"
+                style="width:80px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:22px;font-weight:700;padding:8px 12px;outline:none;text-align:center;">
+              <span style="color:var(--text-muted);font-size:18px;">%</span>
             </div>
-            <div id="bucket-suggestions" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:200;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);max-height:180px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);"></div>
           </div>
-          <div id="bucket-tokens" style="display:flex;flex-direction:column;gap:8px;"></div>
-        </div>
 
-        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted);margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
-          <span>Total asignado: <strong id="bucket-total" style="color:var(--text-primary);font-size:14px;">0%</strong></span>
-          <span id="bucket-warn" style="color:var(--accent-red);display:none;font-weight:600;">Debe sumar 100%</span>
-        </div>
+          <div style="margin-top:24px;">
+            <label style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;margin-bottom:10px;">Monedas y reparto interno</label>
+            <div style="position:relative;margin-bottom:12px;">
+              <div class="search-wrap" style="cursor:text;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="bucket-search" class="tx-search" placeholder="Añadir moneda..." style="width:100%;">
+                <svg id="bucket-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);flex-shrink:0;cursor:pointer;"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div id="bucket-suggestions" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:200;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);max-height:180px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);"></div>
+            </div>
+            <div id="bucket-tokens" style="display:flex;flex-direction:column;gap:8px;"></div>
+          </div>
 
-        <div class="sync-actions" style="margin-top:20px;">
-          <button type="button" id="bucket-save" class="add-submit">Guardar</button>
-          <button type="button" class="add-cancel modal-close">Cancelar</button>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted);margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+            <span>Total asignado: <strong id="bucket-total" style="color:var(--text-primary);font-size:14px;">0%</strong></span>
+            <span id="bucket-warn" style="color:var(--accent-red);display:none;font-weight:600;">Debe sumar 100%</span>
+          </div>
+
+          <div class="sync-actions" style="margin-top:20px;">
+            <button type="button" id="bucket-save" class="add-submit">Guardar</button>
+            <button type="button" class="add-cancel modal-close">Cancelar</button>
+          </div>
+
         </div>
       </div>`;
     document.body.appendChild(ov);
@@ -1080,9 +1084,16 @@ const App = (() => {
       });
     }
 
+    const chevronEl = document.getElementById('bucket-chevron');
+
     searchEl.addEventListener('input', () => showSuggestions(searchEl.value.trim().toUpperCase()));
-    searchEl.addEventListener('focus', () => showSuggestions(searchEl.value.trim().toUpperCase()));
-    document.addEventListener('click', e => { if (!sugEl.contains(e.target) && e.target !== searchEl) sugEl.style.display = 'none'; });
+    chevronEl.addEventListener('click', () => {
+      if (sugEl.style.display === 'none') showSuggestions(searchEl.value.trim().toUpperCase());
+      else sugEl.style.display = 'none';
+    });
+    document.addEventListener('click', e => {
+      if (!sugEl.contains(e.target) && e.target !== searchEl && e.target !== chevronEl) sugEl.style.display = 'none';
+    });
 
     // guardar
     document.getElementById('bucket-save').addEventListener('click', () => {
@@ -1161,8 +1172,8 @@ const App = (() => {
 
     const satTarget = settings.satTarget ?? DEFAULT_SAT_TARGET;
     const satRatio = satTarget > 0 ? cosmosPct / satTarget : 1;
-    const overTop = cosmosPct > cosmosTopPct * 100;
-    const nearTop = cosmosPct > (cosmosTopPct - 0.05) * 100;
+    const overTop = cosmosPct > cosmosTopPct() * 100;
+    const nearTop = cosmosPct > (cosmosTopPct() - 0.05) * 100;
 
     // Para satelites el objetivo es un rango: alcanzar satTarget pero no superar cosmosTopPct.
     // Color: verde si en rango, amarillo si cerca del tope, rojo si lo supera.
@@ -1174,7 +1185,7 @@ const App = (() => {
     bar.style.width = `${Math.min(cosmosPct, 100)}%`;
     bar.style.background = barCol;
     bar.className = 'progress-fill';
-    setBarMark('cosmos-bar-wrap', cosmosTopPct * 100);
+    setBarMark('cosmos-bar-wrap', cosmosTopPct() * 100);
 
     label.textContent = `Objetivo ${satTarget}%`;
     label.className = 'cosmos-label';
@@ -1905,21 +1916,49 @@ const App = (() => {
       const weight = total > 0 ? val / total : 0;
       const bucketTotal = b.tokens.reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t)), 0);
       const bucketWeight = bucketTotal > 0 ? val / bucketTotal : 0;
-      const split = settings.satSplit?.[tok] ?? null;
+
+      // Objetivo individual = objetivo del cubo × split interno del token
+      let targetPct = null;
+      if (bucket === 'core' && settings.coreSplit?.[tok] != null) {
+        targetPct = (settings.coreTarget ?? DEFAULT_CORE_TARGET) * (settings.coreSplit[tok]);
+      } else if (bucket === 'satelites' && settings.satSplit?.[tok] != null) {
+        targetPct = (settings.satTarget ?? DEFAULT_SAT_TARGET) * (settings.satSplit[tok]);
+      } else if (bucket === 'refugio' && settings.defenseTarget) {
+        targetPct = settings.defenseTarget;
+      }
+      const actualPct = weight * 100;
+      const diffPct = targetPct != null ? actualPct - targetPct : null;
+      let chipHtml = '';
+      if (diffPct != null) {
+        const ok    = Math.abs(diffPct) < 1;
+        const over  = diffPct > 1;
+        const color = ok ? 'var(--accent-green)' : over ? 'var(--accent-yellow)' : 'var(--accent-red)';
+        const bg    = ok ? 'var(--accent-green-bg)' : over ? 'var(--accent-yellow-bg, rgba(240,185,11,.12))' : 'var(--accent-red-bg)';
+        const sign  = diffPct >= 0 ? '+' : '';
+        chipHtml = `<span style="display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:${bg};color:${color};">
+          Objetivo ${targetPct.toFixed(1)}% &nbsp;·&nbsp; ${sign}${diffPct.toFixed(1)}%
+        </span>`;
+      }
+
+      const accentColor = c.color || 'var(--accent-blue)';
       return `
-        <div class="bucket-row">
+        <div class="bucket-row" style="border-right:3px solid ${accentColor};">
+
           <div class="bucket-row-left">
             ${iconHtml(tok, c.cssClass || tok.toLowerCase(), 36)}
             <div class="bucket-row-info">
               <div class="bucket-row-name">${c.name || tok} <span class="bucket-row-sym">${tok}</span></div>
-              <div class="bucket-row-sub">${(weight * 100).toFixed(1)}% cartera${split !== null ? ` · objetivo ${(split * 100).toFixed(0)}% cubo` : ''}</div>
+              <div class="bucket-row-sub" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
+                <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:var(--bg-input);color:var(--text-secondary);">${actualPct.toFixed(1)}% de la cartera</span>
+                ${chipHtml}
+              </div>
             </div>
           </div>
           <div class="bucket-row-right">
             <div class="bucket-row-val">${fmtCurrency(val)}</div>
             <div class="bucket-row-pnl ${pnlClass(pnl)}">${pnl >= 0 ? 'Ganancias' : 'Perdidas'} ${fmtPct(Math.abs(pnlPct))} · ${fmtCurrency(Math.abs(pnl))}</div>
             <div class="bucket-row-bar">
-              <div class="bucket-bar-fill" style="width:${(bucketWeight * 100).toFixed(1)}%;background:${c.color || 'var(--accent-blue)'}"></div>
+              <div class="bucket-bar-fill" style="width:${(bucketWeight * 100).toFixed(1)}%;background:${c.color || 'var(--accent-blue)'}; opacity:0.0"></div>
             </div>
           </div>
         </div>`;
