@@ -961,7 +961,7 @@ const App = (() => {
   }
 
   // Modal de edición de cubo: % objetivo + tokens con sus % internos
-  function openBucketModal({ title, targetKey, splitKey, defaultTarget, color }) {
+  function openBucketEditModal({ title, targetKey, splitKey, defaultTarget, color }) {
     const curTarget = settings[targetKey] ?? defaultTarget;
     const curSplit  = { ...(settings[splitKey] || {}) };
 
@@ -1084,11 +1084,11 @@ const App = (() => {
   }
 
   function editCoreTarget() {
-    openBucketModal({ title: 'Núcleo', targetKey: 'coreTarget', splitKey: 'coreSplit', defaultTarget: DEFAULT_CORE_TARGET, color: 'var(--accent-green)' });
+    openBucketEditModal({ title: 'Núcleo', targetKey: 'coreTarget', splitKey: 'coreSplit', defaultTarget: DEFAULT_CORE_TARGET, color: 'var(--accent-green)' });
   }
 
   function editSatTarget() {
-    openBucketModal({ title: 'Satélites', targetKey: 'satTarget', splitKey: 'satSplit', defaultTarget: DEFAULT_SAT_TARGET, color: 'var(--accent-yellow)' });
+    openBucketEditModal({ title: 'Satélites', targetKey: 'satTarget', splitKey: 'satSplit', defaultTarget: DEFAULT_SAT_TARGET, color: 'var(--accent-yellow)' });
   }
 
   function renderDcaSummary() {
