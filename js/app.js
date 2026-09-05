@@ -548,9 +548,27 @@ const App = (() => {
 
     const gotThisRound = new Map();   // token → {price, change24h} obtenidos AHORA
 
-    // Binance/OKX/DeFiLlama directamente — CoinGecko demo da 429 persistente.
-    const fbResults = await fillMissingFromFallbacks(assets);
-    fbResults.forEach((v, t) => gotThisRound.set(t, v));
+    // CoinGecko primero (mejor precio, algoritmo VWAP propio).
+    // Con intervalo de 270s gastamos ~320 llamadas/día → aguanta todo el mes.
+    try {
+      const urls = coingeckoUrls('price', assets.map(a => a.coingeckoId).join(','));
+      const res = await fetchCoinGecko(urls);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      assets.forEach(a => {
+        const c = data[a.coingeckoId];
+        if (c && c.usd > 0) gotThisRound.set(a.token, { price: c.usd, change24h: c.usd_24h_change || 0 });
+      });
+    } catch (err) {
+      console.warn('CoinGecko fetch failed:', err.message);
+    }
+
+    // Fallback: Binance + Kraken + DeFiLlama en paralelo para lo que CoinGecko no dio.
+    const missed = assets.filter(a => !gotThisRound.has(a.token));
+    if (missed.length > 0) {
+      const fbResults = await fillMissingFromFallbacks(missed);
+      fbResults.forEach((v, t) => gotThisRound.set(t, v));
+    }
 
     // Aplica los vivos y guarda el snapshot en localStorage (se sobrescribe).
     gotThisRound.forEach((v, t) => applyPrice(t, v.price, v.change24h));
@@ -2533,7 +2551,7 @@ const App = (() => {
     document.getElementById('add-form').addEventListener('submit', submitAdd);
 
     await fetchPrices();
-    refreshInterval = setInterval(fetchPrices, 60000);
+    refreshInterval = setInterval(fetchPrices, 270000);  // 270s = ~320 llamadas/día a CoinGecko
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { closeModal(); closeAddModal(); }
