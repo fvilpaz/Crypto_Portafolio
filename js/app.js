@@ -438,22 +438,8 @@ const App = (() => {
 
   // ── SPARKLINE DATA ──
   async function fetchSparklines() {
-    try {
-      const ids = portfolio.map(a => a.coingeckoId).join(',');
-      if (!ids) return;
-      const urls = coingeckoUrls('markets', ids);
-      const res = await fetchCoinGecko(urls);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      data.forEach(coin => {
-        const asset = portfolio.find(a => a.coingeckoId === coin.id);
-        if (asset && coin.sparkline_in_7d?.price) {
-          sparklineData[asset.token] = coin.sparkline_in_7d.price.slice(-24);
-        }
-      });
-    } catch (err) {
-      console.warn('Sparklines fetch failed:', err.message);
-    }
+    // Sparklines requieren CoinGecko (datos históricos 7d), sin alternativa gratuita.
+    // Desactivadas mientras la key demo siga dando 429.
   }
 
   function renderSparkline(token, isPositive) {
@@ -534,32 +520,9 @@ const App = (() => {
 
     const gotThisRound = new Map();   // token → {price, change24h} obtenidos AHORA
 
-    // CoinGecko y Binance/fallbacks en paralelo: el primero en responder gana.
-    // Así si CoinGecko tarda o da 429, Binance ya tiene los precios listos.
-    const cgPromise = (async () => {
-      try {
-        const urls = coingeckoUrls('price', assets.map(a => a.coingeckoId).join(','));
-        const res = await fetchCoinGecko(urls);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        const out = new Map();
-        assets.forEach(a => {
-          const c = data[a.coingeckoId];
-          if (c && c.usd > 0) out.set(a.token, { price: c.usd, change24h: c.usd_24h_change || 0 });
-        });
-        return out;
-      } catch (err) {
-        console.warn('CoinGecko fetch failed:', err.message);
-        return new Map();
-      }
-    })();
-
-    const fbPromise = fillMissingFromFallbacks(assets);
-
-    // Esperar ambos y mezclar: CoinGecko tiene prioridad si llegó con datos.
-    const [cgResults, fbResults] = await Promise.all([cgPromise, fbPromise]);
-    fbResults.forEach((v, t) => { if (!gotThisRound.has(t)) gotThisRound.set(t, v); });
-    cgResults.forEach((v, t) => gotThisRound.set(t, v));   // CG sobreescribe si es mejor
+    // Binance/OKX/DeFiLlama directamente — CoinGecko demo da 429 persistente.
+    const fbResults = await fillMissingFromFallbacks(assets);
+    fbResults.forEach((v, t) => gotThisRound.set(t, v));
 
     // Aplica los vivos y guarda el snapshot en localStorage (se sobrescribe).
     gotThisRound.forEach((v, t) => applyPrice(t, v.price, v.change24h));
