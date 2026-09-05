@@ -404,34 +404,16 @@ const App = (() => {
   // Binance → OKX → DeFiLlama. Devuelve Map<token → {price, change24h}>.
   async function fillMissingFromFallbacks(assets) {
     const fetched = new Map();
-    const bySrc = { binance: [], okx: [], llama: [] };
+    const llamaAssets = assets.filter(a => (PRICE_SOURCES[a.token] || {}).llama);
 
-    assets.forEach(a => {
-      const src = PRICE_SOURCES[a.token] || {};
-      if (src.binance) bySrc.binance.push({ token: a.token, sym: src.binance });
-      if (src.okx) bySrc.okx.push({ token: a.token, inst: src.okx });
-      if (src.llama) bySrc.llama.push({ token: a.token, id: src.llama });
-    });
-
-    if (bySrc.binance.length) {
+    if (llamaAssets.length) {
       try {
-        const res = await fetchFromBinance(bySrc.binance.map(x => x.sym));
-        bySrc.binance.forEach(x => { const v = res[x.sym]; if (v) fetched.set(x.token, v); });
-      } catch (e) { console.warn('Fallback Binance:', e.message); }
-    }
-    const okxNeeded = bySrc.okx.filter(x => !fetched.has(x.token));
-    if (okxNeeded.length) {
-      try {
-        const res = await fetchFromOkx(okxNeeded.map(x => x.inst));
-        okxNeeded.forEach(x => { const v = res[x.inst]; if (v) fetched.set(x.token, v); });
-      } catch (e) { console.warn('Fallback OKX:', e.message); }
-    }
-    const llamaNeeded = bySrc.llama.filter(x => !fetched.has(x.token));
-    if (llamaNeeded.length) {
-      try {
-        const res = await fetchFromLlama(llamaNeeded.map(x => x.id));
-        llamaNeeded.forEach(x => { const v = res[`coingecko:${x.id}`]; if (v) fetched.set(x.token, v); });
-      } catch (e) { console.warn('Fallback DeFiLlama:', e.message); }
+        const res = await fetchFromLlama(llamaAssets.map(a => PRICE_SOURCES[a.token].llama));
+        llamaAssets.forEach(a => {
+          const v = res[`coingecko:${PRICE_SOURCES[a.token].llama}`];
+          if (v) fetched.set(a.token, v);
+        });
+      } catch (e) { console.warn('DeFiLlama:', e.message); }
     }
     return fetched;
   }
