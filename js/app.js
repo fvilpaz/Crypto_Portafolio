@@ -2599,7 +2599,10 @@ const App = (() => {
     // pinta YA (en vez de dejar skeleton 10 s mientras el primer fetch agota
     // retries). El estado del punto refleja su antigüedad y el fetch siguiente
     // lo actualizará a los precios vivos.
-    if (Object.keys(prices).length > 0) {
+    // Render siempre al arrancar — transacciones, cartera y movimientos
+    // no necesitan precios. Si hay snapshot cacheado se usan; si no, los
+    // valores monetarios quedan en '—' hasta que llega la API.
+    {
       const mins = cachedPrices.ts
         ? Math.max(0, Math.floor((Date.now() - cachedPrices.ts) / 60000))
         : null;
