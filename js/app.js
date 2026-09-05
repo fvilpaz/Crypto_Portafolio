@@ -43,6 +43,8 @@ const App = (() => {
   const cosmosTopPct = 0.35;
   const DEFAULT_DCA_TARGET = 175;   // objetivo DCA inicial en €, hasta que lo edites
   const DEFAULT_DEFENSE_TARGET = 20;   // objetivo de refugio (USDC) en % de la cartera
+  const DEFAULT_CORE_TARGET = 60;      // objetivo de núcleo (BTC+ETH) en % de la cartera
+  const DEFAULT_SAT_TARGET = 20;       // objetivo de satélites en % de la cartera
 
   // Plantillas de reparto del dinero nuevo: % que va a Refugio / Núcleo / Satélites.
   const STRATEGIES = {
@@ -136,7 +138,7 @@ const App = (() => {
   const _store = loadStore();
   let portfolio = _store.portfolio;
   let transactions = _store.transactions;
-  let settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, strategy: DEFAULT_STRATEGY }, _store.settings || {});   // dcaTarget en €, defenseTarget en %, strategy = plantilla de reparto
+  let settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, coreTarget: DEFAULT_CORE_TARGET, satTarget: DEFAULT_SAT_TARGET, strategy: DEFAULT_STRATEGY }, _store.settings || {});   // dcaTarget en €, defenseTarget en %, strategy = plantilla de reparto
   let storeVersion = _store.updatedAt || 0;
   let showHidden = false;   // mostrar temporalmente las monedas ocultas en la tabla
   let pendingImportFormat = null;   // 'json' | 'csv' elegido antes de abrir el file picker
@@ -728,8 +730,8 @@ const App = (() => {
     const stakingMonthly = getTotalStakingIncomeYearly() / 12;
 
     // Pone (o actualiza) una marca vertical en la barra al % del objetivo
-    // Nucleo: peso en la cartera vs objetivo de la estrategia activa.
-    const coreTarget = (STRATEGIES[settings.strategy || DEFAULT_STRATEGY]?.core || 0);
+    // Nucleo: peso en la cartera vs objetivo editable por el usuario.
+    const coreTarget = settings.coreTarget ?? DEFAULT_CORE_TARGET;
     document.getElementById('card-btceth-pct').textContent = `${(coreWeight * 100).toFixed(1)}%`;
     const btcEthBar = document.getElementById('btceth-bar-fill');
     if (btcEthBar) {
@@ -794,6 +796,16 @@ const App = (() => {
     if (defenseEdit && !defenseEdit.dataset.bound) {
       defenseEdit.dataset.bound = '1';
       defenseEdit.addEventListener('click', editDefenseTarget);
+    }
+    const coreEdit = document.getElementById('core-edit');
+    if (coreEdit && !coreEdit.dataset.bound) {
+      coreEdit.dataset.bound = '1';
+      coreEdit.addEventListener('click', editCoreTarget);
+    }
+    const satEdit = document.getElementById('sat-edit');
+    if (satEdit && !satEdit.dataset.bound) {
+      satEdit.dataset.bound = '1';
+      satEdit.addEventListener('click', editSatTarget);
     }
   }
 
@@ -963,6 +975,28 @@ const App = (() => {
     render();
   }
 
+  function editCoreTarget() {
+    const cur = settings.coreTarget ?? DEFAULT_CORE_TARGET;
+    const input = prompt('Objetivo de núcleo (BTC+ETH) en % de la cartera:', cur);
+    if (input === null) return;
+    const val = parseFloat(String(input).replace(',', '.'));
+    if (isNaN(val) || val < 0 || val > 100) return;
+    settings.coreTarget = val;
+    persist();
+    render();
+  }
+
+  function editSatTarget() {
+    const cur = settings.satTarget ?? DEFAULT_SAT_TARGET;
+    const input = prompt('Objetivo de satélites en % de la cartera:', cur);
+    if (input === null) return;
+    const val = parseFloat(String(input).replace(',', '.'));
+    if (isNaN(val) || val < 0 || val > 100) return;
+    settings.satTarget = val;
+    persist();
+    render();
+  }
+
   function renderDcaSummary() {
     const now = new Date();
     const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -1013,7 +1047,7 @@ const App = (() => {
     const banner = document.getElementById('cosmos-warning');
     if (!bar || !label) return;
 
-    const satTarget = STRATEGIES[settings.strategy || DEFAULT_STRATEGY]?.satelites || 20;
+    const satTarget = settings.satTarget ?? DEFAULT_SAT_TARGET;
     const satRatio = satTarget > 0 ? cosmosPct / satTarget : 1;
     const overTop = cosmosPct > cosmosTopPct * 100;
     const nearTop = cosmosPct > (cosmosTopPct - 0.05) * 100;
@@ -1030,8 +1064,7 @@ const App = (() => {
     bar.className = 'progress-fill';
     setBarMark('cosmos-bar-wrap', cosmosTopPct * 100);
 
-    const labelText = `Objetivo 35%`;
-    label.textContent = labelText;
+    label.textContent = `Objetivo ${satTarget}%`;
     label.className = 'cosmos-label';
     label.style.color = barCol;
     if (banner) banner.style.display = 'none';
