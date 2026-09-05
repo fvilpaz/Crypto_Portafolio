@@ -981,15 +981,19 @@ const App = (() => {
           <span style="color:var(--text-muted);font-size:14px;">%</span>
         </div>
 
-        <label style="font-size:12px;color:var(--text-muted);margin-bottom:6px;display:block;">Monedas del cubo y su reparto interno</label>
-        <div class="search-wrap" style="margin-bottom:10px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="bucket-search" class="tx-search" placeholder="Añadir moneda..." style="width:100%;">
-        </div>
-        <div id="bucket-suggestions" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);max-height:140px;overflow-y:auto;margin-bottom:10px;"></div>
-        <div id="bucket-tokens" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;"></div>
+        <label style="font-size:12px;color:var(--text-muted);margin-bottom:8px;display:block;">Monedas del cubo y su reparto interno</label>
 
-        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted);margin-bottom:14px;">
+        <div style="position:relative;margin-bottom:16px;">
+          <div class="search-wrap">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="bucket-search" class="tx-search" placeholder="Buscar moneda..." style="width:100%;">
+          </div>
+          <div id="bucket-suggestions" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:100;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.3);"></div>
+        </div>
+
+        <div id="bucket-tokens" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px;"></div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted);margin-bottom:16px;padding-top:12px;border-top:1px solid var(--border);">
           <span>Total asignado: <strong id="bucket-total" style="color:var(--text-primary)">0%</strong></span>
           <span id="bucket-warn" style="color:var(--accent-red);display:none;">Debe sumar 100%</span>
         </div>
@@ -1037,34 +1041,43 @@ const App = (() => {
     }
     renderTokens();
 
-    // buscador
-    const searchEl = document.getElementById('bucket-search');
-    const sugEl    = document.getElementById('bucket-suggestions');
-    const allTokens = [...new Set([...Object.keys(COINS), ...portfolio.map(a => a.token)])];
-    searchEl.addEventListener('input', () => {
-      const q = searchEl.value.trim().toUpperCase();
-      if (!q) { sugEl.style.display = 'none'; return; }
-      const matches = allTokens.filter(t => t.includes(q) || (COINS[t]?.name || '').toUpperCase().includes(q)).slice(0, 8);
+    // buscador + desplegable
+    const searchEl  = document.getElementById('bucket-search');
+    const sugEl     = document.getElementById('bucket-suggestions');
+    const portfolioTokens = portfolio.map(a => a.token);
+    const allTokens = [...new Set([...portfolioTokens, ...Object.keys(COINS)])];
+
+    function showSuggestions(q) {
+      const matches = q
+        ? allTokens.filter(t => t.includes(q) || (COINS[t]?.name || '').toUpperCase().includes(q)).slice(0, 10)
+        : portfolioTokens.slice(0, 10);   // sin texto → monedas del portfolio
       if (!matches.length) { sugEl.style.display = 'none'; return; }
       sugEl.style.display = '';
-      sugEl.innerHTML = matches.map(t => `
-        <div data-add="${t}" style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;transition:background .15s;">
-          ${iconHtml(t, COINS[t]?.cssClass || '', 20)}
-          <span style="font-size:13px;">${t}</span>
+      sugEl.innerHTML = matches.map(t => {
+        const inMap = !!tokenMap[t];
+        return `<div data-add="${t}" style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;opacity:${inMap ? '.45' : '1'};">
+          ${iconHtml(t, COINS[t]?.cssClass || '', 22)}
+          <span style="font-size:13px;font-weight:600;">${t}</span>
           <span style="font-size:11px;color:var(--text-muted);margin-left:auto;">${COINS[t]?.name || ''}</span>
-        </div>`).join('');
+          ${inMap ? '<span style="font-size:10px;color:var(--text-muted);">ya añadida</span>' : ''}
+        </div>`;
+      }).join('');
       sugEl.querySelectorAll('[data-add]').forEach(el => {
         el.addEventListener('mouseenter', () => el.style.background = 'var(--bg-input)');
         el.addEventListener('mouseleave', () => el.style.background = '');
-        el.addEventListener('click', () => {
+        el.addEventListener('mousedown', e => {
+          e.preventDefault();
           if (!tokenMap[el.dataset.add]) tokenMap[el.dataset.add] = 0;
           searchEl.value = '';
           sugEl.style.display = 'none';
           renderTokens();
         });
       });
-    });
-    document.addEventListener('click', e => { if (!sugEl.contains(e.target) && e.target !== searchEl) sugEl.style.display = 'none'; }, { once: false });
+    }
+
+    searchEl.addEventListener('input', () => showSuggestions(searchEl.value.trim().toUpperCase()));
+    searchEl.addEventListener('focus', () => showSuggestions(searchEl.value.trim().toUpperCase()));
+    document.addEventListener('click', e => { if (!sugEl.contains(e.target) && e.target !== searchEl) sugEl.style.display = 'none'; });
 
     // guardar
     document.getElementById('bucket-save').addEventListener('click', () => {
