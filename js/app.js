@@ -1100,7 +1100,7 @@ const App = (() => {
           <div class="staking-stats">
             <div>
               <div class="staking-stat-label">Stakeado</div>
-              <div class="staking-stat-value">${fmt(s.qty, 0)} ${s.token}</div>
+              <div class="staking-stat-value">${fmt(s.qty, s.qty < 10 ? 2 : 0)} ${s.token}</div>
             </div>
             <div>
               <div class="staking-stat-label">Valor</div>
