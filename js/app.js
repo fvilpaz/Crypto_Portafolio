@@ -669,7 +669,7 @@ const App = (() => {
     renderEvolutionChart();
     renderStaking();
     renderAirdrops();
-    renderCustody();
+
     renderTransactions();
     if (isInitialLoad) isInitialLoad = false;
   }
