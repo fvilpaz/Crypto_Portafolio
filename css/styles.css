@@ -257,6 +257,30 @@ a:hover { text-decoration: underline; }
   color: var(--text-muted);
 }
 
+.btn-refresh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  cursor: pointer;
+  transition: color .15s, border-color .15s, transform .3s;
+}
+
+.btn-refresh:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
+}
+
+.btn-refresh:active {
+  transform: rotate(180deg);
+}
+
 /* ── PORTFOLIO HERO ── */
 .hero {
   padding: 32px 0 24px;
@@ -991,6 +1015,10 @@ tbody td {
 
 .live-dot.offline {
   background: var(--accent-red);
+}
+
+.live-dot.stale {
+  background: var(--accent-yellow);
 }
 
 @keyframes pulse {
