@@ -974,62 +974,135 @@ const App = (() => {
     render();
   }
 
+  // Modal de edición de cubo: % objetivo + tokens con sus % internos
+  function openBucketModal({ title, targetKey, splitKey, defaultTarget, color }) {
+    const curTarget = settings[targetKey] ?? defaultTarget;
+    const curSplit  = { ...(settings[splitKey] || {}) };
+
+    const ov = document.createElement('div');
+    ov.className = 'modal-overlay open';
+    ov.innerHTML = `
+      <div class="modal" style="max-width:420px;">
+        <div class="add-modal-head">
+          <h3 style="color:${color}">${title}</h3>
+          <button type="button" class="modal-close" aria-label="Cerrar">&times;</button>
+        </div>
+
+        <label style="font-size:12px;color:var(--text-muted);margin-bottom:4px;display:block;">% objetivo del cubo en la cartera</label>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+          <input type="number" id="bucket-target" min="0" max="100" step="1" value="${curTarget}"
+            style="width:70px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:16px;font-weight:600;padding:6px 10px;outline:none;">
+          <span style="color:var(--text-muted);font-size:14px;">%</span>
+        </div>
+
+        <label style="font-size:12px;color:var(--text-muted);margin-bottom:6px;display:block;">Monedas del cubo y su reparto interno</label>
+        <div class="search-wrap" style="margin-bottom:10px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="bucket-search" class="tx-search" placeholder="Añadir moneda..." style="width:100%;">
+        </div>
+        <div id="bucket-suggestions" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);max-height:140px;overflow-y:auto;margin-bottom:10px;"></div>
+        <div id="bucket-tokens" style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;"></div>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted);margin-bottom:14px;">
+          <span>Total asignado: <strong id="bucket-total" style="color:var(--text-primary)">0%</strong></span>
+          <span id="bucket-warn" style="color:var(--accent-red);display:none;">Debe sumar 100%</span>
+        </div>
+
+        <div class="sync-actions">
+          <button type="button" id="bucket-save" class="add-submit">Guardar</button>
+          <button type="button" class="add-cancel modal-close">Cancelar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+
+    const close = () => ov.remove();
+    ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('.modal-close')) close(); });
+
+    // tokens actualmente en el split
+    const tokenMap = { ...curSplit }; // token → fracción
+
+    function renderTokens() {
+      const total = Object.values(tokenMap).reduce((s, v) => s + v * 100, 0);
+      document.getElementById('bucket-total').textContent = `${Math.round(total)}%`;
+      document.getElementById('bucket-warn').style.display = Math.abs(total - 100) > 1 && Object.keys(tokenMap).length > 0 ? '' : 'none';
+      document.getElementById('bucket-tokens').innerHTML = Object.entries(tokenMap).map(([tok, frac]) => `
+        <div style="display:flex;align-items:center;gap:10px;background:var(--bg-input);border-radius:var(--radius-sm);padding:8px 10px;">
+          ${iconHtml(tok, COINS[tok]?.cssClass || '', 24)}
+          <span style="flex:1;font-weight:600;font-size:13px;">${tok}</span>
+          <input type="number" min="0" max="100" step="1" value="${Math.round(frac * 100)}"
+            data-tok="${tok}"
+            style="width:60px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:13px;padding:4px 8px;outline:none;text-align:right;">
+          <span style="color:var(--text-muted);font-size:12px;">%</span>
+          <button type="button" data-remove="${tok}" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0 2px;">×</button>
+        </div>`).join('');
+
+      // eventos de los inputs y botones de borrar
+      document.querySelectorAll('#bucket-tokens input[data-tok]').forEach(inp => {
+        inp.addEventListener('input', () => {
+          tokenMap[inp.dataset.tok] = parseFloat(inp.value) / 100 || 0;
+          const t = Object.values(tokenMap).reduce((s, v) => s + v * 100, 0);
+          document.getElementById('bucket-total').textContent = `${Math.round(t)}%`;
+          document.getElementById('bucket-warn').style.display = Math.abs(t - 100) > 1 && Object.keys(tokenMap).length > 0 ? '' : 'none';
+        });
+      });
+      document.querySelectorAll('#bucket-tokens button[data-remove]').forEach(btn => {
+        btn.addEventListener('click', () => { delete tokenMap[btn.dataset.remove]; renderTokens(); });
+      });
+    }
+    renderTokens();
+
+    // buscador
+    const searchEl = document.getElementById('bucket-search');
+    const sugEl    = document.getElementById('bucket-suggestions');
+    const allTokens = [...new Set([...Object.keys(COINS), ...portfolio.map(a => a.token)])];
+    searchEl.addEventListener('input', () => {
+      const q = searchEl.value.trim().toUpperCase();
+      if (!q) { sugEl.style.display = 'none'; return; }
+      const matches = allTokens.filter(t => t.includes(q) || (COINS[t]?.name || '').toUpperCase().includes(q)).slice(0, 8);
+      if (!matches.length) { sugEl.style.display = 'none'; return; }
+      sugEl.style.display = '';
+      sugEl.innerHTML = matches.map(t => `
+        <div data-add="${t}" style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;transition:background .15s;">
+          ${iconHtml(t, COINS[t]?.cssClass || '', 20)}
+          <span style="font-size:13px;">${t}</span>
+          <span style="font-size:11px;color:var(--text-muted);margin-left:auto;">${COINS[t]?.name || ''}</span>
+        </div>`).join('');
+      sugEl.querySelectorAll('[data-add]').forEach(el => {
+        el.addEventListener('mouseenter', () => el.style.background = 'var(--bg-input)');
+        el.addEventListener('mouseleave', () => el.style.background = '');
+        el.addEventListener('click', () => {
+          if (!tokenMap[el.dataset.add]) tokenMap[el.dataset.add] = 0;
+          searchEl.value = '';
+          sugEl.style.display = 'none';
+          renderTokens();
+        });
+      });
+    });
+    document.addEventListener('click', e => { if (!sugEl.contains(e.target) && e.target !== searchEl) sugEl.style.display = 'none'; }, { once: false });
+
+    // guardar
+    document.getElementById('bucket-save').addEventListener('click', () => {
+      const target = parseFloat(document.getElementById('bucket-target').value);
+      if (isNaN(target) || target < 0 || target > 100) return;
+      const total = Object.values(tokenMap).reduce((s, v) => s + v * 100, 0);
+      if (Object.keys(tokenMap).length > 0 && Math.abs(total - 100) > 1) {
+        document.getElementById('bucket-warn').style.display = '';
+        return;
+      }
+      settings[targetKey] = target;
+      settings[splitKey]  = { ...tokenMap };
+      persist();
+      render();
+      close();
+    });
+  }
+
   function editCoreTarget() {
-    const curTarget = settings.coreTarget ?? DEFAULT_CORE_TARGET;
-    const curBtc = Math.round((settings.coreSplit.BTC || 0.6) * 100);
-    const curEth = Math.round((settings.coreSplit.ETH || 0.4) * 100);
-
-    const inputTarget = prompt('Objetivo de núcleo (BTC+ETH) en % de la cartera:', curTarget);
-    if (inputTarget === null) return;
-    const valTarget = parseFloat(String(inputTarget).replace(',', '.'));
-    if (isNaN(valTarget) || valTarget < 0 || valTarget > 100) return;
-
-    const inputBtc = prompt(`% de BTC dentro del núcleo (el resto va a ETH):\nActual: BTC ${curBtc}% / ETH ${curEth}%`, curBtc);
-    if (inputBtc === null) return;
-    const valBtc = parseFloat(String(inputBtc).replace(',', '.'));
-    if (isNaN(valBtc) || valBtc < 0 || valBtc > 100) return;
-
-    settings.coreTarget = valTarget;
-    settings.coreSplit = { BTC: valBtc / 100, ETH: (100 - valBtc) / 100 };
-    persist();
-    render();
+    openBucketModal({ title: 'Núcleo', targetKey: 'coreTarget', splitKey: 'coreSplit', defaultTarget: DEFAULT_CORE_TARGET, color: 'var(--accent-green)' });
   }
 
   function editSatTarget() {
-    const curTarget = settings.satTarget ?? DEFAULT_SAT_TARGET;
-    const inputTarget = prompt('Objetivo de satélites en % de la cartera:', curTarget);
-    if (inputTarget === null) return;
-    const valTarget = parseFloat(String(inputTarget).replace(',', '.'));
-    if (isNaN(valTarget) || valTarget < 0 || valTarget > 100) return;
-
-    const curSplit = settings.satSplit || { SOL: 0.5, ATOM: 0.3, TIA: 0.2 };
-    const tokens = Object.keys(curSplit);
-    const curStr = tokens.map(t => `${t}:${Math.round(curSplit[t] * 100)}`).join(', ');
-    const inputSplit = prompt(
-      `Reparto dentro de satélites (formato TOKEN:%, separados por coma, deben sumar 100):\nEjemplo: SOL:100  o  SOL:50,ATOM:30,TIA:20`,
-      curStr
-    );
-    if (inputSplit === null) return;
-
-    const newSplit = {};
-    let total = 0;
-    for (const part of inputSplit.split(',')) {
-      const [tok, pct] = part.trim().split(':');
-      if (!tok || !pct) continue;
-      const v = parseFloat(pct.replace(',', '.'));
-      if (isNaN(v) || v < 0) continue;
-      newSplit[tok.trim().toUpperCase()] = v / 100;
-      total += v;
-    }
-    if (Math.abs(total - 100) > 1 || Object.keys(newSplit).length === 0) {
-      alert(`Los porcentajes deben sumar 100. Suma actual: ${total}%`);
-      return;
-    }
-
-    settings.satTarget = valTarget;
-    settings.satSplit = newSplit;
-    persist();
-    render();
+    openBucketModal({ title: 'Satélites', targetKey: 'satTarget', splitKey: 'satSplit', defaultTarget: DEFAULT_SAT_TARGET, color: 'var(--accent-yellow)' });
   }
 
   function renderDcaSummary() {
