@@ -2137,6 +2137,11 @@ main.container { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
 @media (max-width: 560px) {
   .add-row { flex-direction: column; gap: 14px; }
 }
+/* Ocultar flechas nativas de inputs number en todos los navegadores */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+
 .add-cancel, .add-submit { padding: 10px 20px; border-radius: 999px; font-weight: 700; font-size: 14px; cursor: pointer; font-family: inherit; border: 1px solid var(--border); }
 .add-cancel { background: var(--bg-card); color: var(--text-secondary); }
 .add-submit { background: var(--accent-green); color: #0b0e11; border-color: var(--accent-green); }
