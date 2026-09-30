@@ -34,7 +34,9 @@ are intentionally not merged. The apps cross-link, nothing more.
 ## 🚀 Features
 
 - Live portfolio valuation with prices from the CoinGecko API
-- Total value + PnL hero, in **USD ⇄ EUR** (toggle)
+- Total value + PnL hero, in **USD ⇄ EUR** (toggle), with the live EUR/USD rate
+  (open.er-api.com). Each movement also keeps the exact euros you typed
+  (`totalEur`), so past purchases don't drift when the rate moves
 - Summary cards: BTC+ETH core, Cosmos (ATOM+TIA) with a 35% concentration guard,
   monthly staking income, airdrops
 - **Single wallet with per-coin tags:** every coin lives in one portfolio and is
