@@ -47,7 +47,7 @@ are intentionally not merged. The apps cross-link, nothing more.
   changing the total value
 - **Distribution** doughnut chart (share per asset)
 - **Evolution** chart over time
-- **DCA** summary (monthly plan)
+- **DCA** summary (monthly plan; purchases from the 28th onwards count towards the next month)
 - **Staking** breakdown (per-asset APR)
 - **Custody** split (Bit2Me / Autocustodia / Bitget)
 - **Movements** table (buys, sells, rewards), searchable

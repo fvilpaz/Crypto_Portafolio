@@ -1120,13 +1120,25 @@ const App = (() => {
     openBucketEditModal({ title: 'Satélites', targetKey: 'satTarget', splitKey: 'satSplit', defaultTarget: DEFAULT_SAT_TARGET, color: 'var(--accent-yellow)' });
   }
 
+  // Mes al que se imputa una compra: del día 28 en adelante cuenta ya como gasto
+  // del mes siguiente. La fecha guardada del movimiento no cambia.
+  const DCA_CUTOFF_DAY = 27;
+  function dcaMonthKey(isoDate) {
+    const [y, m, d] = isoDate.slice(0, 10).split('-').map(Number);
+    const first = new Date(y, m - 1 + (d > DCA_CUTOFF_DAY ? 1 : 0), 1);
+    return `${first.getFullYear()}-${String(first.getMonth() + 1).padStart(2, '0')}`;
+  }
+
   function renderDcaSummary() {
     const now = new Date();
-    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const monthKey = dcaMonthKey(today);
+    const [keyYear, keyMonth] = monthKey.split('-');
+    const period = new Date(keyYear, keyMonth - 1);   // mes que se está llenando (no siempre el del calendario)
     const dcaTargetEur = settings.dcaTarget;   // objetivo en €
 
     const investedUsd = transactions
-      .filter(tx => tx.date.startsWith(monthKey) && tx.type === 'Compra' && tx.totalUsd > 0)
+      .filter(tx => dcaMonthKey(tx.date) === monthKey && tx.type === 'Compra' && tx.totalUsd > 0)
       .reduce((sum, tx) => sum + tx.totalUsd, 0);
 
     const invested = currency === 'EUR' ? investedUsd * EUR_USD : investedUsd;
@@ -1143,7 +1155,7 @@ const App = (() => {
     if (!el) return;
     el.innerHTML = `
       <div class="dca-top">
-        <span class="dca-month">${now.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</span>
+        <span class="dca-month">${period.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</span>
         <button type="button" class="dca-edit" id="dca-amount" title="Editar objetivo mensual" aria-label="Editar objetivo mensual">✎</button>
       </div>
       <div class="dca-amount">
@@ -1339,7 +1351,7 @@ const App = (() => {
     const monthlyInvest = {};
     transactions.forEach(tx => {
       if (tx.type === 'Compra' && tx.totalUsd > 0) {
-        const month = tx.date.substring(0, 7);
+        const month = dcaMonthKey(tx.date);
         monthlyInvest[month] = (monthlyInvest[month] || 0) + tx.totalUsd / EUR_USD;
       }
     });
