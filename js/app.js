@@ -58,6 +58,8 @@ const App = (() => {
     conservadora: { refugio: 50, core: 35, satelites: 15 },
     moderada:     { refugio: 30, core: 50, satelites: 20 },
     agresiva:     { refugio: 15, core: 60, satelites: 25 },
+    // Sin porcentajes fijos: reparte hacia los objetivos de cubo (ver computeReparto).
+    objetivos:    { byTargets: true },
   };
   const DEFAULT_STRATEGY = 'moderada';
   // coreSplit y satSplit ahora viven en settings (editables y persistidos)
@@ -837,14 +839,37 @@ const App = (() => {
   function computeReparto(strat) {
     const monthlyUsd = (settings.dcaTarget || 0) / EUR_USD;   // objetivo DCA (€) a USD interno
     const satBlocked = getCosmosPct() >= (cosmosTopPct() - 0.05);
-    const wR = strat.refugio, wC = strat.core, wS = satBlocked ? 0 : strat.satelites;
-    const sum = wR + wC + wS || 1;
-    const toRefugio = monthlyUsd * wR / sum;
-    const toCore = monthlyUsd * wC / sum;
-    const toSat = monthlyUsd * wS / sum;
-
     const btcVal = getAssetValue(portfolio.find(a => a.token === 'BTC'));
     const ethVal = getAssetValue(portfolio.find(a => a.token === 'ETH'));
+
+    let toRefugio, toCore, toSat;
+    if (strat.byTargets) {
+      // Plantilla "objetivos": el dinero va a los cubos en proporción a lo que le
+      // falta a cada uno para llegar a su objetivo tras aportar (mismo mecanismo
+      // que BTC/ETH más abajo). Un cubo que ya llega no recibe; por eso no hay freno.
+      const after = getInvestedValue() + monthlyUsd;
+      const targets = [settings.defenseTarget || 0, settings.coreTarget ?? DEFAULT_CORE_TARGET, settings.satTarget ?? DEFAULT_SAT_TARGET];
+      const vals = [
+        getAssetValue(portfolio.find(a => a.token === 'USDC')),
+        btcVal + ethVal,
+        SATELLITE_TOKENS.reduce((s, tok) => s + getAssetValue(portfolio.find(a => a.token === tok)), 0),
+      ];
+      const gaps = targets.map((t, i) => Math.max(t / 100 * after - vals[i], 0));
+      const gapSum = gaps[0] + gaps[1] + gaps[2];
+      const targetSum = targets[0] + targets[1] + targets[2] || 1;
+      [toRefugio, toCore, toSat] = gaps.map((g, i) => {
+        if (gapSum <= 0) return monthlyUsd * targets[i] / targetSum;
+        if (gapSum >= monthlyUsd) return monthlyUsd * g / gapSum;
+        return g + (monthlyUsd - gapSum) * targets[i] / targetSum;
+      });
+    } else {
+      const wR = strat.refugio, wC = strat.core, wS = satBlocked ? 0 : strat.satelites;
+      const sum = wR + wC + wS || 1;
+      toRefugio = monthlyUsd * wR / sum;
+      toCore = monthlyUsd * wC / sum;
+      toSat = monthlyUsd * wS / sum;
+    }
+
     const coreAfter = btcVal + ethVal + toCore;
     const btcGap = Math.max(settings.coreSplit.BTC * coreAfter - btcVal, 0);
     const ethGap = Math.max(settings.coreSplit.ETH * coreAfter - ethVal, 0);
@@ -898,6 +923,9 @@ const App = (() => {
       stratWrap.innerHTML = Object.entries(STRATEGIES).map(([key, s]) => {
         const name = key.charAt(0).toUpperCase() + key.slice(1);
         const r = computeReparto(s);
+        // Cabecera (números y barra): los % fijos de la plantilla o, en "objetivos", los que salen hoy.
+        const share = (usd) => r.monthlyUsd > 0 ? Math.round(usd / r.monthlyUsd * 100) : 0;
+        const mix = s.byTargets ? { refugio: share(r.toRefugio), core: share(r.toBtc + r.toEth), satelites: share(r.toSat) } : s;
         // Progreso actual de cada token respecto a su objetivo
         const coreTotal = getAssetValue(portfolio.find(a => a.token === 'BTC')) + getAssetValue(portfolio.find(a => a.token === 'ETH'));
         const satTotal  = SATELLITE_TOKENS.reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t)), 0);
@@ -947,14 +975,14 @@ const App = (() => {
               <div class="strat-head">
                 <span class="strat-name">${name}</span>
                 <span class="strat-head-right">
-                  <span class="strat-legend"><span class="lg-refugio">${s.refugio}</span> · <span class="lg-core">${s.core}</span> · <span class="lg-sat">${s.satelites}</span></span>
+                  <span class="strat-legend"><span class="lg-refugio">${mix.refugio}</span> · <span class="lg-core">${mix.core}</span> · <span class="lg-sat">${mix.satelites}</span></span>
                   <svg class="strat-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
                 </span>
               </div>
               <div class="strat-bar">
-                <span class="seg seg-refugio" style="width:${s.refugio}%"></span>
-                <span class="seg seg-core" style="width:${s.core}%"></span>
-                <span class="seg seg-sat" style="width:${s.satelites}%"></span>
+                <span class="seg seg-refugio" style="width:${mix.refugio}%"></span>
+                <span class="seg seg-core" style="width:${mix.core}%"></span>
+                <span class="seg seg-sat" style="width:${mix.satelites}%"></span>
               </div>
             </summary>
             <div class="reparto-list">${detail}</div>

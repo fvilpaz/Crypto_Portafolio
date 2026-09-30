@@ -50,6 +50,9 @@ are intentionally not merged. The apps cross-link, nothing more.
 - **Distribution** doughnut chart (share per asset)
 - **Evolution** chart over time
 - **DCA** summary (monthly plan; purchases from the 28th onwards count towards the next month)
+- **Monthly split** by strategy: three fixed templates (conservadora / moderada / agresiva)
+  plus **objetivos**, which sends the money to whichever bucket (refugio / core / satellites)
+  is furthest below its own target, in proportion to each gap
 - **Staking** breakdown (per-asset APR)
 - **Custody** split (Bit2Me / Autocustodia / Bitget)
 - **Movements** table (buys, sells, rewards), searchable
