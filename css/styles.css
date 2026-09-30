@@ -431,6 +431,7 @@ a:hover { text-decoration: underline; }
 .strat-block[data-strat="conservadora"] .strat-name { color: var(--accent-green); }
 .strat-block[data-strat="moderada"]     .strat-name { color: var(--accent-yellow); }
 .strat-block[data-strat="agresiva"]     .strat-name { color: var(--accent-red); }
+.strat-block[data-strat="objetivos"]    .strat-name { color: var(--accent-blue); }
 
 .strat-block[data-strat="conservadora"].active {
   border-color: var(--accent-green);
@@ -443,6 +444,10 @@ a:hover { text-decoration: underline; }
 .strat-block[data-strat="agresiva"].active {
   border-color: var(--accent-red);
   box-shadow: 0 0 0 1px var(--accent-red), 0 0 20px rgba(246, 70, 93, 0.15);
+}
+.strat-block[data-strat="objetivos"].active {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 1px var(--accent-blue), 0 0 20px rgba(30, 144, 255, 0.15);
 }
 .strat-sum {
   list-style: none;
