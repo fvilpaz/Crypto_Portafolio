@@ -3,7 +3,14 @@
 // ═══════════════════════════════════════════════════════════════
 
 const App = (() => {
-  const EUR_USD = 0.85;
+  // Cambio €/$: cuántos euros vale 1 dólar. Se pide en vivo al arrancar (misma
+  // fuente que CryptoTrace) y se guarda el último bueno en este navegador.
+  // 0.85 era el cambio fijo hasta sep-2026: queda como arranque si nunca se ha
+  // podido pedir, y para reconstruir los euros de los movimientos de entonces.
+  const LEGACY_EUR_USD = 0.85;
+  const RATE_KEY = 'miCartera.rate.v1';
+  const RATE_URL = 'https://open.er-api.com/v6/latest/USD';
+  let EUR_USD = parseFloat(localStorage.getItem(RATE_KEY)) || LEGACY_EUR_USD;
   const COINGECKO_IMG = 'https://coin-images.coingecko.com/coins/images';
 
   // Catálogo de las monedas que farmeo. Sirve para el selector de "Añadir" y
@@ -176,6 +183,29 @@ const App = (() => {
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   transactions.forEach(t => { if (t.id == null) t.id = uid(); });
 
+  // Cada movimiento guarda también los euros que se teclearon (totalEur), para
+  // que no bailen cuando cambia el €/$. Los anteriores al cambio en vivo no lo
+  // traen: se metieron todos a 0.85, así que se reconstruyen exactos con ese cambio.
+  function fillTotalEur(list) {
+    list.forEach(t => {
+      if (t.totalEur == null) t.totalEur = Math.round((t.totalUsd || 0) * LEGACY_EUR_USD * 100) / 100;
+    });
+  }
+  fillTotalEur(transactions);
+
+  async function fetchEurUsd() {
+    try {
+      const data = await (await fetch(RATE_URL)).json();
+      const rate = data?.rates?.EUR;
+      if (data?.result !== 'success' || !(rate > 0)) return;
+      EUR_USD = rate;
+      localStorage.setItem(RATE_KEY, String(rate));
+      render();
+    } catch (e) {
+      console.warn('No se pudo pedir el cambio €/$ (se usa el último guardado):', e);
+    }
+  }
+
   // ── ESTADO ──
   let currency = 'USD';
   let prices = {};
@@ -208,6 +238,13 @@ const App = (() => {
     if (n === null || n === undefined || isNaN(n)) return '—';
     const value = currency === 'EUR' ? n * EUR_USD : n;
     return currency === 'EUR' ? fmt(value) + ' €' : '$' + fmt(value);
+  };
+
+  // Importe de UN movimiento (su total o su precio, en $). En € usa los euros
+  // exactos del movimiento (totalEur), no los dólares reconvertidos al cambio de hoy.
+  const fmtTxAmount = (tx, usd) => {
+    if (currency !== 'EUR' || !(tx.totalUsd > 0) || tx.totalEur == null) return fmtCurrency(usd);
+    return fmt(usd * tx.totalEur / tx.totalUsd) + ' €';
   };
 
   const fmtPct = (n) => {
@@ -1137,11 +1174,12 @@ const App = (() => {
     const period = new Date(keyYear, keyMonth - 1);   // mes que se está llenando (no siempre el del calendario)
     const dcaTargetEur = settings.dcaTarget;   // objetivo en €
 
-    const investedUsd = transactions
-      .filter(tx => dcaMonthKey(tx.date) === monthKey && tx.type === 'Compra' && tx.totalUsd > 0)
-      .reduce((sum, tx) => sum + tx.totalUsd, 0);
+    const monthBuys = transactions
+      .filter(tx => dcaMonthKey(tx.date) === monthKey && tx.type === 'Compra' && tx.totalUsd > 0);
+    const investedUsd = monthBuys.reduce((sum, tx) => sum + tx.totalUsd, 0);
+    const investedEur = monthBuys.reduce((sum, tx) => sum + tx.totalEur, 0);   // euros exactos tecleados
 
-    const invested = currency === 'EUR' ? investedUsd * EUR_USD : investedUsd;
+    const invested = currency === 'EUR' ? investedEur : investedUsd;
     const target = currency === 'EUR' ? dcaTargetEur : dcaTargetEur / EUR_USD;
     const pct = target > 0 ? Math.min((invested / target) * 100, 100) : 0;
     const remaining = Math.max(target - invested, 0);
@@ -1355,7 +1393,7 @@ const App = (() => {
     transactions.forEach(tx => {
       if (tx.type === 'Compra' && tx.totalUsd > 0) {
         const month = dcaMonthKey(tx.date);
-        monthlyInvest[month] = (monthlyInvest[month] || 0) + (inEur ? tx.totalUsd * EUR_USD : tx.totalUsd);
+        monthlyInvest[month] = (monthlyInvest[month] || 0) + (inEur ? tx.totalEur : tx.totalUsd);
       }
     });
 
@@ -1556,9 +1594,9 @@ const App = (() => {
         <td>
           <span style="color:${tx.type === 'Compra' ? 'var(--accent-green)' : 'var(--accent-blue)'};">${tx.type}</span>
         </td>
-        <td class="text-right">${tx.price > 0 ? fmtCurrency(tx.price) : '—'}</td>
+        <td class="text-right">${tx.price > 0 ? fmtTxAmount(tx, tx.price) : '—'}</td>
         <td class="text-right">${fmt(tx.qty, tx.token === 'BTC' ? 8 : 2)}</td>
-        <td class="text-right">${tx.totalUsd > 0 ? fmtCurrency(tx.totalUsd) : '—'}</td>
+        <td class="text-right">${tx.totalUsd > 0 ? fmtTxAmount(tx, tx.totalUsd) : '—'}</td>
         <td class="text-right tx-actions">
           <button type="button" class="tx-btn tx-edit" data-txid="${tx.id}" title="Editar" aria-label="Editar">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -1797,8 +1835,8 @@ const App = (() => {
                   <div class="modal-tx-qty">${fmt(tx.qty, tx.token === 'BTC' ? 8 : 4)} ${tx.token}</div>
                 </div>
                 <div class="modal-tx-right">
-                  <div class="modal-tx-price">${tx.price > 0 ? fmtCurrency(tx.price) : '—'}</div>
-                  <div class="modal-tx-total">${tx.totalUsd > 0 ? fmtCurrency(tx.totalUsd) : '—'}</div>
+                  <div class="modal-tx-price">${tx.price > 0 ? fmtTxAmount(tx, tx.price) : '—'}</div>
+                  <div class="modal-tx-total">${tx.totalUsd > 0 ? fmtTxAmount(tx, tx.totalUsd) : '—'}</div>
                 </div>
               </div>
             `).join('')}
@@ -2129,7 +2167,7 @@ const App = (() => {
     document.getElementById('add-title').textContent = tx ? 'Editar movimiento' : 'Añadir movimiento';
     document.getElementById('add-date').value = tx ? tx.date : new Date().toISOString().slice(0, 10);
     document.getElementById('add-qty').value = tx ? fmtInput(tx.qty, 8) : '';
-    document.getElementById('add-amount').value = tx ? fmtInput(tx.totalUsd * EUR_USD, 2) : '';
+    document.getElementById('add-amount').value = tx ? fmtInput(tx.totalEur, 2) : '';
     document.getElementById('add-error').textContent = '';
     document.getElementById('add-derived').textContent = '';
     renderAddChips();
@@ -2169,7 +2207,12 @@ const App = (() => {
     }
 
     // Recompensa = monedas gratis: coste 0€, sin precio de compra.
-    const totalUsd = isReward ? 0 : amountEur / EUR_USD;   // € → $ (la cartera calcula en USD)
+    // Al editar sin tocar el importe se conservan los $ con los que entró: si no,
+    // corregir una cantidad o una fecha cambiaría el coste al cambio de hoy.
+    const prevTx = editingId ? transactions.find(t => t.id === editingId) : null;
+    const sameAmount = prevTx && prevTx.totalUsd > 0 && Math.abs(prevTx.totalEur - amountEur) < 0.005;
+    const totalEur = isReward ? 0 : (sameAmount ? prevTx.totalEur : amountEur);
+    const totalUsd = isReward ? 0 : (sameAmount ? prevTx.totalUsd : amountEur / EUR_USD);   // € → $ (la cartera calcula en USD)
     const priceUsd = isReward ? 0 : totalUsd / qty;
 
     // Si editamos, revertimos primero el movimiento viejo.
@@ -2190,7 +2233,7 @@ const App = (() => {
       }
     }
 
-    const newTx = { id: editingId || uid(), date, token, type, price: priceUsd, qty, totalUsd, applied: true };
+    const newTx = { id: editingId || uid(), date, token, type, price: priceUsd, qty, totalUsd, totalEur, applied: true };
     applyMovement(newTx);
     if (oldIdx >= 0) transactions[oldIdx] = newTx;
     else transactions.push(newTx);
@@ -2218,8 +2261,8 @@ const App = (() => {
   };
 
   function exportCsv() {
-    const header = ['date', 'token', 'type', 'price', 'qty', 'totalUsd'];
-    const rows = transactions.map(t => [t.date, t.token, t.type, t.price, t.qty, t.totalUsd].map(csvEscape));
+    const header = ['date', 'token', 'type', 'price', 'qty', 'totalUsd', 'totalEur'];
+    const rows = transactions.map(t => [t.date, t.token, t.type, t.price, t.qty, t.totalUsd, t.totalEur].map(csvEscape));
     const csv = [header.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -2286,6 +2329,7 @@ const App = (() => {
     }
     portfolio = data.portfolio;
     transactions = data.transactions;
+    fillTotalEur(transactions);
     if (data.settings) settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, strategy: DEFAULT_STRATEGY }, data.settings);
     normalizePortfolio(portfolio);
   }
@@ -2506,7 +2550,7 @@ const App = (() => {
         if (lines.length < 2) throw new Error('El CSV está vacío o mal formado.');
         const header = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
         const idx = {};
-        ['date', 'token', 'type', 'price', 'qty', 'totalUsd'].forEach(f => { idx[f] = header.indexOf(f); });
+        ['date', 'token', 'type', 'price', 'qty', 'totalUsd', 'totalEur'].forEach(f => { idx[f] = header.indexOf(f); });
         if (idx.token < 0 || idx.type < 0) throw new Error('Cabecera CSV no reconocida. Usa: date,token,type,price,qty,totalUsd');
 
         const parsed = [];
@@ -2523,8 +2567,12 @@ const App = (() => {
           // p.ej. ATOM/BTC recibidos) son tenencias reales; si se descartan aquí,
           // al reconstruir la cartera desde el CSV faltan y el total sale más bajo.
           if (!token || !type || !(qty > 0)) continue;
-          parsed.push({ date, token, type, price: price > 0 ? price : 0, qty, totalUsd: totalUsd > 0 ? totalUsd : 0 });
+          const tx = { date, token, type, price: price > 0 ? price : 0, qty, totalUsd: totalUsd > 0 ? totalUsd : 0 };
+          const totalEur = parseFloat(get('totalEur'));
+          if (totalEur >= 0) tx.totalEur = totalEur;   // CSV antiguo sin la columna: lo rellena fillTotalEur
+          parsed.push(tx);
         }
+        fillTotalEur(parsed);
         if (!parsed.length) throw new Error('No se encontraron movimientos válidos en el CSV.');
 
         if (!confirm(`Se importarán ${parsed.length} movimientos y se reconstruirá la cartera. ¿Continuar?`)) return;
@@ -2624,6 +2672,7 @@ const App = (() => {
       if (cachedPrices.ts && mins > CACHE_MAX_MIN) setLiveState('stale', mins);
       render();
     }
+    fetchEurUsd();   // cambio €/$ en vivo; vuelve a pintar cuando llega
 
     const refreshBtn = document.getElementById('refresh-prices');
     if (refreshBtn) refreshBtn.addEventListener('click', () => fetchPrices());
