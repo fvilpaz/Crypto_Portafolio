@@ -1348,11 +1348,14 @@ const App = (() => {
     const gridColor = cs.getPropertyValue('--chart-grid').trim() || 'rgba(43,49,57,0.5)';
     const legendColor = cs.getPropertyValue('--text-secondary').trim() || '#848e9c';
 
+    // Las dos series van ya en la moneda elegida; el tooltip y el eje solo ponen el símbolo.
+    const inEur = currency === 'EUR';
+    const money = (v) => inEur ? fmt(v) + ' €' : '$' + fmt(v);
     const monthlyInvest = {};
     transactions.forEach(tx => {
       if (tx.type === 'Compra' && tx.totalUsd > 0) {
         const month = dcaMonthKey(tx.date);
-        monthlyInvest[month] = (monthlyInvest[month] || 0) + tx.totalUsd / EUR_USD;
+        monthlyInvest[month] = (monthlyInvest[month] || 0) + (inEur ? tx.totalUsd * EUR_USD : tx.totalUsd);
       }
     });
 
@@ -1372,7 +1375,7 @@ const App = (() => {
     if (evolutionChart) evolutionChart.destroy();
 
     const totalNow = getTotalPortfolioValue();   // ya incluye airdrops/staking; no re-sumar
-    const currentVal = currency === 'EUR' ? totalNow * EUR_USD : totalNow;
+    const currentVal = inEur ? totalNow * EUR_USD : totalNow;
 
     evolutionChart = new Chart(ctx, {
       type: 'line',
@@ -1415,14 +1418,14 @@ const App = (() => {
             padding: 10,
             cornerRadius: 8,
             callbacks: {
-              label: (ctx) => ` ${ctx.dataset.label}: ${fmtCurrency(ctx.raw)}`,
+              label: (ctx) => ` ${ctx.dataset.label}: ${money(ctx.raw)}`,
             },
           },
         },
         scales: {
           x: { ticks: { color: tickColor, font: { size: 11 } }, grid: { color: gridColor } },
           y: {
-            ticks: { color: tickColor, font: { size: 11 }, callback: (v) => '$' + v.toLocaleString() },
+            ticks: { color: tickColor, font: { size: 11 }, callback: (v) => inEur ? v.toLocaleString() + ' €' : '$' + v.toLocaleString() },
             grid: { color: gridColor },
           },
 
