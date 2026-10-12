@@ -109,5 +109,8 @@ half. Each does one thing well and they link to each other.
 - Add brand-new coins via CoinGecko search (auto-resolves id, name and icon,
   e.g. type "usdc")
 - Per-coin manual price override for coins CoinGecko does not price
+- Stocks/ETFs (e.g. an S&P 500 ETF for DCA or extra pay): symbol search with
+  Twelve Data (CORS open; price needs a free key), price in EUR/USD with the
+  existing rate, and its own "Bolsa" total kept apart from the crypto cards
 
 ---
