@@ -1083,13 +1083,15 @@ const App = (() => {
     const sufijos = new Set(['inc', 'corp', 'corporation', 'co', 'ltd', 'plc', 'holdings', 'common', 'stock', 'ordinary', 'share', 'shares', 'class', 'a', 'b', 'c']);
     return nombre.replace(/[,.]/g, ' ').split(' ').filter(w => w && !sufijos.has(w.toLowerCase())).slice(0, 2).join(' ') || nombre;
   }
-  // % de cada acción sobre el total de bolsa. Sin reparto guardado: el núcleo lleva la mayoría (70 %, como las plantillas; si solo hay núcleo, todo) y los
+  // % que lleva por defecto el núcleo de la bolsa (el resto, a partes iguales entre los satélites). Se cambia aquí y en el editor de la Bolsa.
+  const NUCLEO_BOLSA_DEFECTO = 50;
+  // % de cada acción sobre el total de bolsa. Sin reparto guardado: el núcleo lleva NUCLEO_BOLSA_DEFECTO % (si solo hay núcleo, todo) y los
   // satélites se reparten el resto a partes iguales. Con reparto guardado: el que fijaste (una acción que aún no está en él cuenta 0 hasta que la repartas).
   function plBolsaActual() {
     const l = bolsaLista(), nuc = bolsaNucleo(), sp = settings.stockSplit || {}, peso = {};
     if (!Object.keys(sp).length) {
       const sats = l.filter(x => x[0] !== nuc).length;
-      l.forEach(([t]) => { peso[t] = t === nuc ? (sats ? 70 : 100) : 30 / sats; });
+      l.forEach(([t]) => { peso[t] = t === nuc ? (sats ? NUCLEO_BOLSA_DEFECTO : 100) : (100 - NUCLEO_BOLSA_DEFECTO) / sats; });
       return peso;
     }
     l.forEach(([t]) => { peso[t] = (sp[t] ?? 0) * 100; });
