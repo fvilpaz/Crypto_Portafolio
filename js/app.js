@@ -30,8 +30,6 @@ const App = (() => {
   // Tokens que cuentan como satelites (todo lo que no es BTC, ETH ni USDC).
   // Anadir aqui cada nuevo satelite que entre en la cartera.
   const SATELLITE_TOKENS = ['ATOM', 'TIA', 'SOL'];
-  // Bolsa (acciones/ETF): catálogo a mano, como COINS. Por ahora solo pinta el Reparto (sin precios).
-  const STOCKS = [['SP', 'S&P 500', 'sp'], ['SX', 'SpaceX', 'sx'], ['TS', 'Tesla', 'ts'], ['NV', 'Nvidia', 'nv'], ['MS', 'Microsoft', 'ms']];
   const REPARTO_OPEN = new Set();   // grupos (crypto/bolsa) que tienes abiertos: renderReparto repinta todo
 
   // La cartera es UN SOLO monedero. Cada moneda lleva un tag:
@@ -1016,20 +1014,21 @@ const App = (() => {
     const val = (toks) => toks.reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t && a.tag !== 'airdrop')), 0);
     const bolsa = settings.bolsaTarget || 0, rc = 100 - bolsa;
     const t = [settings.coreTarget ?? DEFAULT_CORE_TARGET, settings.satTarget ?? DEFAULT_SAT_TARGET, settings.defenseTarget || 0].map(v => rc > 0 ? v * 100 / rc : 0);
-    const sb = plBolsaActual(), bs = { nucleo: sb.SP, satelites: 100 - sb.SP };   // núcleo = S&P 500; satélites = el resto de acciones
+    const nuc = bolsaNucleo(), pn = nuc ? plBolsaActual()[nuc] : 0, bs = { nucleo: pn, satelites: 100 - pn };   // núcleo = la acción marcada; satélites = el resto
     const stk = portfolio.filter(a => a.kind === 'stock' && a.tag !== 'airdrop');
     return { mensual: Math.max(monthlySplit().totalUsd - dcaMonthBoughtUsd(), 0), ratioCrypto: rc,
       pesos: { crypto: { nucleo: t[0], satelites: t[1], refugio: t[2] }, bolsa: { nucleo: bs.nucleo, satelites: bs.satelites } },
       valores: { crypto: { nucleo: val(['BTC', 'ETH']), satelites: val(SATELLITE_TOKENS), refugio: val(['USDC']) },
-        bolsa: { nucleo: stk.filter(a => a.token === 'SP').reduce((s, a) => s + getAssetValue(a), 0), satelites: stk.filter(a => a.token !== 'SP').reduce((s, a) => s + getAssetValue(a), 0) } } };
+        bolsa: { nucleo: stk.filter(a => a.token === nuc).reduce((s, a) => s + getAssetValue(a), 0), satelites: stk.filter(a => a.token !== nuc).reduce((s, a) => s + getAssetValue(a), 0) } } };
   }
 
   // Dónde cae el dinero de un cubo: reparto interno de la app (coreSplit / satSplit; bolsa: S&P 500 y el resto a partes iguales)
   function planDonde(lado, cubo, usd) {
     let pos;
     if (lado === 'crypto') pos = cubo === 'nucleo' ? Object.entries(settings.coreSplit) : cubo === 'satelites' ? Object.entries(settings.satSplit) : [['USDC', 1]];
-    else pos = cubo === 'nucleo' ? [['S&P 500', 1]] : STOCKS.filter(s => s[0] !== 'SP').map(s => [s[1], plBolsaActual()[s[0]]]);
+    else { const nuc = bolsaNucleo(), pb = plBolsaActual(); pos = bolsaLista().filter(x => (cubo === 'nucleo') === (x[0] === nuc)).map(x => [x[1], pb[x[0]]]); }
     const s = pos.reduce((x, [, w]) => x + w, 0);
+    if (s <= 0) return '';
     return pos.map(([n, w]) => `${n} ${fmtCurrency(usd * w / s)}`).join(' · ');
   }
 
@@ -1042,31 +1041,41 @@ const App = (() => {
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px 18px;margin-top:12px">${campos}${extra}</div><div class="card-sub" style="margin-top:10px">${nota}</div></div>`;
   const plBoton = (k, txt) => `<button type="button" class="add-submit" data-plan="${k}" style="width:auto;padding:10px 22px">${txt}</button>`;
 
+  // Tus acciones/ETF: las que has añadido con el buscador (settings.customStocks) y las que tienes en cartera. [token, nombre, clase del icono]
+  function bolsaLista() {
+    const toks = [...new Set([...Object.keys(settings.customStocks || {}), ...portfolio.filter(a => a.kind === 'stock').map(a => a.token)])];
+    return toks.map(t => [t, COINS[t]?.name || t, COINS[t]?.cssClass || 'stk']);
+  }
+  // Núcleo de la bolsa: la que marques con la estrella; si no, el primer ETF del S&P 500 que tengas. Sin núcleo, todo son satélites.
+  function bolsaNucleo() {
+    const l = bolsaLista().map(x => x[0]);
+    return l.includes(settings.bolsaCore) ? settings.bolsaCore : ['SPY', 'VOO', 'IVV', 'SPLG'].find(t => l.includes(t)) || null;
+  }
   // % de cada acción sobre el total de bolsa (a partes iguales hasta que lo fijes)
   function plBolsaActual() {
-    const sp = settings.stockSplit || {};
-    return Object.fromEntries(STOCKS.map(([tk]) => [tk, (sp[tk] ?? 1 / STOCKS.length) * 100]));
+    const sp = settings.stockSplit || {}, l = bolsaLista();
+    return Object.fromEntries(l.map(([tk]) => [tk, (sp[tk] ?? 1 / l.length) * 100]));
   }
 
   // Bolsa de una plantilla: en bolsa no hay refugio, así que el dinero se reparte entre núcleo (S&P 500) y satélites (el resto) en la misma
   // proporción que la plantilla da a Núcleo y a Satélites; los satélites, entre sus acciones por los % relativos del panel Reparto de la bolsa.
   function bolsaPorPlantilla(strat, usd) {
     const wC = strat.byTargets ? (settings.coreTarget ?? DEFAULT_CORE_TARGET) : strat.core, wS = strat.byTargets ? (settings.satTarget ?? DEFAULT_SAT_TARGET) : strat.satelites;
-    const nucleo = wC + wS > 0 ? usd * wC / (wC + wS) : 0, sat = usd - nucleo, pb = plBolsaActual();
-    const sumaSat = STOCKS.filter(x => x[0] !== 'SP').reduce((s, x) => s + pb[x[0]], 0);
-    return Object.fromEntries(STOCKS.map(([tk]) => [tk, tk === 'SP' ? nucleo : sumaSat > 0 ? sat * pb[tk] / sumaSat : sat / (STOCKS.length - 1)]));
+    const l = bolsaLista().map(x => x[0]), nuc = bolsaNucleo(), sats = l.filter(t => t !== nuc), pb = plBolsaActual();
+    const nucleo = !nuc ? 0 : !sats.length ? usd : wC + wS > 0 ? usd * wC / (wC + wS) : 0, sat = usd - nucleo, suma = sats.reduce((s, t) => s + pb[t], 0);
+    return Object.fromEntries(l.map(t => [t, t === nuc ? nucleo : suma > 0 ? sat * pb[t] / suma : sat / sats.length]));
   }
 
   function planPanelesHtml() {
-    const rc = 100 - (settings.bolsaTarget || 0), bo = planDraft.bolsa || plBolsaActual(), sBo = Object.values(bo).reduce((x, y) => x + y, 0);
+    const rc = 100 - (settings.bolsaTarget || 0), bl = bolsaLista(), bo = planDraft.bolsa || plBolsaActual(), sBo = Object.values(bo).reduce((x, y) => x + y, 0);
     return `<div class="cards-grid">
         <div class="card"><div class="card-label">Dinero al mes para invertir (€)</div><div class="add-field"><input type="number" min="0" step="10" data-plan="dca" value="${settings.dcaTarget || 0}"></div></div>
         <div class="card"><div class="card-label">Ratio crypto / bolsa</div><input type="range" class="pl-rango" min="0" max="100" step="1" data-plan="rc" value="${rc}">
           <div class="strat-head"><span class="strat-legend lg-core">Crypto ${rc} %</span><span class="strat-legend lg-bolsa">Bolsa ${100 - rc} %</span></div>
           <div class="strat-bar"><span class="seg seg-core" style="width:${rc}%"></span><span class="seg seg-bolsa" style="width:${100 - rc}%"></span></div></div>
       </div>`
-      + plPanel('Reparto de la bolsa', sBo, STOCKS.map(([tk, nombre, css]) => plCampo('bo', tk, bo[tk] || 0, nombre, iconHtml(tk, css, 28))).join(''),
-        Math.abs(sBo - 100) > 0.05 ? plBoton('bofit', 'Ajustar a 100') : '', 'Qué parte de lo que metes en bolsa va a cada acción. Lo decides tú; por defecto, a partes iguales.');
+      + plPanel('Reparto de la bolsa', bl.length ? sBo : 100, bl.length ? bl.map(([tk, nombre, css]) => plCampo('bo', tk, bo[tk] || 0, `${nombre} <button type="button" class="tx-btn" data-plan="nuc" data-tok="${tk}" title="Marcar como núcleo de la bolsa" style="width:auto">${tk === bolsaNucleo() ? '★ Núcleo' : '☆'}</button>`, iconHtml(tk, css, 28))).join('') : '<span class="card-sub">Aún no tienes acciones: añádelas con el buscador del botón +.</span>',
+        Math.abs(sBo - 100) > 0.05 ? plBoton('bofit', 'Ajustar a 100') : '', 'Qué parte de lo que metes en bolsa va a cada acción. La estrella marca el núcleo (p. ej. tu ETF del S&P 500); el resto son satélites. Por defecto, a partes iguales.');
   }
 
   function renderPlanPanel() {
@@ -1111,6 +1120,7 @@ const App = (() => {
     const num = (i) => Math.max(parseFloat(i.value) || 0, 0);
     if (k === 'dca') settings.dcaTarget = num(e.target);
     else if (k === 'rc') { settings.bolsaTarget = 100 - Math.min(num(e.target), 100); fitTargetsTo100(); }   // el ratio fija la bolsa y los otros tres se reajustan, como con el lápiz de Bolsa
+    else if (k === 'nuc') settings.bolsaCore = e.target.dataset.tok;
     else if (k === 'bo' || k === 'bofit') {
       const d = {};
       document.querySelectorAll('#plan-panel input[data-plan="bo"]').forEach(i => { d[i.dataset.tok] = num(i); });
@@ -1178,7 +1188,9 @@ const App = (() => {
           const barColor = prog >= 1 ? 'var(--accent-green)' : prog >= 0.8 ? 'var(--accent-yellow)' : 'var(--accent-blue)';
           return repartoRowHtml({ icon: iconHtml(row.token, row.cssClass, 24), label: row.label, amountText: on ? fmtCurrency(row.amount) : `${pct}%`, pct, barColor, idle: !on });
         }).join('');
-        const stockRows = STOCKS.map(([tok, name, css]) => repartoRowHtml({ icon: iconHtml(tok, css, 24), label: name, amountText: fmtCurrency(bolsaPorPlantilla(s, r.bolsaUsd)[tok]) })).join('');
+        const bAmt = bolsaPorPlantilla(s, r.bolsaUsd), bNuc = bolsaNucleo();
+        const stockRows = bolsaLista().length ? bolsaLista().map(([tok, name, css]) => repartoRowHtml({ icon: iconHtml(tok, css, 24), label: name + (tok === bNuc ? ' · núcleo' : ''), amountText: fmtCurrency(bAmt[tok]) })).join('')
+          : '<div class="card-sub" style="padding:8px 12px">Añade acciones con el buscador del botón + para repartir la bolsa.</div>';
         return `
           <details class="strat-block ${key === settings.strategy ? 'active' : ''}" data-strat="${key}" open>
             <summary class="strat-sum">
@@ -3090,7 +3102,7 @@ const App = (() => {
 
     const planBox = document.getElementById('plan-panel');
     planBox.addEventListener('change', onPlanPanelChange);
-    planBox.addEventListener('click', (e) => { if (e.target.dataset?.plan === 'bofit') onPlanPanelChange(e); });
+    planBox.addEventListener('click', (e) => { if (['bofit', 'nuc'].includes(e.target.dataset?.plan)) onPlanPanelChange(e); });
 
     document.getElementById('sec-cartera').addEventListener('click', (e) => {
       const editBtn = e.target.closest('.card-edit');
