@@ -51,7 +51,7 @@ const App = (() => {
   ];
 
   const cosmosTopPct = () => (settings.satTarget ?? DEFAULT_SAT_TARGET) / 100;
-  const DEFAULT_DCA_TARGET = 175;   // objetivo DCA inicial en €, hasta que lo edites
+  const DEFAULT_DCA_TARGET = 200;   // objetivo DCA inicial en €, hasta que lo edites
   const DEFAULT_DEFENSE_TARGET = 20;   // objetivo de refugio (USDC) en % de la cartera
   const DEFAULT_CORE_TARGET = 60;      // objetivo de núcleo (BTC+ETH) en % de la cartera
   const DEFAULT_SAT_TARGET = 20;       // objetivo de satélites en % de la cartera
