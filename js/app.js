@@ -1600,7 +1600,7 @@ const App = (() => {
     };
     const cryptoList = sorted.filter(a => a.kind !== 'stock'), bolsaList = sorted.filter(a => a.kind === 'stock');
     tbody.innerHTML = bolsaList.length
-      ? [['Cartera crypto', 'var(--accent-green)', cryptoList], ['Cartera bolsa', 'var(--accent-teal)', bolsaList]]
+      ? [['Crypto', 'var(--accent-green)', cryptoList], ['Bolsa', 'var(--accent-teal)', bolsaList]]
           .filter(g => g[2].length).map(([n, col, l]) => grupoHtml(n, col, l) + l.map(rowHtml).join('')).join('')
       : sorted.map(rowHtml).join('');
 
@@ -2491,7 +2491,7 @@ const App = (() => {
     const pe = addPriceEur();
     document.getElementById('add-price-live').textContent = pe > 0
       ? `Precio ${addState.token} en vivo: ${pe.toLocaleString('es-ES', { maximumFractionDigits: pe < 1 ? 6 : 2 })} €/ud`
-      : `Sin precio de ${addState.token} todavía. Mételo a mano`;
+      : `Sin precio de ${addState.token} en vivo. Pon importe y cantidad, o solo el importe (se guarda como 1 unidad al precio que pagaste)`;
   }
 
   function updateEffective() {
@@ -2611,9 +2611,12 @@ const App = (() => {
     const token = addState.token;
     const type = addState.type;
     const date = document.getElementById('add-date').value;
-    const qty = parseNum(document.getElementById('add-qty').value);
+    let qty = parseNum(document.getElementById('add-qty').value);
     const amountEur = parseNum(document.getElementById('add-amount').value);
     const isReward = type === 'Recompensa';
+    // Compra sin precio conocido (p. ej. una acción sin cotización en vivo) y solo importe: no se puede calcular la cantidad, así que se guarda
+    // como 1 unidad al precio pagado. Así se abre una posición de 1 € sin tener que inventar cuántas unidades son.
+    if (!(qty > 0) && type === 'Compra' && amountEur > 0 && !(addPriceEur() > 0)) qty = 1;
 
     if (!date || !(qty > 0)) {
       errEl.textContent = 'Rellena fecha y cantidad (mayores que 0).';
