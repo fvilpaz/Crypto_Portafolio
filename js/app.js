@@ -150,6 +150,17 @@ const App = (() => {
   let portfolio = _store.portfolio;
   let transactions = _store.transactions;
   let settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, coreTarget: DEFAULT_CORE_TARGET, satTarget: DEFAULT_SAT_TARGET, strategy: DEFAULT_STRATEGY, coreSplit: { BTC: 0.6, ETH: 0.4 }, satSplit: { SOL: 0.5, ATOM: 0.3, TIA: 0.2 } }, _store.settings || {});   // dcaTarget en €, defenseTarget en %, strategy = plantilla de reparto
+
+  // Monedas añadidas por búsqueda (settings.customCoins): se registran en COINS y el resto del código las trata como una más.
+  // Lo que viene de fuera (CoinGecko, un JSON importado) se limpia, y una moneda de fuera nunca pisa una del catálogo.
+  function registerCustomCoins() {
+    Object.entries(settings.customCoins || {}).forEach(([tok, m]) => {
+      const ya = COINS[tok];
+      if (!/^[A-Z0-9]{1,12}$/.test(tok) || !/^[a-z0-9-]+$/.test(m?.coingeckoId || '') || (ya && ya.coingeckoId !== m.coingeckoId)) return;
+      COINS[tok] = { name: String(m.name || tok).replace(/[<>&"']/g, ''), coingeckoId: m.coingeckoId, icon: /^https:\/\//.test(m.icon) ? m.icon : '', color: '#8c94a8', cssClass: '' };
+    });
+  }
+  registerCustomCoins();
   let storeVersion = _store.updatedAt || 0;
   let showHidden = false;   // mostrar temporalmente las monedas ocultas en la tabla
   let pendingImportFormat = null;   // 'json' | 'csv' elegido antes de abrir el file picker
@@ -2110,6 +2121,57 @@ const App = (() => {
       </button>`).join('');
   }
 
+  // Selecciona una moneda en el modal y recalcula lo que dependa de ella (lo hace el clic en un chip y la búsqueda).
+  function selectToken(token) {
+    addState.token = token;
+    renderAddChips();
+    renderAddPrice();
+    if (parseNum(document.getElementById('add-amount').value) > 0) onAmountInput();
+    else if (parseNum(document.getElementById('add-qty').value) > 0) onQtyInput();
+  }
+
+  // Buscar monedas que no están en el catálogo (CoinGecko). Solo propone: no se guarda nada hasta que eliges una.
+  async function searchCoins(q) {
+    const key = COINGECKO_API_KEY ? `&${COINGECKO_API_PARAM}=${COINGECKO_API_KEY}` : '';
+    const res = await fetchCoinGecko([`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}${key}`]);
+    return (await res.json()).coins.slice(0, 8);
+  }
+
+  function renderCoinResults(list) {
+    const box = document.getElementById('add-coin-results');
+    box.replaceChildren(...(list || []).map(c => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'coin-chip'; b.title = c.name;
+      const img = new Image(20, 20); img.src = c.thumb; img.alt = '';
+      const sym = document.createElement('span'); sym.textContent = c.symbol.toUpperCase();
+      b.append(img, sym);
+      b.addEventListener('click', () => chooseCoin(c));
+      return b;
+    }));
+    if (list && !list.length) box.textContent = 'Sin resultados';
+  }
+
+  async function chooseCoin(c) {
+    const token = c.symbol.toUpperCase(), err = document.getElementById('add-error');
+    if (COINS[token] && COINS[token].coingeckoId !== c.id) { err.textContent = `Ya tienes otra moneda con el símbolo ${token}.`; return; }
+    if (!COINS[token]) {
+      const previo = settings.customCoins;
+      settings.customCoins = Object.assign({}, previo, { [token]: { name: c.name, coingeckoId: c.id, icon: c.large || c.thumb } });
+      registerCustomCoins();
+      if (!COINS[token]) { settings.customCoins = previo; err.textContent = 'No se pudo añadir esa moneda.'; return; }   // rechazada: no se guarda
+      persist();
+    }
+    err.textContent = '';
+    document.getElementById('add-coin-search').value = '';
+    renderCoinResults(null);
+    selectToken(token);
+    try {   // aún no está en cartera: su precio en vivo hay que pedirlo aparte
+      const d = await (await fetchCoinGecko(coingeckoUrls('price', c.id))).json();
+      applyPrice(token, d[c.id]?.usd, d[c.id]?.usd_24h_change);
+      renderAddPrice();
+    } catch (e) { /* sin precio en vivo: se escribe el importe a mano */ }
+  }
+
   // Parseo robusto: acepta coma decimal (0,044) y punto (0.044).
   const parseNum = (v) => parseFloat(String(v).replace(/\./g, '').replace(',', '.')) || 0;
   const fmtInput = (n, dec) => n.toLocaleString('es-ES', { maximumFractionDigits: dec, useGrouping: false });
@@ -2220,6 +2282,8 @@ const App = (() => {
     document.getElementById('add-amount').value = tx ? fmtInput(tx.totalEur, 2) : '';
     document.getElementById('add-error').textContent = '';
     document.getElementById('add-derived').textContent = '';
+    document.getElementById('add-coin-search').value = '';
+    renderCoinResults(null);
     renderAddChips();
     renderAddPrice();
     updateEffective();
@@ -2381,6 +2445,7 @@ const App = (() => {
     transactions = data.transactions;
     fillTotalEur(transactions);
     if (data.settings) settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, strategy: DEFAULT_STRATEGY }, data.settings);
+    registerCustomCoins();
     normalizePortfolio(portfolio);
   }
 
@@ -2843,11 +2908,15 @@ const App = (() => {
     document.getElementById('add-coin-chips').addEventListener('click', (e) => {
       const chip = e.target.closest('.coin-chip');
       if (!chip) return;
-      addState.token = chip.dataset.token;
-      renderAddChips();
-      renderAddPrice();
-      if (parseNum(document.getElementById('add-amount').value) > 0) onAmountInput();
-      else if (parseNum(document.getElementById('add-qty').value) > 0) onQtyInput();
+      selectToken(chip.dataset.token);
+    });
+    let esperaBusqueda;
+    document.getElementById('add-coin-search').addEventListener('input', (e) => {
+      clearTimeout(esperaBusqueda);
+      const q = e.target.value.trim();
+      if (q.length < 2) { renderCoinResults(null); return; }
+      esperaBusqueda = setTimeout(() => searchCoins(q).then(renderCoinResults)
+        .catch(() => { document.getElementById('add-error').textContent = 'No se pudo buscar ahora (límite de CoinGecko); prueba en un minuto.'; }), 450);
     });
     document.getElementById('add-type').addEventListener('change', (e) => {
       addState.type = e.target.value;
