@@ -16,6 +16,9 @@ GESTORES = [
     {"clave": "bridgewater", "corto": "BR", "nombre": "Bridgewater Associates", "cik": "0001350694"},
     {"clave": "gates", "corto": "GF", "nombre": "Gates Foundation Trust", "cik": "0001166559"},
 ]
+# Empresas que sigo en bolsa: (nombre, texto que lleva el emisor en el 13F, en mayusculas). Se busca por nombre:
+# un fondo como ISHARES TR o VANGUARD INDEX FDS no dice que indice sigue, asi que el S&P 500 puede quedar infracontado.
+SEGUIDAS = [("S&P 500", "S&P 500"), ("SpaceX", "SPACE EXPLORATION"), ("Tesla", "TESLA"), ("Nvidia", "NVIDIA"), ("Microsoft", "MICROSOFT")]
 DATOS = Path(__file__).resolve().parent.parent / "data"
 UA = os.environ.get("SEC_USER_AGENT")
 if not UA:
@@ -75,6 +78,24 @@ def procesar(gestor):
     return {"ahora": ahora, "antes": antes, "total": total, "periodo": periodo}
 
 
+def seguidas(todos):
+    """Para cada empresa seguida, que gestores la tienen (suma los emisores cuyo nombre contiene el texto), aunque este fuera del top 10."""
+    salida = []
+    for nombre, patron in SEGUIDAS:
+        gestores = []
+        for clave, t in todos.items():
+            ahora = [v for e, v in t["ahora"].items() if patron in e]
+            if not ahora:
+                continue
+            antes = [v for e, v in t["antes"].items() if patron in e]
+            valor, acciones = sum(v[0] for v in ahora), sum(v[1] for v in ahora)
+            prev = [sum(v[0] for v in antes), sum(v[1] for v in antes)] if antes else None
+            gestores.append({"clave": clave, "peso_pct": round(valor / t["total"] * 100, 2),
+                             "cambio_acciones_pct": cambio_acciones(prev, acciones)})
+        salida.append({"nombre": nombre, "patron": patron, "gestores": gestores})
+    return salida
+
+
 def coincidencias(todos):
     """Empresas que 2 o mas gestores tienen a la vez (por nombre de emisor, ya sumado dentro de cada gestor)."""
     por_emisor = defaultdict(list)
@@ -86,7 +107,7 @@ def coincidencias(todos):
     orden = sorted(varios.items(), key=lambda kv: (-len(kv[1]), -sum(x["peso_pct"] for x in kv[1])))
     return {"gestores_seguidos": len(todos), "periodo": max(t["periodo"] for t in todos.values()),
             "en_2_o_mas": len(varios), "en_todas": sum(1 for g in varios.values() if len(g) == len(todos)),
-            "filas": [{"emisor": e, "gestores": g} for e, g in orden[:15]]}
+            "filas": [{"emisor": e, "gestores": g} for e, g in orden[:15]], "seguidas": seguidas(todos)}
 
 
 DATOS.mkdir(exist_ok=True)

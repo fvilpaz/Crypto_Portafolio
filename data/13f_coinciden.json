@@ -234,5 +234,56 @@
         }
       ]
     }
+  ],
+  "seguidas": [
+    {
+      "nombre": "S&P 500",
+      "patron": "S&P 500",
+      "gestores": [
+        {
+          "clave": "bridgewater",
+          "peso_pct": 16.3,
+          "cambio_acciones_pct": 21.9
+        }
+      ]
+    },
+    {
+      "nombre": "SpaceX",
+      "patron": "SPACE EXPLORATION",
+      "gestores": [
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.01,
+          "cambio_acciones_pct": "nueva"
+        }
+      ]
+    },
+    {
+      "nombre": "Tesla",
+      "patron": "TESLA",
+      "gestores": []
+    },
+    {
+      "nombre": "Nvidia",
+      "patron": "NVIDIA",
+      "gestores": [
+        {
+          "clave": "bridgewater",
+          "peso_pct": 3.17,
+          "cambio_acciones_pct": -17.6
+        }
+      ]
+    },
+    {
+      "nombre": "Microsoft",
+      "patron": "MICROSOFT",
+      "gestores": [
+        {
+          "clave": "bridgewater",
+          "peso_pct": 1.09,
+          "cambio_acciones_pct": -34.4
+        }
+      ]
+    }
   ]
 }
