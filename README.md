@@ -149,8 +149,10 @@ half. Each does one thing well and they link to each other.
     over the same data (13F data only changes quarterly; only prices and news are live)
 - **Done:** automatic cross-device sync (a "Nando profile" backed by a private GitHub Gist, cloud
   button in the header), so state travels between devices without carrying a file by hand
-- Add brand-new coins via CoinGecko search (auto-resolves id, name and icon,
-  e.g. type "usdc")
+- **Done:** add brand-new coins via CoinGecko search in the "Añadir movimiento" window (id, name and icon
+  are resolved; saved in `settings.customCoins`, so they travel with the export and the sync). Known limit: a
+  new coin counts in the total and the distribution, but not yet in the Núcleo / Satélites / Refugio cards
+  (they use fixed lists), so the place of each new coin has to be decided
 - Per-coin manual price override for coins CoinGecko does not price
 - Stocks/ETFs (e.g. an S&P 500 ETF for DCA or extra pay): symbol search with
   Twelve Data (CORS open; price needs a free key), price in EUR/USD with the
