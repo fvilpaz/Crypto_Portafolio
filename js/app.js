@@ -899,10 +899,12 @@ const App = (() => {
   // Las plantillas fijas (Conservadora/Moderada/Agresiva) reparten el dinero por sus % puros y, dentro de cada cubo, por los % de cada
   // moneda (coreSplit/satSplit), SIN mirar lo que ya tienes. Solo "Objetivos" analiza lo que tienes y lo que falta para llegar al objetivo.
   function computeReparto(strat) {
-    // Parte de crypto del dinero mensual (€ a USD interno). "Objetivos" la saca del ratio fijado (60/40 → 60 % a crypto) para no mandar
-    // todo a bolsa cuando la bolsa va a 0; el resto de plantillas siguen con el reparto de siempre.
+    // Cuánto del dinero mensual va a crypto y cuánto a bolsa (€ a USD interno):
+    //  - Conservadora/Moderada/Agresiva: se divide por el ratio fijado (400 € al 50/50 → 200 y 200), sin mirar lo que ya tienes;
+    //  - Objetivos: según lo que falta a cada lado (si en crypto vas sobrado, todo a bolsa, que es donde falta).
     const split0 = monthlySplit();
-    const monthlyUsd = strat.byTargets ? split0.totalUsd * (1 - split0.target) : split0.cryptoUsd;
+    const monthlyUsd = strat.byTargets ? split0.cryptoUsd : split0.totalUsd * (1 - split0.target);
+    const bolsaUsd = strat.byTargets ? split0.bolsaUsd : split0.totalUsd * split0.target;
     const satBlocked = getCosmosPct() >= (cosmosTopPct() - 0.05);
     const btcVal = getAssetValue(portfolio.find(a => a.token === 'BTC'));
     const ethVal = getAssetValue(portfolio.find(a => a.token === 'ETH'));
@@ -970,7 +972,7 @@ const App = (() => {
       }
     });
 
-    return { toBtc, toEth, toRefugio, toSat, satAlloc, satBlocked, monthlyUsd };
+    return { toBtc, toEth, toRefugio, toSat, satAlloc, satBlocked, monthlyUsd, bolsaUsd };
   }
 
   // Una fila del Reparto (crypto o bolsa). pct = null: sin barra de progreso.
@@ -1118,7 +1120,7 @@ const App = (() => {
     const split = monthlySplit(), monthlyUsd = split.cryptoUsd, bolsaUsd = split.bolsaUsd;   // bolsaUsd 0 = sin objetivo de bolsa
     const hint = document.getElementById('reparto-hint');
     if (hint) hint.innerHTML = settings.bolsaTarget > 0
-      ? `Tu aportación de <strong>${fmtCurrency(split.totalUsd)}</strong> al mes: <strong>${fmtCurrency(monthlyUsd)}</strong> a crypto y <strong>${fmtCurrency(bolsaUsd)}</strong> a bolsa, según lo que falta a cada lado (ratio objetivo: crypto ${100 - settings.bolsaTarget} % · bolsa ${settings.bolsaTarget} %). Despliega para comparar y elige la tuya.`
+      ? `Tu aportación de <strong>${fmtCurrency(split.totalUsd)}</strong> al mes. Las recomendaciones la dividen por tu ratio (crypto ${100 - settings.bolsaTarget} % · bolsa ${settings.bolsaTarget} %): <strong>${fmtCurrency(split.totalUsd * (1 - split.target))}</strong> a crypto y <strong>${fmtCurrency(split.totalUsd * split.target)}</strong> a bolsa. «Objetivos» mira lo que ya tienes y lo manda donde falta: <strong>${fmtCurrency(monthlyUsd)}</strong> a crypto y <strong>${fmtCurrency(bolsaUsd)}</strong> a bolsa. Despliega para comparar y elige la tuya.`
       : `Tu aportación de <strong>${fmtCurrency(monthlyUsd)}</strong> al mes, repartida según cada estrategia. Despliega para comparar y elige la tuya.`;
     const proy = document.getElementById('reparto-proyeccion');
     if (proy) proy.textContent = bolsaProjection();
@@ -1167,7 +1169,7 @@ const App = (() => {
           const barColor = prog >= 1 ? 'var(--accent-green)' : prog >= 0.8 ? 'var(--accent-yellow)' : 'var(--accent-blue)';
           return repartoRowHtml({ icon: iconHtml(row.token, row.cssClass, 24), label: row.label, amountText: on ? fmtCurrency(row.amount) : `${pct}%`, pct, barColor, idle: !on });
         }).join('');
-        const stockRows = STOCKS.map(([tok, name, css]) => repartoRowHtml({ icon: iconHtml(tok, css, 24), label: name, amountText: fmtCurrency(bolsaUsd * plBolsaActual()[tok] / 100) })).join('');
+        const stockRows = STOCKS.map(([tok, name, css]) => repartoRowHtml({ icon: iconHtml(tok, css, 24), label: name, amountText: fmtCurrency(r.bolsaUsd * plBolsaActual()[tok] / 100) })).join('');
         return `
           <details class="strat-block ${key === settings.strategy ? 'active' : ''}" data-strat="${key}" open>
             <summary class="strat-sum">
@@ -1184,7 +1186,7 @@ const App = (() => {
                 <span class="seg seg-sat" style="width:${mix.satelites}%"></span>
               </div>
             </summary>
-            <div class="reparto-list">${settings.bolsaTarget > 0 ? repartoGroupHtml('crypto', 'Crypto', r.monthlyUsd, detail) + repartoGroupHtml('bolsa', 'Bolsa', bolsaUsd, stockRows) : detail}</div>
+            <div class="reparto-list">${settings.bolsaTarget > 0 ? repartoGroupHtml('crypto', 'Crypto', r.monthlyUsd, detail) + repartoGroupHtml('bolsa', 'Bolsa', r.bolsaUsd, stockRows) : detail}</div>
           </details>`;
       }).join('');
     }
