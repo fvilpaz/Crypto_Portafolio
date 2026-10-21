@@ -30,6 +30,9 @@ const App = (() => {
   // Tokens que cuentan como satelites (todo lo que no es BTC, ETH ni USDC).
   // Anadir aqui cada nuevo satelite que entre en la cartera.
   const SATELLITE_TOKENS = ['ATOM', 'TIA', 'SOL'];
+  // Bolsa (acciones/ETF): catálogo a mano, como COINS. Por ahora solo pinta el Reparto (sin precios).
+  const STOCKS = [['SP', 'S&P 500', 'sp'], ['SX', 'SpaceX', 'sx'], ['TS', 'Tesla', 'ts'], ['NV', 'Nvidia', 'nv'], ['MS', 'Microsoft', 'ms']];
+  const REPARTO_OPEN = new Set();   // grupos (crypto/bolsa) que tienes abiertos: renderReparto repinta todo
 
   // La cartera es UN SOLO monedero. Cada moneda lleva un tag:
 //   'portfolio' → cartera normal
@@ -908,10 +911,32 @@ const App = (() => {
     return { toBtc, toEth, toRefugio, toSat, satAlloc, satBlocked, monthlyUsd };
   }
 
+  // Una fila del Reparto (crypto o bolsa). pct = null: sin barra de progreso.
+  function repartoRowHtml({ icon, label, amountText, pct = null, barColor = '', idle = false }) {
+    const bar = pct === null ? '' : `
+                <div class="reparto-prog-wrap">
+                  <div class="reparto-prog-bar" style="width:${pct}%;background:${barColor}"></div>
+                </div>`;
+    return `
+            <div class="reparto-row ${idle ? 'idle' : ''}">
+              <span class="reparto-coin">${icon}</span>
+              <div class="reparto-mid">
+                <span class="reparto-name">${label}</span>${bar}
+              </div>
+              <span class="reparto-amt">${amountText}</span>
+            </div>`;
+  }
+
+  // Grupo plegable (Crypto / Bolsa) dentro de una plantilla, con su subtotal.
+  function repartoGroupHtml(key, title, totalUsd, inner) {
+    return `<details class="reparto-group" data-g="${key}"${REPARTO_OPEN.has(key) ? ' open' : ''}><summary class="reparto-group-sum"><span>${title}</span><span class="reparto-group-tot">${fmtCurrency(totalUsd)}<svg class="strat-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span></summary>${inner}</details>`;
+  }
+
   // Reparto del mes: un desplegable por plantilla y, dentro, cuánto meter en cada
   // sitio este mes según esa estrategia. Abres las tres para comparar.
   function renderReparto() {
     const monthlyUsd = (settings.dcaTarget || 0) / EUR_USD;
+    const bolsaUsd = (settings.bolsaMonthly || 0) / EUR_USD;   // aportación mensual a bolsa (€ en ajustes); 0 = sin bolsa
     const hint = document.getElementById('reparto-hint');
     if (hint) hint.innerHTML = `Tu aportación de <strong>${fmtCurrency(monthlyUsd)}</strong> al mes, repartida según cada estrategia. Despliega para comparar y elige la tuya.`;
 
@@ -957,18 +982,9 @@ const App = (() => {
           const prog = rowProgress(row.token);
           const pct = (prog * 100).toFixed(0);
           const barColor = prog >= 1 ? 'var(--accent-green)' : prog >= 0.8 ? 'var(--accent-yellow)' : 'var(--accent-blue)';
-          return `
-            <div class="reparto-row ${on ? '' : 'idle'}">
-              <span class="reparto-coin">${iconHtml(row.token, row.cssClass, 24)}</span>
-              <div class="reparto-mid">
-                <span class="reparto-name">${row.label}</span>
-                <div class="reparto-prog-wrap">
-                  <div class="reparto-prog-bar" style="width:${pct}%;background:${barColor}"></div>
-                </div>
-              </div>
-              <span class="reparto-amt">${on ? fmtCurrency(row.amount) : `${pct}%`}</span>
-            </div>`;
+          return repartoRowHtml({ icon: iconHtml(row.token, row.cssClass, 24), label: row.label, amountText: on ? fmtCurrency(row.amount) : `${pct}%`, pct, barColor, idle: !on });
         }).join('');
+        const stockRows = STOCKS.map(([tok, name, css]) => repartoRowHtml({ icon: iconHtml(tok, css, 24), label: name, amountText: fmtCurrency(bolsaUsd / STOCKS.length) })).join('');
         return `
           <details class="strat-block ${key === settings.strategy ? 'active' : ''}" data-strat="${key}" open>
             <summary class="strat-sum">
@@ -985,7 +1001,7 @@ const App = (() => {
                 <span class="seg seg-sat" style="width:${mix.satelites}%"></span>
               </div>
             </summary>
-            <div class="reparto-list">${detail}</div>
+            <div class="reparto-list">${bolsaUsd > 0 ? repartoGroupHtml('crypto', 'Crypto', r.monthlyUsd, detail) + repartoGroupHtml('bolsa', 'Bolsa', bolsaUsd, stockRows) : detail}</div>
           </details>`;
       }).join('');
     }
@@ -994,12 +1010,18 @@ const App = (() => {
       // Clic en una plantilla la marca como la tuya (se guarda y viaja por el gist),
       // sin re-renderizar para no cerrar los desplegables que tengas abiertos.
       stratWrap.addEventListener('click', (e) => {
+        if (e.target.closest('.reparto-group-sum')) return;   // plegar/desplegar un grupo no elige la plantilla
         const block = e.target.closest('.strat-block');
         if (!block) return;
         settings.strategy = block.dataset.strat;
         persist();
         stratWrap.querySelectorAll('.strat-block').forEach(b => b.classList.toggle('active', b === block));
       });
+      // `toggle` no burbujea: se escucha en captura para recordar qué grupos tienes abiertos.
+      stratWrap.addEventListener('toggle', (e) => {
+        const g = e.target.dataset && e.target.dataset.g;
+        if (g) { e.target.open ? REPARTO_OPEN.add(g) : REPARTO_OPEN.delete(g); }
+      }, true);
     }
   }
 
