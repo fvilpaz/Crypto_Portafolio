@@ -161,6 +161,16 @@ const App = (() => {
     });
   }
   registerCustomCoins();
+
+  // Acciones/ETF añadidos por búsqueda (settings.customStocks): se registran en COINS con kind 'stock'. Sin coingeckoId no hay
+  // precio en vivo, así que valen a precio de compra. Nunca pisan una moneda del catálogo; el nombre se limpia.
+  function registerCustomStocks() {
+    Object.entries(settings.customStocks || {}).forEach(([tok, m]) => {
+      if (!/^[A-Z0-9.]{1,10}$/.test(tok) || COINS[tok]) return;
+      COINS[tok] = { name: String(m?.name || tok).replace(/[<>&"']/g, ''), kind: 'stock', icon: '', color: '#2dd4bf', cssClass: 'stk' };
+    });
+  }
+  registerCustomStocks();
   let storeVersion = _store.updatedAt || 0;
   let showHidden = false;   // mostrar temporalmente las monedas ocultas en la tabla
   let pendingImportFormat = null;   // 'json' | 'csv' elegido antes de abrir el file picker
@@ -844,6 +854,21 @@ const App = (() => {
     }
     const defenseSub = document.getElementById('card-defense-sub');
     if (defenseSub) defenseSub.innerHTML = reached ? `<span class="positive">✓ Colchon cubierto</span>` : '';
+    // Bolsa (acciones/ETF): lo registrado con kind 'stock'. Sin precio en vivo valen a precio de compra.
+    const stocks = portfolio.filter(a => a.kind === 'stock');
+    const bolsaVal = stocks.reduce((s, a) => s + getAssetValue(a), 0);
+    const bolsaWeight = total > 0 ? bolsaVal / total : 0, bolsaTarget = settings.bolsaTarget || 0;
+    document.getElementById('card-bolsa-pct').textContent = `${(bolsaWeight * 100).toFixed(1)}%`;
+    document.getElementById('bolsa-icons').innerHTML = stocks.slice(0, 5).map(a => iconHtml(a.token, a.cssClass || 'stk', 30)).join('');
+    const bolsaBar = document.getElementById('bolsa-bar-fill');
+    const bolsaRatio = bolsaTarget > 0 ? (bolsaWeight * 100) / bolsaTarget : 1;
+    bolsaBar.style.width = `${Math.min(bolsaWeight * 100, 100)}%`;
+    bolsaBar.style.background = barColor(bolsaRatio, 'var(--accent-teal)');
+    setBarMark('bolsa-bar-wrap', bolsaTarget);
+    const bolsaLabel = document.getElementById('bolsa-bar-label');
+    bolsaLabel.textContent = bolsaTarget > 0 ? `Objetivo ${bolsaTarget}%` : 'Sin objetivo';
+    bolsaLabel.style.color = bolsaTarget > 0 ? barColor(bolsaRatio, 'var(--accent-teal)') : '';
+    document.getElementById('card-bolsa-sub').textContent = stocks.length ? `${stocks.length} ${stocks.length === 1 ? 'posición' : 'posiciones'} · a precio de compra` : 'Sin posiciones todavía';
     // listeners de edición de cubos — se registran en init(), no aquí
   }
 
@@ -1043,6 +1068,16 @@ const App = (() => {
     const val = parseFloat(String(input).replace(',', '.'));
     if (isNaN(val) || val < 0) return;
     settings.dcaTarget = val;
+    persist();
+    render();
+  }
+
+  function editBolsaTarget() {
+    const input = prompt('Objetivo de bolsa en % de la cartera (0 = sin objetivo):', settings.bolsaTarget || 0);
+    if (input === null) return;
+    const val = parseFloat(String(input).replace(',', '.'));
+    if (isNaN(val) || val < 0 || val > 100) return;
+    settings.bolsaTarget = val;
     persist();
     render();
   }
@@ -2016,6 +2051,12 @@ const App = (() => {
         tokens: ['USDC'],
         target: settings.defenseTarget || null,
       },
+      bolsa: {
+        label: 'Bolsa',
+        color: 'var(--accent-teal)',
+        tokens: portfolio.filter(a => a.kind === 'stock').map(a => a.token),
+        target: settings.bolsaTarget || null,
+      },
     };
     const b = buckets[bucket];
     if (!b) return;
@@ -2137,15 +2178,31 @@ const App = (() => {
     return (await res.json()).coins.slice(0, 8);
   }
 
+  // Buscar acciones/ETF (Twelve Data: la búsqueda no pide clave). Solo cotizaciones de EE. UU., una por símbolo.
+  async function searchStocks(q) {
+    const res = await fetch(`https://api.twelvedata.com/symbol_search?symbol=${encodeURIComponent(q)}&outputsize=10`);
+    const vistos = new Set();
+    return ((await res.json()).data || [])
+      .filter(x => x.country === 'United States' && /^[A-Z0-9.]{1,10}$/.test(x.symbol) && !vistos.has(x.symbol) && vistos.add(x.symbol))
+      .slice(0, 5).map(x => ({ kind: 'stock', symbol: x.symbol, name: x.instrument_name, exchange: x.exchange }));
+  }
+
   function renderCoinResults(list) {
     const box = document.getElementById('add-coin-results');
     box.replaceChildren(...(list || []).map(c => {
       const b = document.createElement('button');
-      b.type = 'button'; b.className = 'coin-chip'; b.title = c.name;
-      const img = new Image(20, 20); img.src = c.thumb; img.alt = '';
+      b.type = 'button'; b.className = 'coin-chip';
       const sym = document.createElement('span'); sym.textContent = c.symbol.toUpperCase();
-      b.append(img, sym);
-      b.addEventListener('click', () => chooseCoin(c));
+      if (c.kind === 'stock') {   // acción/ETF: sin imagen y con el borde turquesa de la Bolsa
+        b.title = `${c.name} · ${c.exchange} (bolsa)`; b.style.borderColor = 'var(--accent-teal)';
+        b.append(sym);
+        b.addEventListener('click', () => chooseStock(c));
+      } else {
+        b.title = c.name;
+        const img = new Image(20, 20); img.src = c.thumb; img.alt = '';
+        b.append(img, sym);
+        b.addEventListener('click', () => chooseCoin(c));
+      }
       return b;
     }));
     if (list && !list.length) box.textContent = 'Sin resultados';
@@ -2170,6 +2227,22 @@ const App = (() => {
       applyPrice(token, d[c.id]?.usd, d[c.id]?.usd_24h_change);
       renderAddPrice();
     } catch (e) { /* sin precio en vivo: se escribe el importe a mano */ }
+  }
+
+  function chooseStock(c) {
+    const token = c.symbol, err = document.getElementById('add-error');
+    if (COINS[token] && COINS[token].kind !== 'stock') { err.textContent = `El símbolo ${token} ya es una moneda crypto de tu catálogo.`; return; }
+    if (!COINS[token]) {
+      const previo = settings.customStocks;
+      settings.customStocks = Object.assign({}, previo, { [token]: { name: c.name } });
+      registerCustomStocks();
+      if (!COINS[token]) { settings.customStocks = previo; err.textContent = 'No se pudo añadir esa acción.'; return; }   // rechazada: no se guarda
+      persist();
+    }
+    err.textContent = '';
+    document.getElementById('add-coin-search').value = '';
+    renderCoinResults(null);
+    selectToken(token);
   }
 
   // Parseo robusto: acepta coma decimal (0,044) y punto (0.044).
@@ -2250,7 +2323,7 @@ const App = (() => {
       portfolio.push({
         token: tx.token, name: m.name || tx.token, qty: tx.qty,
         costUsd: tx.totalUsd, avgPrice: tx.price || 0,
-        coingeckoId: m.coingeckoId, icon: m.icon, color: m.color, cssClass: m.cssClass,
+        coingeckoId: m.coingeckoId, icon: m.icon, color: m.color, cssClass: m.cssClass, kind: m.kind,
         tag: 'portfolio',
       });
     }
@@ -2263,7 +2336,7 @@ const App = (() => {
       if (h) { h.qty += tx.qty; h.costUsd = h.avgPrice * h.qty; }
       else {
         const m = COINS[tx.token] || {};
-        portfolio.push({ token: tx.token, name: m.name || tx.token, qty: tx.qty, costUsd: tx.price * tx.qty, avgPrice: tx.price, coingeckoId: m.coingeckoId, icon: m.icon, color: m.color, cssClass: m.cssClass });
+        portfolio.push({ token: tx.token, name: m.name || tx.token, qty: tx.qty, costUsd: tx.price * tx.qty, avgPrice: tx.price, coingeckoId: m.coingeckoId, icon: m.icon, color: m.color, cssClass: m.cssClass, kind: m.kind });
       }
     } else { // revertir Compra/Airdrop = quitar las monedas
       if (!h) return;
@@ -2446,6 +2519,7 @@ const App = (() => {
     fillTotalEur(transactions);
     if (data.settings) settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, strategy: DEFAULT_STRATEGY }, data.settings);
     registerCustomCoins();
+    registerCustomStocks();
     normalizePortfolio(portfolio);
   }
 
@@ -2829,6 +2903,7 @@ const App = (() => {
         if (editBtn.id === 'core-edit')    editCoreTarget();
         else if (editBtn.id === 'sat-edit')    editSatTarget();
         else if (editBtn.id === 'defense-edit') editDefenseTarget();
+        else if (editBtn.id === 'bolsa-edit') editBolsaTarget();
         return;
       }
       const card = e.target.closest('.card[data-bucket]');
@@ -2915,8 +2990,10 @@ const App = (() => {
       clearTimeout(esperaBusqueda);
       const q = e.target.value.trim();
       if (q.length < 2) { renderCoinResults(null); return; }
-      esperaBusqueda = setTimeout(() => searchCoins(q).then(renderCoinResults)
-        .catch(() => { document.getElementById('add-error').textContent = 'No se pudo buscar ahora (límite de CoinGecko); prueba en un minuto.'; }), 450);
+      esperaBusqueda = setTimeout(() => Promise.allSettled([searchCoins(q), searchStocks(q)]).then(([cripto, bolsa]) => {
+        if (cripto.status === 'rejected' && bolsa.status === 'rejected') { document.getElementById('add-error').textContent = 'No se pudo buscar ahora (límite de CoinGecko); prueba en un minuto.'; return; }
+        renderCoinResults([...(bolsa.value || []), ...(cripto.value || [])]);   // la bolsa primero: la crypto trae muchos tokens que imitan acciones
+      }), 450);
     });
     document.getElementById('add-type').addEventListener('change', (e) => {
       addState.type = e.target.value;
