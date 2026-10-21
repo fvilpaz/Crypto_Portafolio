@@ -1157,13 +1157,6 @@ const App = (() => {
   function renderReparto() {
     renderPlanPanel();
     const split = monthlySplit(), monthlyUsd = split.cryptoUsd, bolsaUsd = split.bolsaUsd;   // bolsaUsd 0 = sin objetivo de bolsa
-    const hint = document.getElementById('reparto-hint');
-    if (hint) hint.innerHTML = settings.bolsaTarget > 0
-      ? `Tu aportación de <strong>${fmtCurrency(split.totalUsd)}</strong> al mes. Las recomendaciones la dividen por tu ratio (crypto ${100 - settings.bolsaTarget} % · bolsa ${settings.bolsaTarget} %): <strong>${fmtCurrency(split.totalUsd * (1 - split.target))}</strong> a crypto y <strong>${fmtCurrency(split.totalUsd * split.target)}</strong> a bolsa. «Objetivos» mira lo que ya tienes y lo manda donde falta: <strong>${fmtCurrency(monthlyUsd)}</strong> a crypto y <strong>${fmtCurrency(bolsaUsd)}</strong> a bolsa. Despliega para comparar y elige la tuya.`
-      : `Tu aportación de <strong>${fmtCurrency(monthlyUsd)}</strong> al mes, repartida según cada estrategia. Despliega para comparar y elige la tuya.`;
-    const proy = document.getElementById('reparto-proyeccion');
-    if (proy) proy.textContent = bolsaProjection();
-
     const badge = document.getElementById('reparto-amount-badge');
     if (badge) badge.textContent = `${fmtCurrency(split.totalUsd)}/mes`;
 
@@ -1260,23 +1253,6 @@ const App = (() => {
     settings.dcaTarget = val;
     persist();
     render();
-  }
-
-  // Peso de la bolsa a 12 y 24 meses, y cuándo llega a su objetivo, si cada mes entra el dinero repartido por lo que falta,
-  // sin contar variaciones de precio (simulación mes a mes con splitByGaps). '' si faltan datos.
-  function bolsaProjection() {
-    const sp = monthlySplit(), total = getInvestedValue();
-    if (sp.target <= 0 || sp.totalUsd <= 0 || total <= 0) return '';
-    let v = total, s = sp.stocks, llega = Math.abs(s / v - sp.target) <= 0.0005 ? 0 : null;   // llega = mes en que alcanza el objetivo (desde abajo o desde arriba)
-    const peso = {};
-    for (let m = 1; m <= 240; m++) {
-      s += splitByGaps(v, s, sp.totalUsd, sp.target).bolsa; v += sp.totalUsd;
-      if (llega === null && Math.abs(s / v - sp.target) <= 0.0005) llega = m;
-      if (m === 12 || m === 24) peso[m] = `${(s / v * 100).toFixed(1)} %`;
-    }
-    const meta = `${settings.bolsaTarget} %`;
-    const cuando = llega === 0 ? 'ya está en su objetivo' : llega === null ? 'no llegaría a su objetivo en 20 años' : `llegaría a su objetivo en ${llega} ${llega === 1 ? 'mes' : 'meses'}`;
-    return `Sin contar variaciones de precio, la bolsa pasaría de ${(sp.stocks / total * 100).toFixed(1)} % a ${peso[12]} en 12 meses y a ${peso[24]} en 24 (objetivo ${meta}); ${cuando}.`;
   }
 
   // Ajusta Núcleo, Satélites y Refugio en proporción para que, con la Bolsa, los cuatro objetivos sumen 100 %.
