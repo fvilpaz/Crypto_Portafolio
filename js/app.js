@@ -1084,7 +1084,7 @@ const App = (() => {
     return nombre.replace(/[,.]/g, ' ').split(' ').filter(w => w && !sufijos.has(w.toLowerCase())).slice(0, 2).join(' ') || nombre;
   }
   // % que lleva por defecto el núcleo de la bolsa (el resto, a partes iguales entre los satélites). Se cambia aquí y en el editor de la Bolsa.
-  const NUCLEO_BOLSA_DEFECTO = 50;
+  const NUCLEO_BOLSA_DEFECTO = 25;
   // % de cada acción sobre el total de bolsa. Sin reparto guardado: el núcleo lleva NUCLEO_BOLSA_DEFECTO % (si solo hay núcleo, todo) y los
   // satélites se reparten el resto a partes iguales. Con reparto guardado: el que fijaste (una acción que aún no está en él cuenta 0 hasta que la repartas).
   function plBolsaActual() {
@@ -1098,13 +1098,11 @@ const App = (() => {
     return peso;
   }
 
-  // Bolsa de una plantilla: en bolsa no hay refugio, así que el dinero se reparte entre núcleo (S&P 500) y satélites (el resto) en la misma
-  // proporción que la plantilla da a Núcleo y a Satélites; los satélites, entre sus acciones por los % relativos del panel Reparto de la bolsa.
+  // Bolsa de una plantilla: el dinero se reparte con el reparto de la Bolsa (el del editor del lápiz de la tarjeta: % del núcleo y de cada acción),
+  // igual para todas las plantillas. Si los % guardados no suman 100, se reescalan.
   function bolsaPorPlantilla(strat, usd) {
-    const wC = strat.byTargets ? (settings.coreTarget ?? DEFAULT_CORE_TARGET) : strat.core, wS = strat.byTargets ? (settings.satTarget ?? DEFAULT_SAT_TARGET) : strat.satelites;
-    const l = bolsaLista().map(x => x[0]), nuc = bolsaNucleo(), sats = l.filter(t => t !== nuc), pb = plBolsaActual();
-    const nucleo = !nuc ? 0 : !sats.length ? usd : wC + wS > 0 ? usd * wC / (wC + wS) : 0, sat = usd - nucleo, suma = sats.reduce((s, t) => s + pb[t], 0);
-    return Object.fromEntries(l.map(t => [t, t === nuc ? nucleo : suma > 0 ? sat * pb[t] / suma : sat / sats.length]));
+    const l = bolsaLista().map(x => x[0]), pb = plBolsaActual(), suma = l.reduce((s, t) => s + pb[t], 0);
+    return Object.fromEntries(l.map(t => [t, suma > 0 ? usd * pb[t] / suma : 0]));
   }
 
   function planPanelesHtml() {
