@@ -50,9 +50,26 @@ are intentionally not merged. The apps cross-link, nothing more.
 - **Distribution** doughnut chart (share per asset)
 - **Evolution** chart over time
 - **DCA** summary (monthly plan; purchases from the 28th onwards count towards the next month)
-- **Monthly split** by strategy: three fixed templates (conservadora / moderada / agresiva)
-  plus **objetivos**, which sends the money to whichever bucket (refugio / core / satellites)
-  is furthest below its own target, in proportion to each gap
+- **Monthly split ("Reparto del mes")**, built around a "Plan de inversión" panel: the monthly amount, a crypto / bolsa
+  ratio slider (moving it rescales Núcleo / Satélites / Refugio so the four targets add up to 100 %), result cards
+  ("this month to crypto / to bolsa") and Crypto / Bolsa cards where each bucket shows its weight and its target as
+  coloured chips (green reaches it, yellow passes it, red is short). The three fixed templates (conservadora / moderada /
+  agresiva) split the money by the ratio and then by their own percentages, **ignoring what you already hold**;
+  **objetivos** looks at what you hold and sends each side's money where it is missing (if crypto is ahead, it all goes
+  to bolsa)
+- **Bolsa (stocks and ETFs):** the "Añadir movimiento" window has two separate searches (*Buscar crypto* /
+  *Buscar acción o ETF*) so tokens that imitate stocks never mix with real stocks. The stock search finds US tickers
+  (Twelve Data, no key for the search) and a short built-in list of popular ETFs by name ("sp500", "global vanguard"),
+  European UCITS first (VUAA, VWCE, CSPX, IWDA...). A purchase with only an amount and no price opens a 1-unit position at
+  the price paid. The Bolsa card has a pencil that opens the same editor as Núcleo: target, one percentage per stock, a
+  search to add more and a ★ that marks the núcleo (it goes first and inherits the highest percentage; default 25 % núcleo,
+  the rest equal among the satellites). The assets table shows Crypto and Bolsa as two blocks with their own subtotal
+- **Live stock prices, no key in the browser:** a scheduled GitHub Action (`scripts/update_precios.py`, Twelve Data free
+  plan) writes `data/precios.json` every 2 hours Monday to Friday; the app only reads that file and falls back to the
+  purchase price when a stock has no recent price (older than 5 days) or is not in the file. The symbols it tracks are
+  listed in `data/acciones.json`
+- **Satellites** are the coins of your own satellite split (`settings.satSplit`, edited with the card's pencil); a coin
+  you add there shows up in the card and in the monthly split
 - **Staking** breakdown (per-asset APR)
 - **Custody** split (Bit2Me / Autocustodia / Bitget)
 - **Movements** table (buys, sells, rewards), searchable
@@ -70,7 +87,8 @@ are intentionally not merged. The apps cross-link, nothing more.
 - Vanilla JavaScript
 - [Chart.js](https://www.chartjs.org/) for the charts
 - [CoinGecko API](https://www.coingecko.com/en/api) for live prices (direct call, API key)
-- Service Worker + Web App Manifest (installable, offline app shell)
+- Service Worker + Web App Manifest (installable, offline app shell; network-first, revalidating every load)
+- Python scripts + GitHub Actions that refresh static JSON in `data/` (SEC EDGAR 13F, DefiLlama, CoinGecko, Twelve Data)
 
 ---
 
@@ -89,6 +107,11 @@ The app starts empty and only shows what you add. There is no seed data.
   the JSON on one device, import it on another and everything is restored intact.
 - **CSV (movements):** just the buy / sell / reward history
   (`date,token,type,price,qty,totalUsd`).
+
+Static data written by scheduled GitHub Actions lives in `data/` (`13f_*.json`, `crypto.json`, `precios.json`); the app
+only reads it. Secrets live only in the repository settings: `TWELVE_DATA_KEY` (stock prices) and `SEC_USER_AGENT` (the
+contact the SEC asks for). Twelve Data's free plan gives 8 credits per minute and 800 per day, 1 credit per symbol and
+call; the price script makes one call per symbol every 10 s, at most 40 symbols, and stops at the first 429.
 
 A `git push` to `master` triggers an automatic **GitHub Pages** deploy.
 
@@ -110,16 +133,14 @@ half. Each does one thing well and they link to each other.
   statistics on the overlap: which companies several of them hold at once, as
   candidates for my own investing. Note: 13F is quarterly and lags up to 45 days, so
   it shows what they held, not what they hold today
-  - **Status (2026-10-21), branch `feat/mercado-bolsa`.** Done and checked in the browser: header button
-    "Mercado" and its view; real 13F tables for Berkshire, Bridgewater and the Gates Foundation Trust
-    (`scripts/update_13f.py`, one JSON per manager in `data/`, run by hand with `SEC_USER_AGENT`); real "Dónde
-    coinciden" and "Las que sigues" computed from the full positions, not only the top 10; teal highlight for the
-    stocks I follow; Crypto tab from DefiLlama and CoinGecko (`scripts/update_crypto.py`, no keys); "Reparto del
-    mes" groups Crypto / Bolsa (shown only when `settings.bolsaMonthly` > 0). Still example data (yellow label):
-    the text cards "Inversores y gestoras" and "Empresas y fondos". **Not done:** Bolsa card with real holdings,
-    targets adding up to 100 %, live stock prices (Twelve Data), a scheduled GitHub Action running both scripts
-    (the SEC contact would be a repo secret), and people such as Elon Musk (not 13F filers: they show up in
-    Form 4 and 13D/13G filings, a different source)
+  - **Status (2026-10-22), published in `master`.** Done and checked in the browser: header button "Mercado" and its
+    view; real 13F tables for Berkshire, Bridgewater and the Gates Foundation Trust (`scripts/update_13f.py`, one JSON per
+    manager in `data/`); real "Dónde coinciden" and "Las que sigues" computed from the full positions, not only the top 10;
+    teal highlight for the stocks I follow; Crypto tab from DefiLlama and CoinGecko (`scripts/update_crypto.py`, no keys); the
+    daily Action `actualizar-datos.yml` (written, never run on GitHub yet). Still example data (yellow label): the text cards
+    "Inversores y gestoras" and "Empresas y fondos". **Pending:** create the repo secret `SEC_USER_AGENT` (without it the Action
+    skips the 13F) and run the Action once to check it; people such as Elon Musk (not 13F filers: they show up in Form 4 and
+    13D/13G filings, a different source); phases 2 and 3 below
   - Base the analysis on quarter-to-quarter changes (new buys, increases) and portfolio
     weight, not only on plain overlap
   - Per-company drill-down: who holds it, since when, weight, plus recent news and
@@ -150,30 +171,30 @@ half. Each does one thing well and they link to each other.
 - **Done:** automatic cross-device sync (a "Nando profile" backed by a private GitHub Gist, cloud
   button in the header), so state travels between devices without carrying a file by hand
 - **Done:** add brand-new coins via CoinGecko search in the "Añadir movimiento" window (id, name and icon
-  are resolved; saved in `settings.customCoins`, so they travel with the export and the sync). Known limit: a
-  new coin counts in the total and the distribution, but not yet in the Núcleo / Satélites / Refugio cards
-  (they use fixed lists), so the place of each new coin has to be decided
+  are resolved; saved in `settings.customCoins`, so they travel with the export and the sync). A new coin counts in the
+  total and the distribution; to count in the Satélites card and in the monthly split, add it with the pencil of the Satélites
+  card. Núcleo (BTC, ETH) and Refugio (USDC) are still fixed lists
 - Per-coin manual price override for coins CoinGecko does not price
 - Stocks/ETFs (e.g. an S&P 500 ETF for DCA or extra pay): symbol search with
   Twelve Data (CORS open; price needs a free key), price in EUR/USD with the
   existing rate, and its own "Bolsa" total kept apart from the crypto cards
-  - **Phase 1 done:** the "Añadir movimiento" search box also finds US stocks/ETFs (Twelve Data, no key
-    needed for the search). They are saved as holdings (`kind: 'stock'`, registry in `settings.customStocks`) and
-    a teal "Bolsa" card shows their weight and an optional target (`settings.bolsaTarget`, pencil button); they
-    are valued at purchase price. Setting the Bolsa target offers to rescale Núcleo / Satélites / Refugio in
-    proportion so the four add up to 100 % (60/20/20 + Bolsa 30 gives 42/14/14). **Pending:** live price (needs
-    a free Twelve Data key that only I can create, to go in `config.js`), a warning when editing the other
-    targets breaks the 100 %, and the "Tu plan" block of the prototype
-  - **Monthly plan, one amount (decided with Nando):** the pencil of the DCA card is the single monthly money to
-    invest (crypto + bolsa). The Bolsa target (pencil of the Bolsa card) defines the crypto / bolsa ratio (the rest
-    is crypto), and each month's money goes to whichever side is further from its target (same mechanism as the
-    "objetivos" template; if one side already reaches it, everything goes to the other). The Reparto templates
-    split only the crypto part (with Crypto / Bolsa groups), the DCA card counts every purchase (crypto and stocks)
-    against the total and breaks it down, the Bolsa card says how much is missing ("Faltan"), and a line projects
-    the weight of the Bolsa at 12 and 24 months and when it reaches its target (month-by-month simulation, price
-    moves ignored). Note: with lots of crypto and no Bolsa, all the new money goes to the Bolsa until the ratio is
-    close. **Open:** one single "Plan de inversión" panel for all these inputs, how the Bolsa part is shared among
-    the stocks (today equally among the five of the catalogue), and the "Tu plan" block
+  - **Phase 1 done:** US stocks/ETFs are found with the "Añadir movimiento" search, saved as holdings (`kind: 'stock'`,
+    registry in `settings.customStocks`) and shown in a teal "Bolsa" card with an optional target (`settings.bolsaTarget`).
+    Setting the Bolsa target rescales Núcleo / Satélites / Refugio so the four add up to 100 % (60/20/20 + Bolsa 30 gives
+    42/14/14)
+  - **Phase 2 done (2026-10-22):** separate crypto / stock searches; popular ETFs by name incl. European UCITS; amount-only
+    purchases; Crypto / Bolsa blocks in the assets table; the Bolsa pencil opens an editor with per-stock percentages
+    (`settings.stockSplit`) and the núcleo (`settings.bolsaCore`); issuer logo for Vanguard and a public logo for the other
+    stocks (letters when none); live prices through the scheduled Action and `data/precios.json`. **Pending / unverified:** the
+    first run of the price Action on GitHub (the free Twelve Data plan lists US stocks and ETFs; European ones such as VUAA
+    may come back without a price, and then they stay at purchase price; it is not confirmed which ones the plan covers); a
+    manual price per stock for those; a warning when editing the other targets breaks the 100 %; the "Tu plan" block
+  - **Monthly plan (decided with Nando):** the "Dinero al mes" box is the single amount to invest (crypto + bolsa); the
+    slider (or the pencil of the Bolsa card) sets the crypto / bolsa ratio. The three fixed templates divide the amount by
+    that ratio and then by their own percentages (crypto: refugio / núcleo / satélites, then the per-coin split of each
+    bucket; bolsa: the percentages of the Bolsa editor), without looking at the portfolio. "Objetivos" does look at it: it
+    sends each side's money to whichever is further from its target, so with lots of crypto and no bolsa everything goes to
+    bolsa. The panel's result cards use that same "what is missing" logic and subtract what you already bought this month
 - Traditional-market metrics next to the crypto ones (allocation, performance and
   evolution of the "Bolsa" side, same charts as crypto)
   - New summary card "Bolsa" in the card row (same format as Núcleo / Satélites /
@@ -203,5 +224,12 @@ half. Each does one thing well and they link to each other.
       instead of new styles; one row-building function for every list
     - Open: base of the template maths (600 EUR budget vs invested only), whether "Tu
       plan" goes first, and the bolsa rows' progress bar (split share, not progress)
+    - **What reached the app (2026-10-22):** the two collapsible Crypto / Bolsa groups in each template, the horizontal
+      dock of templates (3 visible), the Plan panel (amount + ratio), the per-bucket chips, the bolsa split (now an editor
+      behind the Bolsa pencil instead of a card, using the stocks you actually hold). **Left out on purpose:** the
+      hardcoded five-stock catalogue and the separate "Reparto de crypto" card (the Núcleo / Satélites pencils edit it).
+      **Still only in the prototype:** the "Plan del mes" sliders with cushion and "Ahorro y gastos", the "weight of the
+      bolsa in N months" slider, and the month bar with legend. The old "Objetivos de la cartera" box (four % boxes, a SUMA badge
+      and an "adjust the other three" button) is kept in the prototype notes in case it is wanted back
 
 ---
