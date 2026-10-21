@@ -1,14 +1,17 @@
 [
   {
     "clave": "berkshire",
+    "corto": "BK",
     "nombre": "Berkshire Hathaway"
   },
   {
     "clave": "bridgewater",
+    "corto": "BR",
     "nombre": "Bridgewater Associates"
   },
   {
     "clave": "gates",
+    "corto": "GF",
     "nombre": "Gates Foundation Trust"
   }
 ]
