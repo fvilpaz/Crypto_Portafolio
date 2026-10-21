@@ -2403,13 +2403,33 @@ const App = (() => {
     return (await res.json()).coins.slice(0, 8);
   }
 
+  // ETF americanos habituales, para encontrarlos por nombre ("sp500", "global vanguard"...): la búsqueda de Twelve Data es literal y solo
+  // entiende símbolos y nombres exactos. [símbolo, nombre, palabras clave]
+  const ETF_POPULARES = [
+    ['VOO', 'Vanguard S&P 500 ETF', 'sp500 s&p vanguard'], ['SPY', 'SPDR S&P 500 ETF Trust', 'sp500 s&p spdr'], ['IVV', 'iShares Core S&P 500 ETF', 'sp500 s&p ishares'],
+    ['VTI', 'Vanguard Total Stock Market ETF', 'vanguard total usa bolsa'], ['VT', 'Vanguard Total World Stock ETF', 'vanguard global world mundo total'],
+    ['VXUS', 'Vanguard Total International Stock ETF', 'vanguard global internacional mundo'], ['QQQ', 'Invesco QQQ Trust', 'nasdaq 100 tecnologia'],
+    ['VUG', 'Vanguard Growth ETF', 'vanguard growth crecimiento'], ['SCHD', 'Schwab U.S. Dividend Equity ETF', 'dividendos dividend schwab'], ['VYM', 'Vanguard High Dividend Yield ETF', 'vanguard dividendos dividend'],
+  ];
+
   // Buscar acciones/ETF (Twelve Data: la búsqueda no pide clave). Solo cotizaciones de EE. UU., una por símbolo.
   async function searchStocks(q) {
-    const res = await fetch(`https://api.twelvedata.com/symbol_search?symbol=${encodeURIComponent(q)}&outputsize=10`);
+    const norm = (s) => String(s).toLowerCase().replace(/[\s&.\-]/g, '');
+    const palabras = String(q).toLowerCase().split(/\s+/).map(norm).filter(Boolean);
     const vistos = new Set();
-    return ((await res.json()).data || [])
-      .filter(x => x.country === 'United States' && /^[A-Z0-9.]{1,10}$/.test(x.symbol) && !vistos.has(x.symbol) && vistos.add(x.symbol))
-      .slice(0, 5).map(x => ({ kind: 'stock', symbol: x.symbol, name: x.instrument_name, exchange: x.exchange }));
+    // 1) los ETF habituales que encajan por nombre o palabras clave (todas las palabras tienen que aparecer)
+    const locales = palabras.length ? ETF_POPULARES.filter(([sym, nom, claves]) => { const t = norm(`${sym} ${nom} ${claves}`); return palabras.every(p => t.includes(p)); })
+      .map(([symbol, name]) => ({ kind: 'stock', symbol, name, exchange: 'EE. UU.' })) : [];
+    locales.forEach(x => vistos.add(x.symbol));
+    // 2) la búsqueda de Twelve Data (más resultados que antes, antes de quedarnos solo con EE. UU.)
+    let remotos = [];
+    try {
+      const res = await fetch(`https://api.twelvedata.com/symbol_search?symbol=${encodeURIComponent(q)}&outputsize=30`);
+      remotos = ((await res.json()).data || [])
+        .filter(x => x.country === 'United States' && /^[A-Z][A-Z0-9.]{0,9}$/.test(x.symbol) && !vistos.has(x.symbol) && vistos.add(x.symbol))   // sin códigos que empiezan por número (ids de fondos, no tickers)
+        .map(x => ({ kind: 'stock', symbol: x.symbol, name: x.instrument_name, exchange: x.exchange }));
+    } catch (e) { /* sin red: quedan los ETF habituales */ }
+    return [...locales, ...remotos].slice(0, 8);
   }
 
   function renderCoinResults(list) {
