@@ -872,11 +872,19 @@ const App = (() => {
     // listeners de edición de cubos — se registran en init(), no aquí
   }
 
+  // Dinero mensual para invertir (settings.dcaTarget, en €): a la bolsa le toca su objetivo (bolsaTarget %) y el resto va a crypto,
+  // que se reparte con las plantillas de siempre. Sin objetivo de bolsa, todo es crypto como antes.
+  function monthlySplit() {
+    const totalUsd = (settings.dcaTarget || 0) / EUR_USD;
+    const share = Math.min(Math.max((settings.bolsaTarget || 0) / 100, 0), 1);
+    return { totalUsd, share, bolsaUsd: totalUsd * share, cryptoUsd: totalUsd * (1 - share) };
+  }
+
   // Calcula el reparto de una plantilla: cuánto va a cada sitio este mes.
   // Salta Satélites si está en el tope (su parte se reparte al resto) y dentro
   // del núcleo prioriza el que esté más flojo (BTC, ya que ETH suele estar bien).
   function computeReparto(strat) {
-    const monthlyUsd = (settings.dcaTarget || 0) / EUR_USD;   // objetivo DCA (€) a USD interno
+    const monthlyUsd = monthlySplit().cryptoUsd;   // la parte de crypto del dinero mensual (€ a USD interno)
     const satBlocked = getCosmosPct() >= (cosmosTopPct() - 0.05);
     const btcVal = getAssetValue(portfolio.find(a => a.token === 'BTC'));
     const ethVal = getAssetValue(portfolio.find(a => a.token === 'ETH'));
@@ -971,13 +979,16 @@ const App = (() => {
   // Reparto del mes: un desplegable por plantilla y, dentro, cuánto meter en cada
   // sitio este mes según esa estrategia. Abres las tres para comparar.
   function renderReparto() {
-    const monthlyUsd = (settings.dcaTarget || 0) / EUR_USD;
-    const bolsaUsd = (settings.bolsaMonthly || 0) / EUR_USD;   // aportación mensual a bolsa (€ en ajustes); 0 = sin bolsa
+    const split = monthlySplit(), monthlyUsd = split.cryptoUsd, bolsaUsd = split.bolsaUsd;   // bolsaUsd 0 = sin objetivo de bolsa
     const hint = document.getElementById('reparto-hint');
-    if (hint) hint.innerHTML = `Tu aportación de <strong>${fmtCurrency(monthlyUsd)}</strong> al mes, repartida según cada estrategia. Despliega para comparar y elige la tuya.`;
+    if (hint) hint.innerHTML = bolsaUsd > 0
+      ? `Tu aportación de <strong>${fmtCurrency(split.totalUsd)}</strong> al mes: <strong>${fmtCurrency(monthlyUsd)}</strong> a crypto y <strong>${fmtCurrency(bolsaUsd)}</strong> a bolsa (tu objetivo de bolsa, ${settings.bolsaTarget} %). Despliega para comparar y elige la tuya.`
+      : `Tu aportación de <strong>${fmtCurrency(monthlyUsd)}</strong> al mes, repartida según cada estrategia. Despliega para comparar y elige la tuya.`;
+    const proy = document.getElementById('reparto-proyeccion');
+    if (proy) proy.textContent = bolsaProjection();
 
     const badge = document.getElementById('reparto-amount-badge');
-    if (badge) badge.textContent = `${fmtCurrency(monthlyUsd)}/mes`;
+    if (badge) badge.textContent = `${fmtCurrency(split.totalUsd)}/mes`;
 
     const stratWrap = document.getElementById('reparto-strategies');
     if (stratWrap) {
@@ -1063,13 +1074,23 @@ const App = (() => {
 
   function editDcaTarget() {
     const cur = settings.dcaTarget;
-    const input = prompt('Objetivo mensual de DCA (en €):', cur);
+    const input = prompt('Dinero mensual para invertir, crypto y bolsa (en €):', cur);
     if (input === null) return;
     const val = parseFloat(String(input).replace(',', '.'));
     if (isNaN(val) || val < 0) return;
     settings.dcaTarget = val;
     persist();
     render();
+  }
+
+  // Peso de la bolsa dentro de 12 y 24 meses si cada mes entra el dinero repartido así, sin contar variaciones de precio:
+  // (s + m·bolsa) / (total + m·dinero). Como a la bolsa le toca su objetivo, se va acercando a él. '' si faltan datos.
+  function bolsaProjection() {
+    const { totalUsd: dinero, share, bolsaUsd } = monthlySplit(), total = getInvestedValue();
+    if (share <= 0 || dinero <= 0 || total <= 0) return '';
+    const stocks = portfolio.filter(a => a.kind === 'stock').reduce((s, a) => s + getAssetValue(a), 0);
+    const en = (meses) => `${((stocks + meses * bolsaUsd) / (total + meses * dinero) * 100).toFixed(1)} %`;
+    return `Sin contar variaciones de precio, la bolsa pasaría de ${(stocks / total * 100).toFixed(1)} % a ${en(12)} en 12 meses y a ${en(24)} en 24 (objetivo ${settings.bolsaTarget} %).`;
   }
 
   // Ajusta Núcleo, Satélites y Refugio en proporción para que, con la Bolsa, los cuatro objetivos sumen 100 %.
@@ -1288,6 +1309,8 @@ const App = (() => {
       .filter(tx => dcaMonthKey(tx.date) === monthKey && tx.type === 'Compra' && tx.totalUsd > 0);
     const investedUsd = monthBuys.reduce((sum, tx) => sum + tx.totalUsd, 0);
     const investedEur = monthBuys.reduce((sum, tx) => sum + tx.totalEur, 0);   // euros exactos tecleados
+    const share = monthlySplit().share;   // con objetivo de bolsa, el total se desglosa en crypto y bolsa
+    const bolsaBoughtEur = monthBuys.filter(tx => COINS[tx.token]?.kind === 'stock').reduce((sum, tx) => sum + tx.totalEur, 0);
 
     const invested = currency === 'EUR' ? investedEur : investedUsd;
     const target = currency === 'EUR' ? dcaTargetEur : dcaTargetEur / EUR_USD;
@@ -1318,6 +1341,7 @@ const App = (() => {
           ? '<span class="positive">✓ Mes completo</span>'
           : `<span style="color:var(--text-muted)">Faltan ${symFmt(remaining)}</span>`}
       </div>
+      ${share > 0 ? `<div class="dca-footer" style="color:var(--text-muted)">Crypto ${symFmt(currency === 'EUR' ? investedEur - bolsaBoughtEur : (investedEur - bolsaBoughtEur) / EUR_USD)} de ${symFmt(currency === 'EUR' ? dcaTargetEur * (1 - share) : dcaTargetEur * (1 - share) / EUR_USD)} · <span style="color:var(--accent-teal)">Bolsa ${symFmt(currency === 'EUR' ? bolsaBoughtEur : bolsaBoughtEur / EUR_USD)} de ${symFmt(currency === 'EUR' ? dcaTargetEur * share : dcaTargetEur * share / EUR_USD)}</span></div>` : ''}
     `;
     const amountEl = document.getElementById('dca-amount');
     if (amountEl) amountEl.addEventListener('click', editDcaTarget);

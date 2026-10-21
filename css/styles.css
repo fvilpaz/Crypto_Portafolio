@@ -2143,6 +2143,7 @@ main.container { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
 }
 .coin-chip img, .coin-chip .token-icon { border-radius: 50%; }
 #add-coin-results:empty { display: none; }
+#reparto-proyeccion:empty { display: none; }
 .coin-chip.active { background: var(--accent-yellow); color: #0b0e11; border-color: var(--accent-yellow); }
 .coin-chip:hover:not(.active) { color: var(--text-primary); border-color: var(--bg-hover); }
 .add-row { display: flex; gap: 14px; margin-bottom: 18px; }

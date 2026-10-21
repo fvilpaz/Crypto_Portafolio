@@ -163,7 +163,14 @@ half. Each does one thing well and they link to each other.
     are valued at purchase price. Setting the Bolsa target offers to rescale Núcleo / Satélites / Refugio in
     proportion so the four add up to 100 % (60/20/20 + Bolsa 30 gives 42/14/14). **Pending:** live price (needs
     a free Twelve Data key that only I can create, to go in `config.js`), a warning when editing the other
-    targets breaks the 100 %, and the monthly plan with Bolsa
+    targets breaks the 100 %, and the "Tu plan" block of the prototype
+  - **Monthly plan, one amount (decided with Nando):** the pencil of the DCA card is the single monthly money to
+    invest (crypto + bolsa). Bolsa gets its target % of it and the rest goes to crypto: the Reparto templates split
+    only the crypto part (with Crypto / Bolsa groups), the DCA card counts every purchase (crypto and stocks)
+    against the total and breaks it down, and a line projects the weight of the Bolsa at 12 and 24 months (price
+    moves ignored; with share = target it approaches the target, it does not cross it). **Open:** another split
+    rule (fixed % or by gaps), how the Bolsa part is shared among the stocks (today equally among the five of the
+    catalogue), and the "Tu plan" block
 - Traditional-market metrics next to the crypto ones (allocation, performance and
   evolution of the "Bolsa" side, same charts as crypto)
   - New summary card "Bolsa" in the card row (same format as Núcleo / Satélites /
