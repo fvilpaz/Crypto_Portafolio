@@ -2219,6 +2219,10 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 #mercado .up  { background: var(--accent-green-bg); color: var(--accent-green); }
 #mercado .dn  { background: var(--accent-red-bg); color: var(--accent-red); }
 #mercado .new { background: var(--accent-yellow-bg); color: var(--accent-yellow); }
+/* En claro los acentos de la app son demasiado suaves sobre fondo blanco para texto pequeño: tonos más oscuros */
+body.light #mercado .up  { color: #0a7a52; }
+body.light #mercado .dn  { color: #c4223a; }
+body.light #mercado .new { color: #8a6500; }
 #mercado .who { display: flex; gap: 5px; }
 #mercado .who .token-icon, #mercado .mh .token-icon { width: 26px; height: 26px; font-size: 11px; background: var(--bg-card); color: var(--text-primary); }
 
