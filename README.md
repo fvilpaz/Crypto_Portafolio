@@ -147,8 +147,8 @@ half. Each does one thing well and they link to each other.
     EDGAR's missing CORS and keeps any API key out of the frontend
   - Later, phase 3, on top of that function: in-app manager search, and an analysis chat
     over the same data (13F data only changes quarterly; only prices and news are live)
-- Automatic cross-device sync (a "Nando profile" backed by a private GitHub Gist),
-  so state travels between devices without carrying a file by hand
+- **Done:** automatic cross-device sync (a "Nando profile" backed by a private GitHub Gist, cloud
+  button in the header), so state travels between devices without carrying a file by hand
 - Add brand-new coins via CoinGecko search (auto-resolves id, name and icon,
   e.g. type "usdc")
 - Per-coin manual price override for coins CoinGecko does not price
