@@ -1001,13 +1001,19 @@ const App = (() => {
     bien: 'background:var(--accent-green-bg);color:var(--accent-green);', mal: 'background:var(--accent-red-bg);color:var(--accent-red);' };
   const plPct = (f) => (f * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 }) + ' %';
 
+  // Lo ya comprado este mes (mismo mes que llena la tarjeta DCA), en USD interno
+  function dcaMonthBoughtUsd() {
+    const n = new Date(), hoy = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`, mk = dcaMonthKey(hoy);
+    return transactions.filter(tx => dcaMonthKey(tx.date) === mk && tx.type === 'Compra' && tx.totalUsd > 0).reduce((s, tx) => s + tx.totalUsd, 0);
+  }
+
   function planInput() {
     const val = (toks) => toks.reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t && a.tag !== 'airdrop')), 0);
     const bolsa = settings.bolsaTarget || 0, rc = 100 - bolsa;
     const t = [settings.coreTarget ?? DEFAULT_CORE_TARGET, settings.satTarget ?? DEFAULT_SAT_TARGET, settings.defenseTarget || 0].map(v => rc > 0 ? v * 100 / rc : 0);
     const bs = settings.bolsaSplit || { nucleo: 50, satelites: 50 };
     const stk = portfolio.filter(a => a.kind === 'stock' && a.tag !== 'airdrop');
-    return { mensual: monthlySplit().totalUsd, ratioCrypto: rc,
+    return { mensual: Math.max(monthlySplit().totalUsd - dcaMonthBoughtUsd(), 0), ratioCrypto: rc,
       pesos: { crypto: { nucleo: t[0], satelites: t[1], refugio: t[2] }, bolsa: { nucleo: bs.nucleo, satelites: bs.satelites } },
       valores: { crypto: { nucleo: val(['BTC', 'ETH']), satelites: val(SATELLITE_TOKENS), refugio: val(['USDC']) },
         bolsa: { nucleo: stk.filter(a => a.token === 'SP').reduce((s, a) => s + getAssetValue(a), 0), satelites: stk.filter(a => a.token !== 'SP').reduce((s, a) => s + getAssetValue(a), 0) } } };
@@ -1025,7 +1031,7 @@ const App = (() => {
   function renderPlanPanel() {
     const box = document.getElementById('plan-panel');
     if (!box || typeof Plan === 'undefined') return;
-    const p = planInput(), m = Plan.modelo(p), pr = Plan.proyeccion(p, [12, 24]);
+    const p = planInput(), m = Plan.modelo(p), pr = Plan.proyeccion({ ...p, mensual: monthlySplit().totalUsd }, [12, 24]);   // la proyección usa el mes entero
     const campo = (k, lab, v) => `<div class="add-field"><label>${lab}</label><input type="number" min="0" step="1" data-plan="${k}" value="${+v.toFixed(1)}"></div>`;
     const cabeza = (nombre, ws, fitKey) => {
       const s = +ws.reduce((x, y) => x + y, 0).toFixed(1), ok = Math.abs(s - 100) <= 0.05, d = +Math.abs(s - 100).toFixed(1);
@@ -1063,9 +1069,9 @@ const App = (() => {
       <div class="cards-grid" style="margin-top:14px">
         <div class="card"><div class="card-label">Cartera</div><div class="card-value">${fmtCurrency(m.total)}</div>
           <div class="pl-chips">${chip('crypto', `Crypto <b>${fmtCurrency(m.lados.crypto.valor)}</b>`)}${chip('bolsa', `Bolsa <b>${fmtCurrency(m.lados.bolsa.valor)}</b>`)}</div></div>
-        <div class="card"><div class="card-label">Este mes a crypto</div><div class="card-value" style="color:${PL_COLOR.crypto}">${fmtCurrency(m.lados.crypto.rec)}</div><div class="card-sub">de tus ${fmtCurrency(p.mensual)} al mes</div></div>
-        <div class="card"><div class="card-label">Este mes a bolsa</div><div class="card-value" style="color:${PL_COLOR.bolsa}">${fmtCurrency(m.lados.bolsa.rec)}</div><div class="card-sub">de tus ${fmtCurrency(p.mensual)} al mes</div></div>
-        <div class="card"><div class="card-label">Llegas al ratio en</div><div class="card-value">${llega}</div><div class="card-sub">ratio ${rc} / ${100 - rc}, con ${fmtCurrency(p.mensual)} al mes</div></div>
+        <div class="card"><div class="card-label">Este mes a crypto</div><div class="card-value" style="color:${PL_COLOR.crypto}">${fmtCurrency(m.lados.crypto.rec)}</div><div class="card-sub">de los ${fmtCurrency(p.mensual)} que te faltan este mes</div></div>
+        <div class="card"><div class="card-label">Este mes a bolsa</div><div class="card-value" style="color:${PL_COLOR.bolsa}">${fmtCurrency(m.lados.bolsa.rec)}</div><div class="card-sub">de los ${fmtCurrency(p.mensual)} que te faltan este mes</div></div>
+        <div class="card"><div class="card-label">Llegas al ratio en</div><div class="card-value">${llega}</div><div class="card-sub">ratio ${rc} / ${100 - rc}, con ${fmtCurrency(monthlySplit().totalUsd)} al mes</div></div>
       </div>
       ${m.avisos.map(x => `<div class="warning-banner">⚠ ${x}</div>`).join('')}
       <p class="reparto-hint">Sin contar variaciones de precio: crypto pasa de ${plPct(m.lados.crypto.peso)} a ${plPct(pr.pesos[12].crypto)} en 12 meses y a ${plPct(pr.pesos[24].crypto)} en 24; bolsa, de ${plPct(m.lados.bolsa.peso)} a ${plPct(pr.pesos[12].bolsa)} y a ${plPct(pr.pesos[24].bolsa)}.</p>
@@ -1449,7 +1455,6 @@ const App = (() => {
     el.innerHTML = `
       <div class="dca-top">
         <span class="dca-month">${period.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</span>
-        <button type="button" class="dca-edit" id="dca-amount" title="Editar objetivo mensual" aria-label="Editar objetivo mensual">✎</button>
       </div>
       <div class="dca-amount">
         <span class="dca-invested">${symFmt(invested)}</span>
