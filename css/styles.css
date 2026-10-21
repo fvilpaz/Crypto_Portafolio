@@ -549,7 +549,8 @@ a:hover { text-decoration: underline; }
 .reparto-group-sum::marker { content: ''; }
 .reparto-group-tot { display: inline-flex; align-items: center; gap: 8px; letter-spacing: 0; color: var(--text-primary); }
 .strat-block[open] .reparto-group .strat-chevron { transform: none; }                  /* la flecha de la plantilla gira con la plantilla... */
-.strat-block[open] .reparto-group[open] .strat-chevron { transform: rotate(180deg); }   /* ...la del grupo, con el grupo */.reparto-row.idle .reparto-amt { font-weight: 500; font-size: 13px; color: var(--text-muted); }
+.strat-block[open] .reparto-group[open] .strat-chevron { transform: rotate(180deg); }   /* ...la del grupo, con el grupo */
+.reparto-row.idle .reparto-amt { font-weight: 500; font-size: 13px; color: var(--text-muted); }
 
 .card-icon {
   width: 36px;
