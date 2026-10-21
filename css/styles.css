@@ -2260,3 +2260,8 @@ body.light #mercado .new { color: #8a6500; }
   #mercado .two, #mercado .mgrs { grid-template-columns: 1fr; }
   #mercado .drawer .cols { grid-template-columns: 1fr; }
 }
+
+/* Panel Plan de inversión (Reparto del mes) */
+.pl-rango { width: 100%; accent-color: var(--accent-teal); margin: 6px 0; }
+.pl-tres { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; margin-top: 10px; }
+.pl-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }

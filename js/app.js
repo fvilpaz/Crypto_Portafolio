@@ -993,23 +993,83 @@ const App = (() => {
 
   // Reparto del mes: un desplegable por plantilla y, dentro, cuánto meter en cada
   // sitio este mes según esa estrategia. Abres las tres para comparar.
-  // Panel "Plan de inversión": dinero mensual, ratio crypto/bolsa y % dentro de crypto. Escribe en los ajustes que ya existen
-  // (dcaTarget, bolsaTarget y los objetivos de Núcleo/Satélites/Refugio = ratio crypto × peso), sin cálculo propio.
+  // Panel "Plan de inversión": entradas (dinero, ratio, % dentro de cada lado) y resultado, todo leído de UN cálculo (Plan.modelo, js/modelo.js).
+  // Escribe en los ajustes que ya existen (dcaTarget, bolsaTarget, coreTarget/satTarget/defenseTarget) y en bolsaSplit (núcleo/satélites de la bolsa).
+  const PL_ICONO = { nucleo: 'sp', satelites: 'cush', refugio: 'sv' }, PL_COLOR = { crypto: 'var(--accent-green)', bolsa: 'var(--accent-teal)' };
+  const PL_NOMBRE = { nucleo: 'Núcleo', satelites: 'Satélites', refugio: 'Refugio' };
+  const PL_TONO = { crypto: 'background:var(--accent-green-bg);color:var(--accent-green);', bolsa: 'background:rgba(45,212,191,.12);color:var(--accent-teal);',
+    bien: 'background:var(--accent-green-bg);color:var(--accent-green);', mal: 'background:var(--accent-red-bg);color:var(--accent-red);' };
+  const plPct = (f) => (f * 100).toLocaleString('es-ES', { maximumFractionDigits: 1 }) + ' %';
+
+  function planInput() {
+    const val = (toks) => toks.reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t && a.tag !== 'airdrop')), 0);
+    const bolsa = settings.bolsaTarget || 0, rc = 100 - bolsa;
+    const t = [settings.coreTarget ?? DEFAULT_CORE_TARGET, settings.satTarget ?? DEFAULT_SAT_TARGET, settings.defenseTarget || 0].map(v => rc > 0 ? v * 100 / rc : 0);
+    const bs = settings.bolsaSplit || { nucleo: 50, satelites: 50 };
+    const stk = portfolio.filter(a => a.kind === 'stock' && a.tag !== 'airdrop');
+    return { mensual: monthlySplit().totalUsd, ratioCrypto: rc,
+      pesos: { crypto: { nucleo: t[0], satelites: t[1], refugio: t[2] }, bolsa: { nucleo: bs.nucleo, satelites: bs.satelites } },
+      valores: { crypto: { nucleo: val(['BTC', 'ETH']), satelites: val(SATELLITE_TOKENS), refugio: val(['USDC']) },
+        bolsa: { nucleo: stk.filter(a => a.token === 'SP').reduce((s, a) => s + getAssetValue(a), 0), satelites: stk.filter(a => a.token !== 'SP').reduce((s, a) => s + getAssetValue(a), 0) } } };
+  }
+
+  // Dónde cae el dinero de un cubo: reparto interno de la app (coreSplit / satSplit; bolsa: S&P 500 y el resto a partes iguales)
+  function planDonde(lado, cubo, usd) {
+    let pos;
+    if (lado === 'crypto') pos = cubo === 'nucleo' ? Object.entries(settings.coreSplit) : cubo === 'satelites' ? Object.entries(settings.satSplit) : [['USDC', 1]];
+    else pos = cubo === 'nucleo' ? [['S&P 500', 1]] : STOCKS.filter(s => s[0] !== 'SP').map(s => [s[1], 1]);
+    const s = pos.reduce((x, [, w]) => x + w, 0);
+    return pos.map(([n, w]) => `${n} ${fmtCurrency(usd * w / s)}`).join(' · ');
+  }
+
   function renderPlanPanel() {
     const box = document.getElementById('plan-panel');
-    if (!box) return;
-    const bolsa = settings.bolsaTarget || 0, rc = 100 - bolsa;
-    const t = [settings.coreTarget ?? DEFAULT_CORE_TARGET, settings.satTarget ?? DEFAULT_SAT_TARGET, settings.defenseTarget || 0];
-    const w = t.map(v => rc > 0 ? +(v * 100 / rc).toFixed(1) : 0), suma = +w.reduce((s, v) => s + v, 0).toFixed(1), ok = Math.abs(suma - 100) <= 0.05;
-    const campo = (k, lab, val) => `<div class="add-field"><label>${lab}</label><input type="number" min="0" step="1" data-plan="${k}" value="${val}"></div>`;
+    if (!box || typeof Plan === 'undefined') return;
+    const p = planInput(), m = Plan.modelo(p), pr = Plan.proyeccion(p, [12, 24]);
+    const campo = (k, lab, v) => `<div class="add-field"><label>${lab}</label><input type="number" min="0" step="1" data-plan="${k}" value="${+v.toFixed(1)}"></div>`;
+    const cabeza = (nombre, ws, fitKey) => {
+      const s = +ws.reduce((x, y) => x + y, 0).toFixed(1), ok = Math.abs(s - 100) <= 0.05, d = +Math.abs(s - 100).toFixed(1);
+      return `<div class="strat-head"><span class="strat-name">${nombre}</span><span class="section-badge" style="${PL_TONO[ok ? 'bien' : 'mal']}white-space:nowrap">${ok ? 'suman 100 %' : (s > 100 ? 'sobran ' : 'faltan ') + d + ' pts'}</span></div>`
+        + (ok ? '' : `<button class="tx-btn" data-plan="${fitKey}" style="margin-top:8px">Ajustar a 100</button>`);
+    };
+    const wc = [p.pesos.crypto.nucleo, p.pesos.crypto.satelites, p.pesos.crypto.refugio], wb = [p.pesos.bolsa.nucleo, p.pesos.bolsa.satelites];
+    const rc = p.ratioCrypto;
+    const llega = pr.llega === 0 ? 'Ya estás' : pr.llega === null ? 'No en 20 años' : `${pr.llega} ${pr.llega === 1 ? 'mes' : 'meses'}`;
+    const chip = (lado, txt) => `<span class="section-badge" style="${PL_TONO[lado]}white-space:nowrap">${txt}</span>`;
+    const lados = Plan.LADOS.map((l) => {
+      const L = m.lados[l];
+      const filas = L.cubos.map((hj) => `
+        <div class="reparto-row ${hj.rec < 0.005 ? 'idle' : ''}">
+          <span class="reparto-coin"><span class="token-icon ${PL_ICONO[hj.cubo]}">${PL_NOMBRE[hj.cubo][0]}</span></span>
+          <div class="reparto-mid"><span class="reparto-name">${PL_NOMBRE[hj.cubo]}</span>
+            <span class="card-sub" style="margin:0">hoy ${plPct(hj.peso)} · objetivo ${plPct(hj.objetivo)} de la cartera${hj.falta > 0.5 ? ` · faltan ${fmtCurrency(hj.falta)}` : ' · cubierto'}</span>
+            ${hj.rec >= 0.005 ? `<span class="card-sub" style="margin:0;color:var(--text-muted)">${planDonde(l, hj.cubo, hj.rec)}</span>` : ''}</div>
+          <span class="reparto-amt">${hj.rec >= 0.005 ? fmtCurrency(hj.rec) : '—'}</span></div>`).join('');
+      return `<div class="card" style="border-top:3px solid ${PL_COLOR[l]}">
+        <div class="strat-head"><span class="strat-name" style="color:${PL_COLOR[l]}">${l === 'crypto' ? 'Crypto' : 'Bolsa'}</span><span class="card-sub" style="margin:0">hoy ${plPct(L.peso)} → objetivo ${plPct(L.objetivo)}</span></div>
+        <div class="cosmos-bar-wrap"><div class="progress-bar"><div class="progress-fill" style="width:${Math.min(L.peso * 100, 100)}%;background:${PL_COLOR[l]}"></div><div class="card-bar-mark" style="left:${L.objetivo * 100}%"></div></div></div>
+        <div class="card-sub">Este mes: <strong>${fmtCurrency(L.rec)}</strong></div>
+        ${L.rec < 0.005 && L.peso > L.objetivo ? '<div class="card-sub" style="color:var(--accent-yellow)">Ya está por encima de su objetivo: este mes no recibe dinero, aunque algún cubo esté por debajo.</div>' : ''}<div class="reparto-group">${filas}</div></div>`;
+    }).join('');
     box.innerHTML = `
-      <div class="card"><div class="card-label">Dinero al mes para invertir (€)</div><div class="add-field"><input type="number" min="0" step="10" data-plan="dca" value="${settings.dcaTarget || 0}"></div></div>
-      <div class="card"><div class="card-label">Crypto en la cartera (%)</div><div class="add-field"><input type="number" min="0" max="100" step="1" data-plan="rc" value="${rc}"></div>
-        <div class="card-sub">Bolsa ${bolsa} % (el resto)</div></div>
-      <div class="card"><div class="strat-head"><span class="strat-name">Dentro de crypto</span>
-        <span class="section-badge" style="${ok ? 'background:var(--accent-green-bg);color:var(--accent-green);' : 'background:var(--accent-red-bg);color:var(--accent-red);'}white-space:nowrap">${ok ? 'suman 100 %' : (suma > 100 ? 'sobran ' : 'faltan ') + +Math.abs(suma - 100).toFixed(1) + ' pts'}</span></div>
-        <div class="add-field-row" style="display:flex;gap:8px">${campo('w0', 'Núcleo', w[0])}${campo('w1', 'Satélites', w[1])}${campo('w2', 'Refugio', w[2])}</div>
-        ${ok ? '' : '<button class="tx-btn" data-plan="fit" style="margin-top:8px">Ajustar a 100</button>'}</div>`;
+      <div class="cards-grid">
+        <div class="card"><div class="card-label">Dinero al mes para invertir (€)</div><div class="add-field"><input type="number" min="0" step="10" data-plan="dca" value="${settings.dcaTarget || 0}"></div></div>
+        <div class="card"><div class="card-label">Ratio crypto / bolsa</div><input type="range" class="pl-rango" min="0" max="100" step="1" data-plan="rc" value="${rc}">
+          <div class="strat-head"><span class="strat-legend lg-core">Crypto ${rc} %</span><span class="strat-legend lg-bolsa">Bolsa ${100 - rc} %</span></div>
+          <div class="strat-bar"><span class="seg seg-core" style="width:${rc}%"></span><span class="seg seg-bolsa" style="width:${100 - rc}%"></span></div></div>
+        <div class="card">${cabeza('Crypto', wc, 'fit')}<div class="pl-tres">${campo('w0', 'Núcleo', wc[0])}${campo('w1', 'Satélites', wc[1])}${campo('w2', 'Refugio', wc[2])}</div></div>
+        <div class="card">${cabeza('Bolsa', wb, 'fitb')}<div class="pl-tres">${campo('b0', 'Núcleo', wb[0])}${campo('b1', 'Satélites', wb[1])}</div></div>
+      </div>
+      <div class="cards-grid" style="margin-top:14px">
+        <div class="card"><div class="card-label">Cartera</div><div class="card-value">${fmtCurrency(m.total)}</div>
+          <div class="pl-chips">${chip('crypto', `Crypto <b>${fmtCurrency(m.lados.crypto.valor)}</b>`)}${chip('bolsa', `Bolsa <b>${fmtCurrency(m.lados.bolsa.valor)}</b>`)}</div></div>
+        <div class="card"><div class="card-label">Este mes a crypto</div><div class="card-value" style="color:${PL_COLOR.crypto}">${fmtCurrency(m.lados.crypto.rec)}</div><div class="card-sub">de tus ${fmtCurrency(p.mensual)} al mes</div></div>
+        <div class="card"><div class="card-label">Este mes a bolsa</div><div class="card-value" style="color:${PL_COLOR.bolsa}">${fmtCurrency(m.lados.bolsa.rec)}</div><div class="card-sub">de tus ${fmtCurrency(p.mensual)} al mes</div></div>
+        <div class="card"><div class="card-label">Llegas al ratio en</div><div class="card-value">${llega}</div><div class="card-sub">ratio ${rc} / ${100 - rc}, con ${fmtCurrency(p.mensual)} al mes</div></div>
+      </div>
+      ${m.avisos.map(x => `<div class="warning-banner">⚠ ${x}</div>`).join('')}
+      <p class="reparto-hint">Sin contar variaciones de precio: crypto pasa de ${plPct(m.lados.crypto.peso)} a ${plPct(pr.pesos[12].crypto)} en 12 meses y a ${plPct(pr.pesos[24].crypto)} en 24; bolsa, de ${plPct(m.lados.bolsa.peso)} a ${plPct(pr.pesos[12].bolsa)} y a ${plPct(pr.pesos[24].bolsa)}.</p>
+      <div class="cards-grid">${lados}</div>`;
   }
 
   function onPlanPanelChange(e) {
@@ -1017,7 +1077,11 @@ const App = (() => {
     if (!k) return;
     const n = (sel) => Math.max(parseFloat(document.querySelector(`#plan-panel [data-plan="${sel}"]`)?.value) || 0, 0);
     if (k === 'dca') settings.dcaTarget = n('dca');
-    else {
+    else if (k === 'b0' || k === 'b1' || k === 'fitb') {
+      let b = [n('b0'), n('b1')];
+      if (k === 'fitb') { const s = b[0] + b[1]; if (s <= 0) return; b = b.map(v => v * 100 / s); }
+      settings.bolsaSplit = { nucleo: +b[0].toFixed(1), satelites: +b[1].toFixed(1) };
+    } else {
       const rc = Math.min(n('rc'), 100);
       let w = [n('w0'), n('w1'), n('w2')];
       if (k === 'fit') { const s = w.reduce((x, y) => x + y, 0); if (s <= 0) return; w = w.map(v => v * 100 / s); }
