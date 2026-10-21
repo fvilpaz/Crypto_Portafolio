@@ -40,7 +40,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
 /* Datos reales: ultimo 13F de cada gestor (los genera scripts/update_13f.py). Se cargan al abrir Mercado por primera vez. */
 (function () {
   const fx = window.mkFx, view = document.getElementById('mercado'), cont = document.getElementById('b13f');
-  let datos = null;
+  let datos = null, indice = null, coin = null;
   const el = (tag, txt, cls) => { const e = document.createElement(tag); e.textContent = txt; if (cls) e.className = cls; return e; };
   const billones = (usd) => (fx.toCur(usd) / 1e9).toLocaleString('es-ES', { maximumFractionDigits: 1 }) + ' mil M' + (fx.cur() === 'EUR' ? '€' : '$');
   const dia = (iso) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -68,12 +68,40 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     return sec;
   }
   function pintar() { if (datos) cont.replaceChildren(...datos.map(seccion)); }
+  const pct = (n) => n.toLocaleString('es-ES') + ' %';
+  const MOVIMIENTOS = [   // [simbolo, singular, plural, clase del chip, test sobre cambio_acciones_pct]
+    ['★', 'nueva', 'nuevas', 'new', (c) => c === 'nueva'], ['▲', 'sube', 'suben', 'up', (c) => c > 0], ['▼', 'baja', 'bajan', 'dn', (c) => c !== 'nueva' && c < 0],
+  ];
+  function filaCoinciden(f) {
+    const gestor = (clave) => indice.find((g) => g.clave === clave);
+    const quien = el('div', '', 'who');
+    f.gestores.forEach((g) => { const i = el('span', gestor(g.clave).corto, 'token-icon'); i.title = gestor(g.clave).nombre + ' · ' + pct(g.peso_pct); quien.append(i); });
+    const mayor = f.gestores.reduce((a, b) => (b.peso_pct > a.peso_pct ? b : a));
+    const mov = el('td', '');
+    MOVIMIENTOS.forEach(([simbolo, uno, varios, cls, test]) => {
+      const n = f.gestores.filter((g) => test(g.cambio_acciones_pct)).length;
+      if (n) mov.append(el('span', `${simbolo} ${n} ${n === 1 ? uno : varios}`, 'chip ' + cls), ' ');
+    });
+    if (!mov.hasChildNodes()) mov.textContent = 'Sin cambios';
+    const celdaQuien = el('td', ''); celdaQuien.append(quien);
+    const tr = document.createElement('tr');
+    tr.append(el('td', f.emisor, 'tk'), celdaQuien, el('td', f.gestores.length, 'text-right'), el('td', `${pct(mayor.peso_pct)} (${gestor(mayor.clave).corto})`, 'text-right'), mov);
+    return tr;
+  }
+  function pintarCoinciden() {
+    if (!coin) return;
+    const poner = (id, txt) => { document.getElementById(id).textContent = txt; };
+    const [anio, mes] = coin.periodo.split('-');
+    poner('k-gestores', coin.gestores_seguidos); poner('k-periodo', 'T' + Math.ceil(+mes / 3) + ' ' + anio);
+    poner('k-2mas', coin.en_2_o_mas); poner('k-todas', coin.en_todas);
+    document.getElementById('b13f-coinciden').replaceChildren(...coin.filas.map(filaCoinciden));
+  }
   document.getElementById('mk-btn').addEventListener('click', () => {
     if (view.hidden || datos) return;
     const json = (url) => fetch(url).then((r) => r.json());
     json('data/13f_indice.json')
-      .then((ix) => Promise.all(ix.map((g) => json('data/13f_' + encodeURIComponent(g.clave) + '.json'))))
-      .then((ds) => { datos = ds; pintar(); })
+      .then((ix) => { indice = ix; return Promise.all([json('data/13f_coinciden.json'), ...ix.map((g) => json('data/13f_' + encodeURIComponent(g.clave) + '.json'))]); })
+      .then(([c, ...ds]) => { coin = c; datos = ds; pintar(); pintarCoinciden(); })
       .catch(() => { cont.textContent = 'No se pudieron cargar los datos de los gestores.'; });
   });
   fx.onChange(pintar);

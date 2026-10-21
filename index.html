@@ -58,22 +58,17 @@
 <!-- ═════════ BOLSA ═════════ -->
 <div id="mkv1" class="view on">
   <div class="kpis">
-    <div class="card"><div class="card-label">Gestores seguidos</div><div class="card-value">10</div></div>
-    <div class="card"><div class="card-label">Último 13F (trimestre)</div><div class="card-value">T2 2026</div></div>
-    <div class="card"><div class="card-label">Empresas en 3+ carteras</div><div class="card-value">14</div></div>
-    <div class="card"><div class="card-label">Compras nuevas este trimestre</div><div class="card-value" style="color:var(--accent-green)">9</div></div>
+    <div class="card"><div class="card-label">Gestores seguidos</div><div class="card-value" id="k-gestores">—</div></div>
+    <div class="card"><div class="card-label">Último 13F (trimestre)</div><div class="card-value" id="k-periodo">—</div></div>
+    <div class="card"><div class="card-label">Empresas en 2+ carteras</div><div class="card-value" id="k-2mas">—</div></div>
+    <div class="card"><div class="card-label">Empresas en todas</div><div class="card-value" id="k-todas">—</div></div>
   </div>
 
   <div id="b13f"><p class="reparto-hint">Cargando…</p></div>
 
   <h2 class="section-title">Dónde coinciden</h2>
-  <p class="reparto-hint">Empresas que varios gestores tienen a la vez. Pulsa una fila para ver la ficha. Se excluyen los gigantes del índice que están en todas.</p>
-  <div class="table-wrapper"><table><thead><tr><th>Empresa</th><th>Quién la tiene</th><th class="text-right">Nº</th><th>Peso medio</th><th>Movimiento T2</th><th class="text-right">Precio</th></tr></thead><tbody>
-    <tr class="row" onclick="mkFicha('CEG')"><td><span class="tk">CEG</span><div class="nm">Constellation Energy</div></td><td><div class="who"><span class="token-icon">BR</span><span class="token-icon">BK</span><span class="token-icon">TG</span><span class="token-icon">DC</span></div></td><td class="text-right">4</td><td><span class="reparto-prog-wrap" style="display:inline-block;width:90px;vertical-align:middle"><span class="reparto-prog-bar" style="display:block;width:62%;background:var(--accent-yellow)"></span></span> 2,4 %</td><td><span class="chip up">▲ 3 aumentan</span></td><td class="text-right">$312,40</td></tr>
-    <tr class="row" onclick="mkFicha('VST')"><td><span class="tk">VST</span><div class="nm">Vistra</div></td><td><div class="who"><span class="token-icon">BR</span><span class="token-icon">TG</span><span class="token-icon">DC</span></div></td><td class="text-right">3</td><td><span class="reparto-prog-wrap" style="display:inline-block;width:90px;vertical-align:middle"><span class="reparto-prog-bar" style="display:block;width:48%;background:var(--accent-yellow)"></span></span> 1,9 %</td><td><span class="chip new">★ 2 compras nuevas</span></td><td class="text-right">$187,15</td></tr>
-    <tr class="row" onclick="mkFicha('NEE')"><td><span class="tk">NEE</span><div class="nm">NextEra Energy</div></td><td><div class="who"><span class="token-icon">BK</span><span class="token-icon">DC</span><span class="token-icon">TG</span></div></td><td class="text-right">3</td><td><span class="reparto-prog-wrap" style="display:inline-block;width:90px;vertical-align:middle"><span class="reparto-prog-bar" style="display:block;width:30%;background:var(--accent-yellow)"></span></span> 1,2 %</td><td><span class="chip up">▲ 1 aumenta</span></td><td class="text-right">$84,02</td></tr>
-    <tr class="row" onclick="mkFicha('DE')"><td><span class="tk">DE</span><div class="nm">Deere &amp; Co (agrícola)</div></td><td><div class="who"><span class="token-icon">BK</span><span class="token-icon">BR</span><span class="token-icon">GF</span></div></td><td class="text-right">3</td><td><span class="reparto-prog-wrap" style="display:inline-block;width:90px;vertical-align:middle"><span class="reparto-prog-bar" style="display:block;width:22%;background:var(--accent-yellow)"></span></span> 0,9 %</td><td><span class="chip dn">▼ 2 reducen</span></td><td class="text-right">$455,60</td></tr>
-  </tbody></table></div>
+  <p class="reparto-hint">Empresas que varios de estos gestores tienen a la vez, ordenadas por cuántos las tienen y por peso. Se compara por nombre de emisor: un mismo fondo puede agrupar varios productos (p. ej. iShares). Que coincidan no significa que pesen lo mismo: mira el peso de cada uno.</p>
+  <div class="table-wrapper"><table><thead><tr><th>Empresa</th><th>Quién la tiene</th><th class="text-right">Nº</th><th class="text-right">Peso más alto</th><th>Movimiento frente al trimestre anterior</th></tr></thead><tbody id="b13f-coinciden"><tr><td colspan="5" class="nm">Cargando…</td></tr></tbody></table></div>
 
   <details class="card" style="margin-top:12px;padding:12px 16px"><summary style="cursor:pointer;color:var(--text-secondary);font-size:13px;font-weight:600">Inversores y gestoras</summary>
     <div class="mgrs">

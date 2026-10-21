@@ -12,9 +12,9 @@ from collections import defaultdict
 from pathlib import Path
 
 GESTORES = [
-    {"clave": "berkshire", "nombre": "Berkshire Hathaway", "cik": "0001067983"},
-    {"clave": "bridgewater", "nombre": "Bridgewater Associates", "cik": "0001350694"},
-    {"clave": "gates", "nombre": "Gates Foundation Trust", "cik": "0001166559"},
+    {"clave": "berkshire", "corto": "BK", "nombre": "Berkshire Hathaway", "cik": "0001067983"},
+    {"clave": "bridgewater", "corto": "BR", "nombre": "Bridgewater Associates", "cik": "0001350694"},
+    {"clave": "gates", "corto": "GF", "nombre": "Gates Foundation Trust", "cik": "0001166559"},
 ]
 DATOS = Path(__file__).resolve().parent.parent / "data"
 UA = os.environ.get("SEC_USER_AGENT")
@@ -47,6 +47,11 @@ def posiciones(cik, acc):
     return suma
 
 
+def cambio_acciones(prev, acciones):
+    """% de acciones frente al trimestre anterior, o "nueva" si no estaba."""
+    return "nueva" if not prev else round((acciones / prev[1] - 1) * 100, 1)
+
+
 def procesar(gestor):
     sub = json.loads(get(f"https://data.sec.gov/submissions/CIK{gestor['cik']}.json"))["filings"]["recent"]
     presentaciones = [(sub["accessionNumber"][i], sub["reportDate"][i], sub["filingDate"][i])
@@ -58,9 +63,8 @@ def procesar(gestor):
     top = []
     for emisor, (valor, acciones) in sorted(ahora.items(), key=lambda kv: -kv[1][0])[:10]:
         prev = antes.get(emisor)
-        cambio = "nueva" if not prev else round((acciones / prev[1] - 1) * 100, 1)   # % de acciones frente al trimestre anterior
         top.append({"emisor": emisor, "valor_usd": valor, "peso_pct": round(valor / total * 100, 2),
-                    "acciones": acciones, "cambio_acciones_pct": cambio})
+                    "acciones": acciones, "cambio_acciones_pct": cambio_acciones(prev, acciones)})
 
     (DATOS / f"13f_{gestor['clave']}.json").write_text(json.dumps({
         "gestor": gestor["nombre"], "cik": gestor["cik"], "periodo": periodo, "presentado": presentado,
@@ -68,16 +72,33 @@ def procesar(gestor):
         "total_usd": total, "n_emisores": len(ahora), "top": top,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"{gestor['nombre']}: periodo {periodo}, {len(ahora)} emisores, total {total/1e6:,.0f} M$")
+    return {"ahora": ahora, "antes": antes, "total": total, "periodo": periodo}
+
+
+def coincidencias(todos):
+    """Empresas que 2 o mas gestores tienen a la vez (por nombre de emisor, ya sumado dentro de cada gestor)."""
+    por_emisor = defaultdict(list)
+    for clave, t in todos.items():
+        for emisor, (valor, acciones) in t["ahora"].items():
+            por_emisor[emisor].append({"clave": clave, "peso_pct": round(valor / t["total"] * 100, 2),
+                                       "cambio_acciones_pct": cambio_acciones(t["antes"].get(emisor), acciones)})
+    varios = {e: g for e, g in por_emisor.items() if len(g) >= 2}
+    orden = sorted(varios.items(), key=lambda kv: (-len(kv[1]), -sum(x["peso_pct"] for x in kv[1])))
+    return {"gestores_seguidos": len(todos), "periodo": max(t["periodo"] for t in todos.values()),
+            "en_2_o_mas": len(varios), "en_todas": sum(1 for g in varios.values() if len(g) == len(todos)),
+            "filas": [{"emisor": e, "gestores": g} for e, g in orden[:15]]}
 
 
 DATOS.mkdir(exist_ok=True)
-hechos, fallos = [], 0
+hechos, todos, fallos = [], {}, 0
 for g in GESTORES:
     try:
-        procesar(g)
-        hechos.append({"clave": g["clave"], "nombre": g["nombre"]})
+        todos[g["clave"]] = procesar(g)
+        hechos.append({"clave": g["clave"], "corto": g["corto"], "nombre": g["nombre"]})
     except Exception as e:   # un gestor que falla no tumba a los demas
         fallos += 1
         print(f"FALLO {g['nombre']}: {e}", file=sys.stderr)
 (DATOS / "13f_indice.json").write_text(json.dumps(hechos, ensure_ascii=False, indent=2), encoding="utf-8")
+if len(todos) >= 2:
+    (DATOS / "13f_coinciden.json").write_text(json.dumps(coincidencias(todos), ensure_ascii=False, indent=2), encoding="utf-8")
 sys.exit(1 if fallos else 0)

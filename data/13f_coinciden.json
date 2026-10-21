@@ -1,0 +1,238 @@
+{
+  "gestores_seguidos": 3,
+  "periodo": "2026-06-30",
+  "en_2_o_mas": 35,
+  "en_todas": 1,
+  "filas": [
+    {
+      "emisor": "KRAFT HEINZ CO",
+      "gestores": [
+        {
+          "clave": "berkshire",
+          "peso_pct": 2.57,
+          "cambio_acciones_pct": 0.0
+        },
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.01,
+          "cambio_acciones_pct": 4.7
+        },
+        {
+          "clave": "gates",
+          "peso_pct": 0.17,
+          "cambio_acciones_pct": 0.0
+        }
+      ]
+    },
+    {
+      "emisor": "APPLE INC",
+      "gestores": [
+        {
+          "clave": "berkshire",
+          "peso_pct": 22.04,
+          "cambio_acciones_pct": 0.0
+        },
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.43,
+          "cambio_acciones_pct": -35.3
+        }
+      ]
+    },
+    {
+      "emisor": "CATERPILLAR INC",
+      "gestores": [
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.03,
+          "cambio_acciones_pct": -91.1
+        },
+        {
+          "clave": "gates",
+          "peso_pct": 19.65,
+          "cambio_acciones_pct": 0.0
+        }
+      ]
+    },
+    {
+      "emisor": "AMERICAN EXPRESS CO",
+      "gestores": [
+        {
+          "clave": "berkshire",
+          "peso_pct": 17.14,
+          "cambio_acciones_pct": 0.0
+        },
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.04,
+          "cambio_acciones_pct": 35.8
+        }
+      ]
+    },
+    {
+      "emisor": "ALPHABET INC",
+      "gestores": [
+        {
+          "clave": "berkshire",
+          "peso_pct": 12.62,
+          "cambio_acciones_pct": 83.2
+        },
+        {
+          "clave": "bridgewater",
+          "peso_pct": 2.05,
+          "cambio_acciones_pct": -41.4
+        }
+      ]
+    },
+    {
+      "emisor": "COCA COLA CO",
+      "gestores": [
+        {
+          "clave": "berkshire",
+          "peso_pct": 10.86,
+          "cambio_acciones_pct": 0.0
+        },
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.08,
+          "cambio_acciones_pct": 0.2
+        }
+      ]
+    },
+    {
+      "emisor": "BANK OF AMER CORP",
+      "gestores": [
+        {
+          "clave": "berkshire",
+          "peso_pct": 9.2,
+          "cambio_acciones_pct": "nueva"
+        },
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.24,
+          "cambio_acciones_pct": "nueva"
+        }
+      ]
+    },
+    {
+      "emisor": "DEERE & CO",
+      "gestores": [
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.0,
+          "cambio_acciones_pct": "nueva"
+        },
+        {
+          "clave": "gates",
+          "peso_pct": 6.56,
+          "cambio_acciones_pct": 0.0
+        }
+      ]
+    },
+    {
+      "emisor": "CHEVRON CORPORATION",
+      "gestores": [
+        {
+          "clave": "berkshire",
+          "peso_pct": 4.67,
+          "cambio_acciones_pct": 0.0
+        },
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.11,
+          "cambio_acciones_pct": 5374.1
+        }
+      ]
+    },
+    {
+      "emisor": "CHUBB LIMITED",
+      "gestores": [
+        {
+          "clave": "berkshire",
+          "peso_pct": 3.9,
+          "cambio_acciones_pct": "nueva"
+        },
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.09,
+          "cambio_acciones_pct": "nueva"
+        }
+      ]
+    },
+    {
+      "emisor": "MOODYS CORP",
+      "gestores": [
+        {
+          "clave": "berkshire",
+          "peso_pct": 3.73,
+          "cambio_acciones_pct": 0.0
+        },
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.06,
+          "cambio_acciones_pct": "nueva"
+        }
+      ]
+    },
+    {
+      "emisor": "WALMART INC",
+      "gestores": [
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.12,
+          "cambio_acciones_pct": 2.8
+        },
+        {
+          "clave": "gates",
+          "peso_pct": 2.76,
+          "cambio_acciones_pct": 0.0
+        }
+      ]
+    },
+    {
+      "emisor": "FEDEX CORP",
+      "gestores": [
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.09,
+          "cambio_acciones_pct": 4635.8
+        },
+        {
+          "clave": "gates",
+          "peso_pct": 2.17,
+          "cambio_acciones_pct": 0.0
+        }
+      ]
+    },
+    {
+      "emisor": "DAVITA INC",
+      "gestores": [
+        {
+          "clave": "berkshire",
+          "peso_pct": 2.15,
+          "cambio_acciones_pct": -4.1
+        },
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.01,
+          "cambio_acciones_pct": -47.4
+        }
+      ]
+    },
+    {
+      "emisor": "DELTA AIR LINES INC",
+      "gestores": [
+        {
+          "clave": "berkshire",
+          "peso_pct": 1.79,
+          "cambio_acciones_pct": 44.0
+        },
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.01,
+          "cambio_acciones_pct": 1.1
+        }
+      ]
+    }
+  ]
+}
