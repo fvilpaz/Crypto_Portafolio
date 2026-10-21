@@ -1,0 +1,83 @@
+{
+  "gestor": "Berkshire Hathaway",
+  "cik": "0001067983",
+  "periodo": "2026-06-30",
+  "presentado": "2026-08-14",
+  "periodo_anterior": "2026-03-31",
+  "accesion": "0001193125-26-352200",
+  "fuente": "SEC EDGAR, formulario 13F-HR",
+  "total_usd": 299253556246,
+  "n_emisores": 26,
+  "top": [
+    {
+      "emisor": "APPLE INC",
+      "valor_usd": 65950296923,
+      "peso_pct": 22.04,
+      "acciones": 227917808,
+      "cambio_acciones_pct": 0.0
+    },
+    {
+      "emisor": "AMERICAN EXPRESS CO",
+      "valor_usd": 51282319275,
+      "peso_pct": 17.14,
+      "acciones": 151610700,
+      "cambio_acciones_pct": 0.0
+    },
+    {
+      "emisor": "ALPHABET INC",
+      "valor_usd": 37764088383,
+      "peso_pct": 12.62,
+      "acciones": 105979600,
+      "cambio_acciones_pct": 83.2
+    },
+    {
+      "emisor": "COCA COLA CO",
+      "valor_usd": 32508000000,
+      "peso_pct": 10.86,
+      "acciones": 400000000,
+      "cambio_acciones_pct": 0.0
+    },
+    {
+      "emisor": "BANK OF AMER CORP",
+      "valor_usd": 27543790975,
+      "peso_pct": 9.2,
+      "acciones": 483394015,
+      "cambio_acciones_pct": "nueva"
+    },
+    {
+      "emisor": "CHEVRON CORPORATION",
+      "valor_usd": 13986141890,
+      "peso_pct": 4.67,
+      "acciones": 84375856,
+      "cambio_acciones_pct": 0.0
+    },
+    {
+      "emisor": "OCCIDENTAL PETE CORP",
+      "valor_usd": 12868205304,
+      "peso_pct": 4.3,
+      "acciones": 264941431,
+      "cambio_acciones_pct": 0.0
+    },
+    {
+      "emisor": "CHUBB LIMITED",
+      "valor_usd": 11670066615,
+      "peso_pct": 3.9,
+      "acciones": 34249183,
+      "cambio_acciones_pct": "nueva"
+    },
+    {
+      "emisor": "MOODYS CORP",
+      "valor_usd": 11173435852,
+      "peso_pct": 3.73,
+      "acciones": 24669778,
+      "cambio_acciones_pct": 0.0
+    },
+    {
+      "emisor": "KRAFT HEINZ CO",
+      "valor_usd": 7691494401,
+      "peso_pct": 2.57,
+      "acciones": 325634818,
+      "cambio_acciones_pct": 0.0
+    }
+  ]
+}
