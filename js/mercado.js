@@ -41,9 +41,8 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
 (function () {
   const fx = window.mkFx, view = document.getElementById('mercado'), cont = document.getElementById('b13f');
   let datos = null, indice = null, coin = null;
-  // Empresas que sigo en bolsa (el catalogo de la app: S&P 500, SpaceX, Tesla, Nvidia, Microsoft). [texto del emisor en el 13F, nombre]
-  const SEGUIDAS = [['S&P 500', 'S&P 500'], ['SPACE EXPLORATION', 'SpaceX'], ['TESLA', 'Tesla'], ['NVIDIA', 'Nvidia'], ['MICROSOFT', 'Microsoft']];
-  const sigo = (emisor) => SEGUIDAS.some(([k]) => emisor.toUpperCase().includes(k));
+  // Las empresas que sigo en bolsa las define scripts/update_13f.py (SEGUIDAS) y llegan en coin.seguidas.
+  const sigo = (emisor) => !!coin && coin.seguidas.some((s) => emisor.toUpperCase().includes(s.patron));
   const el = (tag, txt, cls) => { const e = document.createElement(tag); e.textContent = txt; if (cls) e.className = cls; return e; };
   const billones = (usd) => (fx.toCur(usd) / 1e9).toLocaleString('es-ES', { maximumFractionDigits: 1 }) + ' mil M' + (fx.cur() === 'EUR' ? '€' : '$');
   const dia = (iso) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -72,8 +71,8 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     return sec;
   }
   function pintar() {
-    if (!datos) return;
-    const leyenda = el('p', `En turquesa, las empresas que sigues en bolsa (${SEGUIDAS.map(([, n]) => n).join(', ')}).`, 'reparto-hint');
+    if (!datos || !coin) return;
+    const leyenda = el('p', `En turquesa, las empresas que sigues en bolsa (${coin.seguidas.map((s) => s.nombre).join(', ')}).`, 'reparto-hint');
     cont.replaceChildren(leyenda, ...datos.map(seccion));
   }
   const pct = (n) => n.toLocaleString('es-ES') + ' %';
@@ -97,6 +96,13 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     tr.append(el('td', f.emisor, 'tk'), celdaQuien, el('td', f.gestores.length, 'text-right'), el('td', `${pct(mayor.peso_pct)} (${gestor(mayor.clave).corto})`, 'text-right'), mov);
     return tr;
   }
+  function filaSeguida(s) {
+    if (s.gestores.length) { const tr = filaCoinciden({ emisor: s.nombre, gestores: s.gestores }); tr.className = 'sigo'; return tr; }
+    const tr = document.createElement('tr'); tr.className = 'sigo';
+    const sin = el('td', 'Ningún gestor de la lista la tiene entre sus posiciones', 'nm'); sin.colSpan = 4;
+    tr.append(el('td', s.nombre, 'tk'), sin);
+    return tr;
+  }
   function pintarCoinciden() {
     if (!coin) return;
     const poner = (id, txt) => { document.getElementById(id).textContent = txt; };
@@ -104,6 +110,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     poner('k-gestores', coin.gestores_seguidos); poner('k-periodo', 'T' + Math.ceil(+mes / 3) + ' ' + anio);
     poner('k-2mas', coin.en_2_o_mas); poner('k-todas', coin.en_todas);
     document.getElementById('b13f-coinciden').replaceChildren(...coin.filas.map(filaCoinciden));
+    document.getElementById('b13f-seguidas').replaceChildren(...coin.seguidas.map(filaSeguida));
   }
   document.getElementById('mk-btn').addEventListener('click', () => {
     if (view.hidden || datos) return;
