@@ -168,7 +168,7 @@ const App = (() => {
   function registerCustomStocks() {
     Object.entries(settings.customStocks || {}).forEach(([tok, m]) => {
       if (!/^[A-Z0-9.]{1,10}$/.test(tok) || COINS[tok]) return;
-      COINS[tok] = { name: String(m?.name || tok).replace(/[<>&"']/g, ''), kind: 'stock', icon: '', color: '#2dd4bf', cssClass: 'stk' };
+      COINS[tok] = { name: String(m?.name || tok).replace(/[<>&"']/g, ''), kind: 'stock', icon: `https://financialmodelingprep.com/image-stock/${tok}.png`, color: '#2dd4bf', cssClass: 'stk' };   // logo público; si no carga, iconHtml vuelve a las letras
     });
   }
   registerCustomStocks();
