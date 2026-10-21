@@ -5,8 +5,8 @@ La clave solo va como variable de entorno (en GitHub, el secreto TWELVE_DATA_KEY
 
 Limites del plan gratuito (twelvedata.com/pricing): 8 creditos por minuto y 800 al dia; /quote cuesta 1 credito por simbolo.
 Por eso: UNA llamada por simbolo, una cada PAUSA segundos (6 por minuto), como mucho MAX_SIMBOLOS por ejecucion y, si la API
-responde 429, se para en seco (sin reintentar) y se conservan los precios anteriores. Con las 2 ejecuciones al dia de la Action son
-como mucho 2 x MAX_SIMBOLOS = 80 creditos. El plan gratuito lista acciones y ETF de EE. UU.; los europeos (p. ej. VUAA) pueden
+responde 429, se para en seco (sin reintentar) y se conservan los precios anteriores. Con las 12 ejecuciones al dia de la Action (una cada 2 h)
+son como mucho 12 x MAX_SIMBOLOS = 480 creditos. El plan gratuito lista acciones y ETF de EE. UU.; los europeos (p. ej. VUAA) pueden
 fallar: su error queda en "errores" y la app los sigue valorando a precio de compra. No se inventa ningun precio.
 """
 import json, os, sys, time, urllib.error, urllib.parse, urllib.request
@@ -69,9 +69,10 @@ def main():
 
     simbolos = {it["symbol"] for it in lista}
     try:
-        previo = json.loads(SALIDA.read_text(encoding="utf8")).get("precios", {})
+        anterior = json.loads(SALIDA.read_text(encoding="utf8"))
     except Exception:
-        previo = {}
+        anterior = {}
+    previo = anterior.get("precios", {})
     precios = {s: v for s, v in previo.items() if s in simbolos}   # lo que falle ahora conserva su precio (y su fecha) anterior
     errores, nuevos = {}, 0
     ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -101,6 +102,15 @@ def main():
     if nuevos == 0:
         print("Ningun precio nuevo: se conserva el archivo anterior.", file=sys.stderr)
         return 1
+    # Si ningun precio ha cambiado (p. ej. con el mercado cerrado) y el archivo es reciente, no se reescribe: asi no hay commits ni despliegues de mas.
+    firma = lambda p: {k: (v.get("price"), v.get("change"), v.get("currency"), v.get("exchange")) for k, v in p.items()}
+    try:
+        reciente = (datetime.now(timezone.utc) - datetime.fromisoformat(anterior["updated"])).total_seconds() < 20 * 3600
+    except Exception:
+        reciente = False
+    if reciente and firma(precios) == firma(previo) and errores == anterior.get("errores", {}):
+        print("Sin cambios en los precios: no se reescribe el archivo.")
+        return 0
     SALIDA.write_text(json.dumps({"updated": ahora, "fuente": "Twelve Data", "precios": precios, "errores": errores}, ensure_ascii=False, indent=1) + "\n", encoding="utf8")
     return 0
 
