@@ -768,6 +768,22 @@ const App = (() => {
     `;
   }
 
+  // Chips del detalle de un cubo: lo que pesa en la cartera y su objetivo con la diferencia (verde si llega, amarillo si se pasa, rojo si falta).
+  // Los usan el detalle y el panel del Reparto.
+  function chipPesoHtml(pct) {
+    return `<span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:var(--bg-input);color:var(--text-secondary);">${pct.toFixed(1)}% de la cartera</span>`;
+  }
+  function chipObjetivoHtml(actualPct, targetPct, margenSup = '4px') {
+    if (targetPct == null) return '';
+    const diffPct = actualPct - targetPct, ok = Math.abs(diffPct) < 1, over = diffPct > 1;
+    const color = ok ? 'var(--accent-green)' : over ? 'var(--accent-yellow)' : 'var(--accent-red)';
+    const bg    = ok ? 'var(--accent-green-bg)' : over ? 'var(--accent-yellow-bg, rgba(240,185,11,.12))' : 'var(--accent-red-bg)';
+    const sign  = diffPct >= 0 ? '+' : '';
+    return `<span style="display:inline-flex;align-items:center;gap:4px;margin-top:${margenSup};padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:${bg};color:${color};">
+          Objetivo ${targetPct.toFixed(1)}% &nbsp;·&nbsp; ${sign}${diffPct.toFixed(1)}%
+        </span>`;
+  }
+
   function setBarMark(wrapId, targetPct) {
     const wrap = document.getElementById(wrapId);
     if (!wrap || !targetPct) return;
@@ -1052,11 +1068,21 @@ const App = (() => {
   }
   // Lista que se reparte: tus acciones y, si ninguna es núcleo, el S&P 500 delante como núcleo a comprar (sin posición todavía).
   function bolsaLista() {
-    const l = bolsaListaReal();
-    return bolsaNucleo() === 'SP' && !l.some(x => x[0] === 'SP') ? [['SP', 'S&P 500', 'sp'], ...l] : l;
+    const l = bolsaListaReal(), nuc = bolsaNucleo();
+    const lista = nuc === 'SP' && !l.some(x => x[0] === 'SP') ? [['SP', 'S&P 500', 'sp'], ...l] : l;
+    return [...lista].sort((x, y) => (y[0] === nuc) - (x[0] === nuc));   // el núcleo, el primero
   }
-  // Nombre de una acción de tu lista (para el editor de la Bolsa)
-  function bolsaNombre(tok) { return String(bolsaLista().find(x => x[0] === tok)?.[1] || COINS[tok]?.name || tok).replace(/[<>&"']/g, ''); }
+  // Nombre CORTO de una acción/ETF de tu lista, para el editor de la Bolsa (una fila = una línea): los ETF habituales con una etiqueta que dice qué
+  // son (no es lo mismo "Global" que "S&P 500"); el resto, el nombre sin sufijos legales y con dos palabras como mucho.
+  const ETF_CORTO = { VUAA: 'S&P 500', VUSA: 'S&P 500 Dist', CSPX: 'S&P 500', SXR8: 'S&P 500', SPYL: 'S&P 500', VOO: 'S&P 500', SPY: 'S&P 500', IVV: 'S&P 500',
+    VWCE: 'Global', VWRL: 'Global Dist', VT: 'Global', IWDA: 'MSCI World', EUNL: 'MSCI World', SWDA: 'MSCI World', VTI: 'USA total', VXUS: 'Internacional',
+    EQQQ: 'Nasdaq 100', CNDX: 'Nasdaq 100', QQQ: 'Nasdaq 100', EMIM: 'Emergentes', VUG: 'Growth', SCHD: 'Dividendos', VYM: 'Dividendos' };
+  function bolsaNombre(tok) {
+    if (ETF_CORTO[tok]) return ETF_CORTO[tok];
+    const nombre = String(bolsaLista().find(x => x[0] === tok)?.[1] || COINS[tok]?.name || tok).replace(/[<>&"']/g, '');
+    const sufijos = new Set(['inc', 'corp', 'corporation', 'co', 'ltd', 'plc', 'holdings', 'common', 'stock', 'ordinary', 'share', 'shares', 'class', 'a', 'b', 'c']);
+    return nombre.replace(/[,.]/g, ' ').split(' ').filter(w => w && !sufijos.has(w.toLowerCase())).slice(0, 2).join(' ') || nombre;
+  }
   // % de cada acción sobre el total de bolsa (a partes iguales hasta que lo fijes)
   function plBolsaActual() {
     const sp = settings.stockSplit || {}, l = bolsaLista();
@@ -1095,14 +1121,14 @@ const App = (() => {
         <div class="reparto-row ${hj.rec < 0.005 ? 'idle' : ''}">
           <span class="reparto-coin"><span class="token-icon ${PL_ICONO[hj.cubo]}">${PL_NOMBRE[hj.cubo][0]}</span></span>
           <div class="reparto-mid"><span class="reparto-name">${PL_NOMBRE[hj.cubo]}</span>
-            <span class="card-sub" style="margin:0">hoy ${plPct(hj.peso)} · objetivo ${plPct(hj.objetivo)} de la cartera${hj.falta > 0.5 ? ` · faltan ${fmtCurrency(hj.falta)}` : ' · cubierto'}</span>
+            <span style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${chipPesoHtml(hj.peso * 100)}${chipObjetivoHtml(hj.peso * 100, hj.objetivo * 100, '0')}</span>
             ${hj.rec >= 0.005 ? `<span class="card-sub" style="margin:0;color:var(--text-muted)">${planDonde(l, hj.cubo, hj.rec)}</span>` : ''}</div>
           <span class="reparto-amt">${hj.rec >= 0.005 ? fmtCurrency(hj.rec) : '—'}</span></div>`).join('');
       return `<div class="card" style="border-top:3px solid ${PL_COLOR[l]}">
-        <div class="strat-head"><span class="strat-name" style="color:${PL_COLOR[l]}">${l === 'crypto' ? 'Crypto' : 'Bolsa'}</span><span class="card-sub" style="margin:0">hoy ${plPct(L.peso)} → objetivo ${plPct(L.objetivo)}</span></div>
+        <div class="strat-head"><span class="strat-name" style="color:${PL_COLOR[l]}">${l === 'crypto' ? 'Crypto' : 'Bolsa'}</span><span style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end">${chipPesoHtml(L.peso * 100)}${chipObjetivoHtml(L.peso * 100, L.objetivo * 100, '0')}</span></div>
         <div class="cosmos-bar-wrap"><div class="progress-bar"><div class="progress-fill" style="width:${Math.min(L.peso * 100, 100)}%;background:${PL_COLOR[l]}"></div><div class="card-bar-mark" style="left:${L.objetivo * 100}%"></div></div></div>
         <div class="card-sub">Este mes: <strong>${fmtCurrency(L.rec)}</strong></div>
-        ${L.rec < 0.005 && L.peso > L.objetivo ? '<div class="card-sub" style="color:var(--accent-yellow)">Ya está por encima de su objetivo: este mes no recibe dinero, aunque algún cubo esté por debajo.</div>' : ''}<div class="reparto-group">${filas}</div></div>`;
+        ${L.rec < 0.005 && L.peso > L.objetivo ? '<div style="margin-top:6px"><span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:var(--accent-yellow-bg, rgba(240,185,11,.12));color:var(--accent-yellow);">Este mes no recibe: ya pasa su objetivo</span></div>' : ''}<div class="reparto-group">${filas}</div></div>`;
     }).join('');
     box.innerHTML = `
       ${planPanelesHtml()}
@@ -1344,15 +1370,15 @@ const App = (() => {
       const total = Object.values(tokenMap).reduce((s, v) => s + v * 100, 0);
       document.getElementById('bucket-total').textContent = `${Math.round(total)}%`;
       document.getElementById('bucket-warn').style.display = Math.abs(total - 100) > 1 && Object.keys(tokenMap).length > 0 ? '' : 'none';
-      document.getElementById('bucket-tokens').innerHTML = Object.entries(tokenMap).map(([tok, frac]) => `
+      document.getElementById('bucket-tokens').innerHTML = (stock ? Object.entries(tokenMap).sort((x, y) => (y[0] === nucleo) - (x[0] === nucleo)) : Object.entries(tokenMap)).map(([tok, frac]) => `
         <div style="display:flex;align-items:center;gap:12px;background:var(--bg-input);border-radius:var(--radius-sm);padding:10px 14px;">
           ${iconHtml(tok, COINS[tok]?.cssClass || '', 26)}
-          <span style="flex:1;font-weight:600;font-size:14px;">${tok}${stock ? ` <span style="font-weight:400;font-size:12px;color:var(--text-muted);">${bolsaNombre(tok)}</span>` : ''}</span>
+          <span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;font-size:14px;" title="${stock ? bolsaLista().find(x => x[0] === tok)?.[1] || tok : tok}">${tok}${stock ? ` <span style="font-weight:400;font-size:12px;color:var(--text-muted);">${bolsaNombre(tok)}${tok === nucleo ? ' · núcleo' : ''}</span>` : ''}</span>
           <input type="number" min="0" max="100" step="1" value="${Math.round(frac * 100)}"
             data-tok="${tok}"
             style="width:64px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:15px;font-weight:600;padding:5px 10px;outline:none;text-align:center;">
           <span style="color:var(--text-muted);font-size:13px;">%</span>
-          ${stock ? `<button type="button" class="tx-btn" data-star="${tok}" title="Marcar como núcleo de la bolsa" style="width:auto;white-space:nowrap">${tok === nucleo ? '★ Núcleo' : '☆'}</button>` : ''}
+          ${stock ? `<button type="button" class="tx-btn" data-star="${tok}" title="Marcar como núcleo de la bolsa" style="width:34px;padding:0;text-align:center;${tok === nucleo ? 'color:var(--accent-yellow);' : ''}">${tok === nucleo ? '★' : '☆'}</button>` : ''}
           <button type="button" class="tx-btn tx-del" data-remove="${tok}" title="Quitar" aria-label="Quitar">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
           </button>
@@ -2339,17 +2365,7 @@ const App = (() => {
       }
       const actualPct = weight * 100;
       const diffPct = targetPct != null ? actualPct - targetPct : null;
-      let chipHtml = '';
-      if (diffPct != null) {
-        const ok    = Math.abs(diffPct) < 1;
-        const over  = diffPct > 1;
-        const color = ok ? 'var(--accent-green)' : over ? 'var(--accent-yellow)' : 'var(--accent-red)';
-        const bg    = ok ? 'var(--accent-green-bg)' : over ? 'var(--accent-yellow-bg, rgba(240,185,11,.12))' : 'var(--accent-red-bg)';
-        const sign  = diffPct >= 0 ? '+' : '';
-        chipHtml = `<span style="display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:${bg};color:${color};">
-          Objetivo ${targetPct.toFixed(1)}% &nbsp;·&nbsp; ${sign}${diffPct.toFixed(1)}%
-        </span>`;
-      }
+      const chipHtml = chipObjetivoHtml(actualPct, targetPct);
 
       const accentColor = c.color || 'var(--accent-blue)';
       return `
@@ -2360,7 +2376,7 @@ const App = (() => {
             <div class="bucket-row-info">
               <div class="bucket-row-name">${c.name || tok} <span class="bucket-row-sym">${tok}</span></div>
               <div class="bucket-row-sub" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
-                <span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;background:var(--bg-input);color:var(--text-secondary);">${actualPct.toFixed(1)}% de la cartera</span>
+                ${chipPesoHtml(actualPct)}
                 ${chipHtml}
               </div>
             </div>
