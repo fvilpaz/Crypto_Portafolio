@@ -896,8 +896,8 @@ const App = (() => {
   }
 
   // Calcula el reparto de una plantilla: cuánto va a cada sitio este mes.
-  // Salta Satélites si está en el tope (su parte se reparte al resto) y dentro
-  // del núcleo prioriza el que esté más flojo (BTC, ya que ETH suele estar bien).
+  // Las plantillas fijas (Conservadora/Moderada/Agresiva) reparten el dinero por sus % puros y, dentro de cada cubo, por los % de cada
+  // moneda (coreSplit/satSplit), SIN mirar lo que ya tienes. Solo "Objetivos" analiza lo que tienes y lo que falta para llegar al objetivo.
   function computeReparto(strat) {
     const monthlyUsd = monthlySplit().cryptoUsd;   // la parte de crypto del dinero mensual (€ a USD interno)
     const satBlocked = getCosmosPct() >= (cosmosTopPct() - 0.05);
@@ -925,7 +925,7 @@ const App = (() => {
         return g + (monthlyUsd - gapSum) * targets[i] / targetSum;
       });
     } else {
-      const wR = strat.refugio, wC = strat.core, wS = satBlocked ? 0 : strat.satelites;
+      const wR = strat.refugio, wC = strat.core, wS = strat.satelites;
       const sum = wR + wC + wS || 1;
       toRefugio = monthlyUsd * wR / sum;
       toCore = monthlyUsd * wC / sum;
@@ -937,7 +937,7 @@ const App = (() => {
     const ethGap = Math.max(settings.coreSplit.ETH * coreAfter - ethVal, 0);
     const gapSum = btcGap + ethGap;
     let toBtc, toEth;
-    if (gapSum <= 0) {
+    if (!strat.byTargets || gapSum <= 0) {
       toBtc = toCore * settings.coreSplit.BTC; toEth = toCore * settings.coreSplit.ETH;
     } else if (gapSum >= toCore) {
       toBtc = toCore * (btcGap / gapSum); toEth = toCore * (ethGap / gapSum);
@@ -957,7 +957,7 @@ const App = (() => {
     const satGapSum = satTokens.reduce((s, tok) => s + satGaps[tok], 0);
     const satAlloc = {};
     satTokens.forEach(tok => {
-      if (satGapSum <= 0) {
+      if (!strat.byTargets || satGapSum <= 0) {
         satAlloc[tok] = toSat * settings.satSplit[tok];
       } else if (satGapSum >= toSat) {
         satAlloc[tok] = toSat * (satGaps[tok] / satGapSum);
