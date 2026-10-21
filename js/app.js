@@ -1038,15 +1038,8 @@ const App = (() => {
     return pos.map(([n, w]) => `${n} ${fmtCurrency(usd * w / s)}`).join(' · ');
   }
 
-  // Panel del Reparto del mes: dinero al mes, ratio crypto/bolsa (reajusta Núcleo/Satélites/Refugio con fitTargetsTo100) y Reparto de la bolsa
-  // (stockSplit: % de cada acción). Un reparto que no suma 100 vive en planDraft y no se guarda hasta que sume.
-  let planDraft = {};
-  const plSuma = (s) => { const ok = Math.abs(s - 100) <= 0.05; return `<span class="section-badge" style="${PL_TONO[ok ? 'bien' : 'mal']}white-space:nowrap">suma ${+s.toFixed(1)} %</span>`; };
-  const plCampo = (k, tok, v, etiqueta, icono) => `<span style="display:inline-flex;align-items:center;gap:8px">${icono || ''}<span>${etiqueta}</span><span class="add-field" style="flex:0 0 76px;width:76px"><input type="number" min="0" max="100" step="1" data-plan="${k}" data-tok="${tok}" value="${+v.toFixed(1)}" style="text-align:right"></span><span>%</span></span>`;
-  const plPanel = (titulo, s, campos, extra, nota) => `<div class="card" style="margin-top:14px"><div class="strat-head" style="justify-content:flex-start;gap:12px"><span class="strat-name">${titulo}</span>${plSuma(s)}</div>
-    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px 18px;margin-top:12px">${campos}${extra}</div><div class="card-sub" style="margin-top:10px">${nota}</div></div>`;
-  const plBoton = (k, txt) => `<button type="button" class="add-submit" data-plan="${k}" style="width:auto;padding:10px 22px">${txt}</button>`;
-
+  // Panel del Reparto del mes: dinero al mes y ratio crypto/bolsa (reajusta Núcleo/Satélites/Refugio con fitTargetsTo100). El reparto de la bolsa
+  // por acción (stockSplit) y su núcleo (bolsaCore) se editan con el lápiz de la tarjeta Bolsa.
   // Tus acciones/ETF reales: las que has añadido con el buscador (settings.customStocks) y las que tienes en cartera. [token, nombre, clase del icono]
   function bolsaListaReal() {
     const toks = [...new Set([...Object.keys(settings.customStocks || {}), ...portfolio.filter(a => a.kind === 'stock').map(a => a.token)])];
@@ -1062,6 +1055,8 @@ const App = (() => {
     const l = bolsaListaReal();
     return bolsaNucleo() === 'SP' && !l.some(x => x[0] === 'SP') ? [['SP', 'S&P 500', 'sp'], ...l] : l;
   }
+  // Nombre de una acción de tu lista (para el editor de la Bolsa)
+  function bolsaNombre(tok) { return String(bolsaLista().find(x => x[0] === tok)?.[1] || COINS[tok]?.name || tok).replace(/[<>&"']/g, ''); }
   // % de cada acción sobre el total de bolsa (a partes iguales hasta que lo fijes)
   function plBolsaActual() {
     const sp = settings.stockSplit || {}, l = bolsaLista();
@@ -1078,15 +1073,13 @@ const App = (() => {
   }
 
   function planPanelesHtml() {
-    const rc = 100 - (settings.bolsaTarget || 0), bl = bolsaLista(), bo = planDraft.bolsa || plBolsaActual(), sBo = Object.values(bo).reduce((x, y) => x + y, 0);
+    const rc = 100 - (settings.bolsaTarget || 0);
     return `<div class="cards-grid">
         <div class="card"><div class="card-label">Dinero al mes para invertir (€)</div><div class="add-field"><input type="number" min="0" step="10" data-plan="dca" value="${settings.dcaTarget || 0}"></div></div>
         <div class="card"><div class="card-label">Ratio crypto / bolsa</div><input type="range" class="pl-rango" min="0" max="100" step="1" data-plan="rc" value="${rc}">
           <div class="strat-head"><span class="strat-legend lg-core">Crypto ${rc} %</span><span class="strat-legend lg-bolsa">Bolsa ${100 - rc} %</span></div>
           <div class="strat-bar"><span class="seg seg-core" style="width:${rc}%"></span><span class="seg seg-bolsa" style="width:${100 - rc}%"></span></div></div>
-      </div>`
-      + plPanel('Reparto de la bolsa', bl.length ? sBo : 100, bl.length ? bl.map(([tk, nombre, css]) => plCampo('bo', tk, bo[tk] || 0, `${nombre} <button type="button" class="tx-btn" data-plan="nuc" data-tok="${tk}" title="Marcar como núcleo de la bolsa" style="width:auto">${tk === bolsaNucleo() ? '★ Núcleo' : '☆'}</button>`, iconHtml(tk, css, 28))).join('') : '<span class="card-sub">Aún no tienes acciones: añádelas con el buscador del botón +.</span>',
-        Math.abs(sBo - 100) > 0.05 ? plBoton('bofit', 'Ajustar a 100') : '', 'Qué parte de lo que metes en bolsa va a cada acción. La estrella marca el núcleo (p. ej. tu ETF del S&P 500); el resto son satélites. Por defecto, a partes iguales.');
+      </div>`;
   }
 
   function renderPlanPanel() {
@@ -1131,16 +1124,6 @@ const App = (() => {
     const num = (i) => Math.max(parseFloat(i.value) || 0, 0);
     if (k === 'dca') settings.dcaTarget = num(e.target);
     else if (k === 'rc') { settings.bolsaTarget = 100 - Math.min(num(e.target), 100); fitTargetsTo100(); }   // el ratio fija la bolsa y los otros tres se reajustan, como con el lápiz de Bolsa
-    else if (k === 'nuc') settings.bolsaCore = e.target.dataset.tok;
-    else if (k === 'bo' || k === 'bofit') {
-      const d = {};
-      document.querySelectorAll('#plan-panel input[data-plan="bo"]').forEach(i => { d[i.dataset.tok] = num(i); });
-      let s = Object.values(d).reduce((x, y) => x + y, 0);
-      if (k === 'bofit') { if (s <= 0) return; Object.keys(d).forEach(t => { d[t] = d[t] * 100 / s; }); s = 100; }
-      if (Math.abs(s - 100) > 0.05) { planDraft.bolsa = d; render(); return; }
-      delete planDraft.bolsa;
-      settings.stockSplit = Object.fromEntries(Object.entries(d).map(([t, v]) => [t, v / s]));
-    }
     persist();
     render();
   }
@@ -1283,15 +1266,7 @@ const App = (() => {
   }
 
   function editBolsaTarget() {
-    const input = prompt('Objetivo de bolsa en % de la cartera: define el ratio, el resto es crypto (0 = sin objetivo):', settings.bolsaTarget || 0);
-    if (input === null) return;
-    const val = parseFloat(String(input).replace(',', '.'));
-    if (isNaN(val) || val < 0 || val > 100) return;
-    settings.bolsaTarget = val;
-    const suma = (settings.coreTarget ?? DEFAULT_CORE_TARGET) + (settings.satTarget ?? DEFAULT_SAT_TARGET) + (settings.defenseTarget || 0) + val;
-    if (Math.abs(suma - 100) > 0.05 && confirm(`Con la Bolsa los objetivos suman ${+suma.toFixed(1)} %. ¿Ajusto Núcleo, Satélites y Refugio en proporción para que sumen 100 %?`)) fitTargetsTo100();
-    persist();
-    render();
+    openBucketEditModal({ title: 'Bolsa', targetKey: 'bolsaTarget', splitKey: 'stockSplit', defaultTarget: 0, color: 'var(--accent-teal)', stock: true });
   }
 
   function editDefenseTarget() {
@@ -1306,9 +1281,11 @@ const App = (() => {
   }
 
   // Modal de edición de cubo: % objetivo + tokens con sus % internos
-  function openBucketEditModal({ title, targetKey, splitKey, defaultTarget, color }) {
+  function openBucketEditModal({ title, targetKey, splitKey, defaultTarget, color, stock = false }) {
     const curTarget = settings[targetKey] ?? defaultTarget;
-    const curSplit  = { ...(settings[splitKey] || {}) };
+    // Bolsa (stock): las acciones salen de tu lista (bolsaLista) con su % (stockSplit) y la ★ marca el núcleo
+    const curSplit  = stock ? Object.fromEntries(Object.entries(plBolsaActual()).map(([t, p]) => [t, p / 100])) : { ...(settings[splitKey] || {}) };
+    let nucleo = stock ? bolsaNucleo() : null;
 
     const ov = document.createElement('div');
     ov.className = 'modal-overlay open';
@@ -1331,11 +1308,11 @@ const App = (() => {
           </div>
 
           <div style="margin-top:24px;">
-            <label style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;margin-bottom:10px;">Monedas y reparto interno</label>
+            <label style="font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);display:block;margin-bottom:10px;">${stock ? 'Acciones y reparto interno (★ marca el núcleo)' : 'Monedas y reparto interno'}</label>
             <div style="position:relative;margin-bottom:12px;">
               <div class="search-wrap" style="cursor:text;">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="text" id="bucket-search" class="tx-search" placeholder="Añadir moneda..." style="width:100%;">
+                <input type="text" id="bucket-search" class="tx-search" placeholder="${stock ? 'Añadir acción o ETF (p. ej. VUAA, NVDA)…' : 'Añadir moneda...'}" style="width:100%;">
                 <svg id="bucket-chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted);flex-shrink:0;cursor:pointer;"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               <div id="bucket-suggestions" style="display:none;position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:200;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);max-height:180px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.4);"></div>
@@ -1370,11 +1347,12 @@ const App = (() => {
       document.getElementById('bucket-tokens').innerHTML = Object.entries(tokenMap).map(([tok, frac]) => `
         <div style="display:flex;align-items:center;gap:12px;background:var(--bg-input);border-radius:var(--radius-sm);padding:10px 14px;">
           ${iconHtml(tok, COINS[tok]?.cssClass || '', 26)}
-          <span style="flex:1;font-weight:600;font-size:14px;">${tok}</span>
+          <span style="flex:1;font-weight:600;font-size:14px;">${tok}${stock ? ` <span style="font-weight:400;font-size:12px;color:var(--text-muted);">${bolsaNombre(tok)}</span>` : ''}</span>
           <input type="number" min="0" max="100" step="1" value="${Math.round(frac * 100)}"
             data-tok="${tok}"
             style="width:64px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:15px;font-weight:600;padding:5px 10px;outline:none;text-align:center;">
           <span style="color:var(--text-muted);font-size:13px;">%</span>
+          ${stock ? `<button type="button" class="tx-btn" data-star="${tok}" title="Marcar como núcleo de la bolsa" style="width:auto;white-space:nowrap">${tok === nucleo ? '★ Núcleo' : '☆'}</button>` : ''}
           <button type="button" class="tx-btn tx-del" data-remove="${tok}" title="Quitar" aria-label="Quitar">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
           </button>
@@ -1392,6 +1370,9 @@ const App = (() => {
       document.querySelectorAll('#bucket-tokens button[data-remove]').forEach(btn => {
         btn.addEventListener('click', () => { delete tokenMap[btn.dataset.remove]; renderTokens(); });
       });
+      document.querySelectorAll('#bucket-tokens [data-star]').forEach(b => {
+        b.addEventListener('click', () => { nucleo = b.dataset.star; renderTokens(); });
+      });
     }
     renderTokens();
 
@@ -1401,7 +1382,50 @@ const App = (() => {
     const portfolioTokens = portfolio.map(a => a.token);
     const allTokens = [...new Set([...portfolioTokens, ...Object.keys(COINS)])];
 
+    // Bolsa: el buscador de acciones (el mismo del botón +); al elegir una se registra en tu lista de acciones
+    const sugDatos = {};
+    let esperaSug;
+    function showStockSuggestions(q) {
+      clearTimeout(esperaSug);
+      const pintar = (lista) => {
+        lista.forEach(c => { sugDatos[c.symbol] = c; });
+        if (!lista.length) { sugEl.style.display = 'none'; return; }
+        sugEl.style.display = '';
+        sugEl.innerHTML = lista.map(c => {
+          const sym = c.symbol, nombre = String(c.name || '').replace(/[<>&"']/g, ''), yaEsta = tokenMap[sym] != null;
+          return `<div data-add="${sym}" style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;opacity:${yaEsta ? '.45' : '1'};">
+            ${iconHtml(sym, COINS[sym]?.cssClass || 'stk', 22)}
+            <span style="font-size:13px;font-weight:600;">${sym}</span>
+            <span style="font-size:11px;color:var(--text-muted);margin-left:auto;">${nombre}</span>
+            ${yaEsta ? '<span style="font-size:10px;color:var(--text-muted);">ya añadida</span>' : ''}
+          </div>`;
+        }).join('');
+        sugEl.querySelectorAll('[data-add]').forEach(el => {
+          el.addEventListener('mouseenter', () => el.style.background = 'var(--bg-input)');
+          el.addEventListener('mouseleave', () => el.style.background = '');
+          el.addEventListener('mousedown', e => {
+            e.preventDefault();
+            const c = sugDatos[el.dataset.add], sym = c.symbol;
+            if (COINS[sym] && COINS[sym].kind !== 'stock') return;   // ese símbolo ya es una moneda crypto
+            if (!COINS[sym] && sym !== 'SP') {
+              const previo = settings.customStocks;
+              settings.customStocks = Object.assign({}, previo, { [sym]: { name: c.name } });
+              registerCustomStocks();
+              if (!COINS[sym]) { settings.customStocks = previo; return; }   // rechazada: no se guarda
+              persist();
+            }
+            if (tokenMap[sym] == null) tokenMap[sym] = 0;
+            searchEl.value = ''; sugEl.style.display = 'none';
+            renderTokens();
+          });
+        });
+      };
+      if (!q) { pintar(bolsaLista().map(([t, n]) => ({ symbol: t, name: n }))); return; }
+      esperaSug = setTimeout(async () => { try { pintar(await searchStocks(q)); } catch (e) { sugEl.style.display = 'none'; } }, 400);
+    }
+
     function showSuggestions(q) {
+      if (stock) { showStockSuggestions(q); return; }
       const matches = q
         ? allTokens.filter(t => t.includes(q) || (COINS[t]?.name || '').toUpperCase().includes(q)).slice(0, 10)
         : portfolioTokens.slice(0, 10);   // sin texto → monedas del portfolio
@@ -1451,6 +1475,11 @@ const App = (() => {
       }
       settings[targetKey] = target;
       settings[splitKey]  = { ...tokenMap };
+      if (stock) {   // el núcleo de la bolsa y, si con la bolsa los objetivos ya no suman 100, los otros tres se reajustan en proporción
+        settings.bolsaCore = nucleo;
+        const suma = (settings.coreTarget ?? DEFAULT_CORE_TARGET) + (settings.satTarget ?? DEFAULT_SAT_TARGET) + (settings.defenseTarget || 0) + target;
+        if (Math.abs(suma - 100) > 0.05) fitTargetsTo100();
+      }
       persist();
       render();
       close();
@@ -3159,7 +3188,6 @@ const App = (() => {
 
     const planBox = document.getElementById('plan-panel');
     planBox.addEventListener('change', onPlanPanelChange);
-    planBox.addEventListener('click', (e) => { if (['bofit', 'nuc'].includes(e.target.dataset?.plan)) onPlanPanelChange(e); });
 
     document.getElementById('sec-cartera').addEventListener('click', (e) => {
       const editBtn = e.target.closest('.card-edit');
