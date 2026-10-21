@@ -157,6 +157,11 @@ half. Each does one thing well and they link to each other.
 - Stocks/ETFs (e.g. an S&P 500 ETF for DCA or extra pay): symbol search with
   Twelve Data (CORS open; price needs a free key), price in EUR/USD with the
   existing rate, and its own "Bolsa" total kept apart from the crypto cards
+  - **Phase 1 done:** the "Añadir movimiento" search box also finds US stocks/ETFs (Twelve Data, no key
+    needed for the search). They are saved as holdings (`kind: 'stock'`, registry in `settings.customStocks`) and
+    a teal "Bolsa" card shows their weight and an optional target (`settings.bolsaTarget`, pencil button); they
+    are valued at purchase price. **Pending:** live price (needs a free Twelve Data key that only I can create,
+    to go in `config.js`), targets adding up to 100 %, and the monthly plan with Bolsa
 - Traditional-market metrics next to the crypto ones (allocation, performance and
   evolution of the "Bolsa" side, same charts as crypto)
   - New summary card "Bolsa" in the card row (same format as Núcleo / Satélites /

@@ -693,6 +693,7 @@ tbody td {
 .token-icon.ms   { background: #1e90ff22; color: #4aa8ff; }
 .token-icon.cush { background: #f0b90b22; color: var(--accent-yellow); }
 .token-icon.sv   { background: #1e90ff22; color: var(--accent-blue); }
+.token-icon.stk  { background: #2dd4bf22; color: var(--accent-teal); }   /* acciones/ETF añadidos por búsqueda */
 
 .token-name {
   font-weight: 600;
