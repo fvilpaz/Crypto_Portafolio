@@ -3303,15 +3303,41 @@ const App = (() => {
       if (!chip) return;
       selectToken(chip.dataset.token);
     });
-    let esperaBusqueda;
-    document.getElementById('add-coin-search').addEventListener('input', (e) => {
+    // Dos buscadores separados: crypto (CoinGecko) o acción/ETF (Twelve Data). Mezclarlos ofrecía tokens crypto que imitan acciones
+    // (p. ej. "Tesla (Backpack Securities)") junto a la acción de verdad, y quedaban clasificados como crypto.
+    let modoBusqueda = 'crypto', esperaBusqueda, contadorBusqueda = 0;
+    try { if (localStorage.getItem('buscarEn') === 'bolsa') modoBusqueda = 'bolsa'; } catch (e) { /* sin almacenamiento: crypto */ }
+    const buscador = document.getElementById('add-coin-search');
+    function pintarModoBusqueda() {
+      document.querySelectorAll('#add-search-mode .coin-chip').forEach(b => b.classList.toggle('active', b.dataset.mode === modoBusqueda));
+      buscador.placeholder = modoBusqueda === 'bolsa' ? 'Busca una acción o ETF (p. ej. NVDA, sp500, VUAA)' : '¿No está? Búscala (p. ej. usdt, sui…)';
+    }
+    pintarModoBusqueda();
+    document.getElementById('add-search-mode').addEventListener('click', (e) => {
+      const b = e.target.closest('.coin-chip');
+      if (!b) return;
+      modoBusqueda = b.dataset.mode;
+      try { localStorage.setItem('buscarEn', modoBusqueda); } catch (err) { /* no se recuerda */ }
+      pintarModoBusqueda();
+      document.getElementById('add-error').textContent = '';
+      renderCoinResults(null);
+      if (buscador.value.trim().length >= 2) buscador.dispatchEvent(new Event('input'));
+    });
+    buscador.addEventListener('input', (e) => {
       clearTimeout(esperaBusqueda);
       const q = e.target.value.trim();
       if (q.length < 2) { renderCoinResults(null); return; }
-      esperaBusqueda = setTimeout(() => Promise.allSettled([searchCoins(q), searchStocks(q)]).then(([cripto, bolsa]) => {
-        if (cripto.status === 'rejected' && bolsa.status === 'rejected') { document.getElementById('add-error').textContent = 'No se pudo buscar ahora (límite de CoinGecko); prueba en un minuto.'; return; }
-        renderCoinResults([...(bolsa.value || []), ...(cripto.value || [])]);   // la bolsa primero: la crypto trae muchos tokens que imitan acciones
-      }), 450);
+      esperaBusqueda = setTimeout(async () => {
+        const mio = ++contadorBusqueda, modo = modoBusqueda;
+        try {
+          const lista = modo === 'bolsa' ? await searchStocks(q) : await searchCoins(q);
+          if (mio !== contadorBusqueda || modo !== modoBusqueda) return;   // llegó tarde: ya se buscó otra cosa u otro modo
+          document.getElementById('add-error').textContent = '';
+          renderCoinResults(lista);
+        } catch (err) {
+          if (mio === contadorBusqueda) document.getElementById('add-error').textContent = modo === 'bolsa' ? 'No se pudo buscar ahora; prueba en un minuto.' : 'No se pudo buscar ahora (límite de CoinGecko); prueba en un minuto.';
+        }
+      }, 450);
     });
     document.getElementById('add-type').addEventListener('change', (e) => {
       addState.type = e.target.value;
