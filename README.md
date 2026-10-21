@@ -165,12 +165,15 @@ half. Each does one thing well and they link to each other.
     a free Twelve Data key that only I can create, to go in `config.js`), a warning when editing the other
     targets breaks the 100 %, and the "Tu plan" block of the prototype
   - **Monthly plan, one amount (decided with Nando):** the pencil of the DCA card is the single monthly money to
-    invest (crypto + bolsa). Bolsa gets its target % of it and the rest goes to crypto: the Reparto templates split
-    only the crypto part (with Crypto / Bolsa groups), the DCA card counts every purchase (crypto and stocks)
-    against the total and breaks it down, and a line projects the weight of the Bolsa at 12 and 24 months (price
-    moves ignored; with share = target it approaches the target, it does not cross it). **Open:** another split
-    rule (fixed % or by gaps), how the Bolsa part is shared among the stocks (today equally among the five of the
-    catalogue), and the "Tu plan" block
+    invest (crypto + bolsa). The Bolsa target (pencil of the Bolsa card) defines the crypto / bolsa ratio (the rest
+    is crypto), and each month's money goes to whichever side is further from its target (same mechanism as the
+    "objetivos" template; if one side already reaches it, everything goes to the other). The Reparto templates
+    split only the crypto part (with Crypto / Bolsa groups), the DCA card counts every purchase (crypto and stocks)
+    against the total and breaks it down, the Bolsa card says how much is missing ("Faltan"), and a line projects
+    the weight of the Bolsa at 12 and 24 months and when it reaches its target (month-by-month simulation, price
+    moves ignored). Note: with lots of crypto and no Bolsa, all the new money goes to the Bolsa until the ratio is
+    close. **Open:** one single "Plan de inversión" panel for all these inputs, how the Bolsa part is shared among
+    the stocks (today equally among the five of the catalogue), and the "Tu plan" block
 - Traditional-market metrics next to the crypto ones (allocation, performance and
   evolution of the "Bolsa" side, same charts as crypto)
   - New summary card "Bolsa" in the card row (same format as Núcleo / Satélites /
