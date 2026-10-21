@@ -1028,6 +1028,23 @@ const App = (() => {
     return pos.map(([n, w]) => `${n} ${fmtCurrency(usd * w / s)}`).join(' · ');
   }
 
+  // Reparto interno de cada cubo crypto (coreSplit / satSplit). Lo que se teclea y aún no suma 100 vive en planDraft y no se guarda.
+  let planDraft = {};
+  const PL_GRUPOS = { core: ['Núcleo', 'coreSplit'], sat: ['Satélites', 'satSplit'] };
+  function planSplitCard(g) {
+    const [nombre, key] = PL_GRUPOS[g];
+    const cur = planDraft[g] || Object.fromEntries(Object.entries(settings[key] || {}).map(([t, f]) => [t, +(f * 100).toFixed(1)]));
+    const s = +Object.values(cur).reduce((x, y) => x + y, 0).toFixed(1), ok = Math.abs(s - 100) <= 0.05, d = +Math.abs(s - 100).toFixed(1);
+    const filas = Object.entries(cur).map(([t, v]) => `
+      <div class="reparto-row"><span class="reparto-coin">${iconHtml(t, COINS[t]?.cssClass || '', 24)}</span>
+        <div class="reparto-mid"><span class="reparto-name">${t}</span></div>
+        <div class="add-field" style="flex:0 0 84px;min-width:0"><input type="number" min="0" max="100" step="1" data-plan="sp" data-grp="${g}" data-tok="${t}" value="${v}"></div></div>`).join('');
+    return `<div class="card"><div class="strat-head"><span class="strat-name">Reparto de ${nombre.toLowerCase()}</span>
+      <span class="section-badge" style="${PL_TONO[ok ? 'bien' : 'mal']}white-space:nowrap">${ok ? 'suman 100 %' : (s > 100 ? 'sobran ' : 'faltan ') + d + ' pts'}</span></div>
+      <div class="card-sub">Qué parte del cubo va a cada moneda.</div><div class="reparto-group">${filas}</div>
+      ${ok ? '' : `<button class="tx-btn" data-plan="spfit" data-grp="${g}" style="margin-top:8px">Ajustar a 100</button>`}</div>`;
+  }
+
   function renderPlanPanel() {
     const box = document.getElementById('plan-panel');
     if (!box || typeof Plan === 'undefined') return;
@@ -1066,6 +1083,7 @@ const App = (() => {
         <div class="card">${cabeza('Crypto', wc, 'fit')}<div class="pl-tres">${campo('w0', 'Núcleo', wc[0])}${campo('w1', 'Satélites', wc[1])}${campo('w2', 'Refugio', wc[2])}</div></div>
         <div class="card">${cabeza('Bolsa', wb, 'fitb')}<div class="pl-tres">${campo('b0', 'Núcleo', wb[0])}${campo('b1', 'Satélites', wb[1])}</div></div>
       </div>
+      <div class="cards-grid" style="margin-top:14px">${planSplitCard('core')}${planSplitCard('sat')}</div>
       <div class="cards-grid" style="margin-top:14px">
         <div class="card"><div class="card-label">Cartera</div><div class="card-value">${fmtCurrency(m.total)}</div>
           <div class="pl-chips">${chip('crypto', `Crypto <b>${fmtCurrency(m.lados.crypto.valor)}</b>`)}${chip('bolsa', `Bolsa <b>${fmtCurrency(m.lados.bolsa.valor)}</b>`)}</div></div>
@@ -1081,6 +1099,16 @@ const App = (() => {
   function onPlanPanelChange(e) {
     const k = e.target.dataset?.plan;
     if (!k) return;
+    if (k === 'sp' || k === 'spfit') {
+      const g = e.target.dataset.grp, key = PL_GRUPOS[g][1], draft = {};
+      document.querySelectorAll(`#plan-panel input[data-plan="sp"][data-grp="${g}"]`).forEach(i => { draft[i.dataset.tok] = Math.max(parseFloat(i.value) || 0, 0); });
+      let s = Object.values(draft).reduce((x, y) => x + y, 0);
+      if (k === 'spfit') { if (s <= 0) return; Object.keys(draft).forEach(t => { draft[t] = draft[t] * 100 / s; }); s = 100; }
+      if (Math.abs(s - 100) <= 0.05) { settings[key] = Object.fromEntries(Object.entries(draft).map(([t, v]) => [t, v / s])); delete planDraft[g]; persist(); }
+      else planDraft[g] = draft;
+      render();
+      return;
+    }
     const n = (sel) => Math.max(parseFloat(document.querySelector(`#plan-panel [data-plan="${sel}"]`)?.value) || 0, 0);
     if (k === 'dca') settings.dcaTarget = n('dca');
     else if (k === 'b0' || k === 'b1' || k === 'fitb') {
@@ -3064,7 +3092,7 @@ const App = (() => {
 
     const planBox = document.getElementById('plan-panel');
     planBox.addEventListener('change', onPlanPanelChange);
-    planBox.addEventListener('click', (e) => { if (e.target.dataset?.plan === 'fit') onPlanPanelChange(e); });
+    planBox.addEventListener('click', (e) => { if (['fit', 'fitb', 'spfit'].includes(e.target.dataset?.plan)) onPlanPanelChange(e); });
 
     document.getElementById('sec-cartera').addEventListener('click', (e) => {
       const editBtn = e.target.closest('.card-edit');
