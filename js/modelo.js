@@ -38,11 +38,11 @@
       cubos.forEach((cubo, i) => hojas.push({ lado, cubo, objetivo: ratio[lado] * w[i], valor: p.valores[lado][cubo] || 0 }));
     });
     const total = suma(hojas.map((h) => h.valor));
-    // Dos niveles con la MISMA función: primero entre lados (crypto / bolsa) por lo que falta a cada uno para el ratio y luego,
-    // dentro del lado que recibe dinero, entre sus cubos. Así un cubo flojo de un lado que ya se pasa no se lleva dinero.
+    // Dos niveles: primero entre lados (crypto / bolsa) por el ratio y luego, dentro de cada lado, entre sus cubos por lo que falta a cada uno
+    // para su objetivo.
     const valorLado = {};
     LADOS.forEach((l) => { valorLado[l] = suma(hojas.filter((h) => h.lado === l).map((h) => h.valor)); });
-    const recLado = repartirPorHuecos(LADOS.map((l) => valorLado[l]), LADOS.map((l) => ratio[l]), p.mensual, total);
+    const recLado = LADOS.map((l) => p.mensual * ratio[l]);   // el dinero del mes se reparte entre lados por el ratio, sin mirar lo que ya hay
     LADOS.forEach((lado, k) => {
       const hs = hojas.filter((h) => h.lado === lado);
       const w = hs.map((h) => (ratio[lado] > 0 ? h.objetivo / ratio[lado] : 1 / hs.length));   // peso dentro del lado
