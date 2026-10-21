@@ -2274,3 +2274,4 @@ body.light #mercado .new { color: #8a6500; }
 .mk-links a { color: var(--accent-blue); font-weight: 600; text-decoration: none; }
 .mk-links a:hover { text-decoration: underline; }
 .mk-links a span { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--text-muted); }
+.mk-desplegable[open] > summary .strat-chevron { transform: rotate(180deg); }   /* la flecha de los desplegables de Mercado */

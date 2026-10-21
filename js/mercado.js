@@ -48,14 +48,15 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   const dia = (iso) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
   function seccion(d) {
     const sec = document.createElement('details');
-    sec.className = 'card'; sec.style.cssText = 'margin-top:12px;padding:12px 16px';
+    sec.className = 'card mk-desplegable'; sec.style.cssText = 'margin-top:12px;padding:12px 16px';
     const badge = el('span', '13F · SEC', 'section-badge');
     badge.style.cssText = 'background:var(--accent-green-bg);color:var(--accent-green);';
     const h = document.createElement('summary');
     h.style.cssText = 'cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap';
     const nombre = el('span', d.gestor, ''); nombre.style.cssText = 'font-weight:700;font-size:15px;color:var(--text-primary)';
     const resumen = el('span', `en qué invierte · ${d.n_emisores} empresas · ${billones(d.total_usd)}`, ''); resumen.style.cssText = 'color:var(--text-muted);font-size:12px;margin-left:auto';
-    h.append(nombre, badge, resumen);
+    const flecha = document.createElement('span'); flecha.innerHTML = '<svg class="strat-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+    h.append(nombre, badge, resumen, flecha);
     const cuantas = d.top.length < d.n_emisores ? `Las ${d.top.length} mayores de las ${d.n_emisores} empresas` : `Las ${d.n_emisores} empresas`;
     const hint = el('p', `${cuantas} en las que ha invertido (${billones(d.total_usd)} en total). Informe 13F a la SEC con cierre el ${dia(d.periodo)}, presentado el ${dia(d.presentado)}: es lo que tenían entonces, no lo que tienen hoy. Fuente: ${d.fuente}.`, 'reparto-hint');
     const tbody = document.createElement('tbody');
@@ -116,6 +117,8 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     poner('k-gestores', coin.gestores_seguidos); poner('k-periodo', 'T' + Math.ceil(+mes / 3) + ' ' + anio);
     poner('k-2mas', coin.en_2_o_mas); poner('k-todas', coin.en_todas);
     document.getElementById('b13f-coinciden').replaceChildren(...coin.filas.map(filaCoinciden));
+    poner('k-coinciden-resumen', `${coin.en_2_o_mas} empresas en 2 o más carteras`);
+    if (indice) poner('b13f-leyenda', indice.map((g) => `${g.corto} = ${g.nombre}`).join(' · ') + '. En movimientos: ▲ aumenta su posición, ▼ la reduce, ★ compra nueva (el número es cuántos de ellos).');
     document.getElementById('b13f-seguidas').replaceChildren(...coin.seguidas.map(filaSeguida));
   }
   document.getElementById('mk-btn').addEventListener('click', () => {
