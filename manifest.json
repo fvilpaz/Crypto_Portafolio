@@ -1,5 +1,5 @@
 {
-  "name": "Mi Cartera Crypto",
+  "name": "Mi Cartera",
   "short_name": "Mi Cartera",
   "description": "Portfolio tracker de criptomonedas con precios en vivo, DCA, staking y airdrops.",
   "start_url": "./index.html",
