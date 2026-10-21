@@ -550,6 +550,12 @@ a:hover { text-decoration: underline; }
 .reparto-group-tot { display: inline-flex; align-items: center; gap: 8px; letter-spacing: 0; color: var(--text-primary); }
 .strat-block[open] .reparto-group .strat-chevron { transform: none; }                  /* la flecha de la plantilla gira con la plantilla... */
 .strat-block[open] .reparto-group[open] .strat-chevron { transform: rotate(180deg); }   /* ...la del grupo, con el grupo */
+
+/* Escritorio: las plantillas en una fila deslizable (tipo dock) con 3 visibles; el resto se desliza. En móvil sigue el grid. */
+@media (min-width: 901px) {
+  .strat-blocks { --strat-gap: 14px; --strat-visible: 3; display: flex; gap: var(--strat-gap); overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-left: 6px; padding: 6px 6px 14px; scrollbar-width: thin; scrollbar-color: var(--bg-hover) transparent; }
+  .strat-blocks > .strat-block { flex: 0 0 calc((100% - (var(--strat-visible) - 1) * var(--strat-gap)) / var(--strat-visible)); scroll-snap-align: start; }
+}
 .reparto-row.idle .reparto-amt { font-weight: 500; font-size: 13px; color: var(--text-muted); }
 
 .card-icon {
