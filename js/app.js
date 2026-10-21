@@ -1072,12 +1072,26 @@ const App = (() => {
     render();
   }
 
+  // Ajusta Núcleo, Satélites y Refugio en proporción para que, con la Bolsa, los cuatro objetivos sumen 100 %.
+  // El reparto interno de cada cubo (BTC/ETH, satélites) no se toca. El redondeo lo absorbe el núcleo.
+  function fitTargetsTo100() {
+    const libre = 100 - (settings.bolsaTarget || 0);
+    const actual = [settings.coreTarget ?? DEFAULT_CORE_TARGET, settings.satTarget ?? DEFAULT_SAT_TARGET, settings.defenseTarget || 0];
+    const suma = actual.reduce((s, v) => s + v, 0);
+    if (suma <= 0) return;   // nada que repartir
+    const nuevo = actual.map(v => Math.round(v * libre / suma));
+    nuevo[0] += libre - nuevo.reduce((s, v) => s + v, 0);
+    [settings.coreTarget, settings.satTarget, settings.defenseTarget] = nuevo;
+  }
+
   function editBolsaTarget() {
     const input = prompt('Objetivo de bolsa en % de la cartera (0 = sin objetivo):', settings.bolsaTarget || 0);
     if (input === null) return;
     const val = parseFloat(String(input).replace(',', '.'));
     if (isNaN(val) || val < 0 || val > 100) return;
     settings.bolsaTarget = val;
+    const suma = (settings.coreTarget ?? DEFAULT_CORE_TARGET) + (settings.satTarget ?? DEFAULT_SAT_TARGET) + (settings.defenseTarget || 0) + val;
+    if (Math.abs(suma - 100) > 0.05 && confirm(`Con la Bolsa los objetivos suman ${+suma.toFixed(1)} %. ¿Ajusto Núcleo, Satélites y Refugio en proporción para que sumen 100 %?`)) fitTargetsTo100();
     persist();
     render();
   }
