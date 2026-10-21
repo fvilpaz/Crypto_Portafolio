@@ -1048,6 +1048,15 @@ const App = (() => {
     return Object.fromEntries(STOCKS.map(([tk]) => [tk, (sp[tk] ?? 1 / STOCKS.length) * 100]));
   }
 
+  // Bolsa de una plantilla: en bolsa no hay refugio, así que el dinero se reparte entre núcleo (S&P 500) y satélites (el resto) en la misma
+  // proporción que la plantilla da a Núcleo y a Satélites; los satélites, entre sus acciones por los % relativos del panel Reparto de la bolsa.
+  function bolsaPorPlantilla(strat, usd) {
+    const wC = strat.byTargets ? (settings.coreTarget ?? DEFAULT_CORE_TARGET) : strat.core, wS = strat.byTargets ? (settings.satTarget ?? DEFAULT_SAT_TARGET) : strat.satelites;
+    const nucleo = wC + wS > 0 ? usd * wC / (wC + wS) : 0, sat = usd - nucleo, pb = plBolsaActual();
+    const sumaSat = STOCKS.filter(x => x[0] !== 'SP').reduce((s, x) => s + pb[x[0]], 0);
+    return Object.fromEntries(STOCKS.map(([tk]) => [tk, tk === 'SP' ? nucleo : sumaSat > 0 ? sat * pb[tk] / sumaSat : sat / (STOCKS.length - 1)]));
+  }
+
   function planPanelesHtml() {
     const rc = 100 - (settings.bolsaTarget || 0), bo = planDraft.bolsa || plBolsaActual(), sBo = Object.values(bo).reduce((x, y) => x + y, 0);
     return `<div class="cards-grid">
@@ -1169,7 +1178,7 @@ const App = (() => {
           const barColor = prog >= 1 ? 'var(--accent-green)' : prog >= 0.8 ? 'var(--accent-yellow)' : 'var(--accent-blue)';
           return repartoRowHtml({ icon: iconHtml(row.token, row.cssClass, 24), label: row.label, amountText: on ? fmtCurrency(row.amount) : `${pct}%`, pct, barColor, idle: !on });
         }).join('');
-        const stockRows = STOCKS.map(([tok, name, css]) => repartoRowHtml({ icon: iconHtml(tok, css, 24), label: name, amountText: fmtCurrency(r.bolsaUsd * plBolsaActual()[tok] / 100) })).join('');
+        const stockRows = STOCKS.map(([tok, name, css]) => repartoRowHtml({ icon: iconHtml(tok, css, 24), label: name, amountText: fmtCurrency(bolsaPorPlantilla(s, r.bolsaUsd)[tok]) })).join('');
         return `
           <details class="strat-block ${key === settings.strategy ? 'active' : ''}" data-strat="${key}" open>
             <summary class="strat-sum">
