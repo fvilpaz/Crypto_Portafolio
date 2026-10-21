@@ -874,10 +874,14 @@ const App = (() => {
     // listeners de edición de cubos — se registran en init(), no aquí
   }
 
-  // Cuánto de lo que entra este mes va a bolsa y cuánto a crypto: el ratio que fijas (60/40 → 60 % a crypto y 40 % a bolsa), sin mirar lo que ya
-  // tienes. Lo que falta para llegar a los objetivos se corrige dentro de cada lado, entre sus cubos. Todo en USD.
-  function splitByRatio(monthly, target) {
-    const bolsa = target > 0 && monthly > 0 ? monthly * target : 0;
+  // Cuánto de lo que entra este mes va a bolsa y cuánto a crypto, según lo que le falta a cada lado para su objetivo tras aportar
+  // (mismo mecanismo que la plantilla "objetivos"): el lado más lejos recibe más; si uno ya llega, todo va al otro. Todo en USD.
+  function splitByGaps(total, stocks, monthly, target) {
+    if (target <= 0 || monthly <= 0) return { bolsa: 0, crypto: monthly };
+    const after = total + monthly;
+    const gapB = Math.max(target * after - stocks, 0), gapC = Math.max((1 - target) * after - (total - stocks), 0);
+    const gaps = gapB + gapC;
+    const bolsa = gaps >= monthly ? monthly * gapB / gaps : gapB + (monthly - gaps) * target;
     return { bolsa, crypto: monthly - bolsa };
   }
 
@@ -887,7 +891,7 @@ const App = (() => {
     const totalUsd = (settings.dcaTarget || 0) / EUR_USD;
     const target = Math.min(Math.max((settings.bolsaTarget || 0) / 100, 0), 1);
     const stocks = portfolio.filter(a => a.kind === 'stock').reduce((s, a) => s + getAssetValue(a), 0);
-    const { bolsa, crypto } = splitByRatio(totalUsd, target);
+    const { bolsa, crypto } = splitByGaps(getInvestedValue(), stocks, totalUsd, target);
     return { totalUsd, target, stocks, bolsaUsd: bolsa, cryptoUsd: crypto };
   }
 
@@ -895,7 +899,10 @@ const App = (() => {
   // Las plantillas fijas (Conservadora/Moderada/Agresiva) reparten el dinero por sus % puros y, dentro de cada cubo, por los % de cada
   // moneda (coreSplit/satSplit), SIN mirar lo que ya tienes. Solo "Objetivos" analiza lo que tienes y lo que falta para llegar al objetivo.
   function computeReparto(strat) {
-    const monthlyUsd = monthlySplit().cryptoUsd;   // la parte de crypto del dinero mensual (€ a USD interno)
+    // Parte de crypto del dinero mensual (€ a USD interno). "Objetivos" la saca del ratio fijado (60/40 → 60 % a crypto) para no mandar
+    // todo a bolsa cuando la bolsa va a 0; el resto de plantillas siguen con el reparto de siempre.
+    const split0 = monthlySplit();
+    const monthlyUsd = strat.byTargets ? split0.totalUsd * (1 - split0.target) : split0.cryptoUsd;
     const satBlocked = getCosmosPct() >= (cosmosTopPct() - 0.05);
     const btcVal = getAssetValue(portfolio.find(a => a.token === 'BTC'));
     const ethVal = getAssetValue(portfolio.find(a => a.token === 'ETH'));
@@ -1127,7 +1134,7 @@ const App = (() => {
     const split = monthlySplit(), monthlyUsd = split.cryptoUsd, bolsaUsd = split.bolsaUsd;   // bolsaUsd 0 = sin objetivo de bolsa
     const hint = document.getElementById('reparto-hint');
     if (hint) hint.innerHTML = settings.bolsaTarget > 0
-      ? `Tu aportación de <strong>${fmtCurrency(split.totalUsd)}</strong> al mes: <strong>${fmtCurrency(monthlyUsd)}</strong> a crypto y <strong>${fmtCurrency(bolsaUsd)}</strong> a bolsa, según el ratio que has fijado (ratio objetivo: crypto ${100 - settings.bolsaTarget} % · bolsa ${settings.bolsaTarget} %). Despliega para comparar y elige la tuya.`
+      ? `Tu aportación de <strong>${fmtCurrency(split.totalUsd)}</strong> al mes: <strong>${fmtCurrency(monthlyUsd)}</strong> a crypto y <strong>${fmtCurrency(bolsaUsd)}</strong> a bolsa, según lo que falta a cada lado (ratio objetivo: crypto ${100 - settings.bolsaTarget} % · bolsa ${settings.bolsaTarget} %). Despliega para comparar y elige la tuya.`
       : `Tu aportación de <strong>${fmtCurrency(monthlyUsd)}</strong> al mes, repartida según cada estrategia. Despliega para comparar y elige la tuya.`;
     const proy = document.getElementById('reparto-proyeccion');
     if (proy) proy.textContent = bolsaProjection();
@@ -1229,14 +1236,14 @@ const App = (() => {
   }
 
   // Peso de la bolsa a 12 y 24 meses, y cuándo llega a su objetivo, si cada mes entra el dinero repartido por lo que falta,
-  // sin contar variaciones de precio (simulación mes a mes con splitByRatio). '' si faltan datos.
+  // sin contar variaciones de precio (simulación mes a mes con splitByGaps). '' si faltan datos.
   function bolsaProjection() {
     const sp = monthlySplit(), total = getInvestedValue();
     if (sp.target <= 0 || sp.totalUsd <= 0 || total <= 0) return '';
     let v = total, s = sp.stocks, llega = Math.abs(s / v - sp.target) <= 0.0005 ? 0 : null;   // llega = mes en que alcanza el objetivo (desde abajo o desde arriba)
     const peso = {};
     for (let m = 1; m <= 240; m++) {
-      s += splitByRatio(sp.totalUsd, sp.target).bolsa; v += sp.totalUsd;
+      s += splitByGaps(v, s, sp.totalUsd, sp.target).bolsa; v += sp.totalUsd;
       if (llega === null && Math.abs(s / v - sp.target) <= 0.0005) llega = m;
       if (m === 12 || m === 24) peso[m] = `${(s / v * 100).toFixed(1)} %`;
     }
