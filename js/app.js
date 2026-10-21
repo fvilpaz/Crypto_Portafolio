@@ -1045,15 +1045,20 @@ const App = (() => {
     <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px 18px;margin-top:12px">${campos}${extra}</div><div class="card-sub" style="margin-top:10px">${nota}</div></div>`;
   const plBoton = (k, txt) => `<button type="button" class="add-submit" data-plan="${k}" style="width:auto;padding:10px 22px">${txt}</button>`;
 
-  // Tus acciones/ETF: las que has añadido con el buscador (settings.customStocks) y las que tienes en cartera. [token, nombre, clase del icono]
-  function bolsaLista() {
+  // Tus acciones/ETF reales: las que has añadido con el buscador (settings.customStocks) y las que tienes en cartera. [token, nombre, clase del icono]
+  function bolsaListaReal() {
     const toks = [...new Set([...Object.keys(settings.customStocks || {}), ...portfolio.filter(a => a.kind === 'stock').map(a => a.token)])];
     return toks.map(t => [t, COINS[t]?.name || t, COINS[t]?.cssClass || 'stk']);
   }
-  // Núcleo de la bolsa: la que marques con la estrella; si no, el primer ETF del S&P 500 que tengas. Sin núcleo, todo son satélites.
+  // Núcleo de la bolsa: la que marques con la estrella; si no, el primer ETF del S&P 500 que tengas; si no tienes ninguno, el S&P 500 ('SP', virtual).
   function bolsaNucleo() {
-    const l = bolsaLista().map(x => x[0]);
-    return l.includes(settings.bolsaCore) ? settings.bolsaCore : ['SPY', 'VOO', 'IVV', 'SPLG'].find(t => l.includes(t)) || null;
+    const l = bolsaListaReal().map(x => x[0]);
+    return l.includes(settings.bolsaCore) ? settings.bolsaCore : ['SPY', 'VOO', 'IVV', 'SPLG'].find(t => l.includes(t)) || 'SP';
+  }
+  // Lista que se reparte: tus acciones y, si ninguna es núcleo, el S&P 500 delante como núcleo a comprar (sin posición todavía).
+  function bolsaLista() {
+    const l = bolsaListaReal();
+    return bolsaNucleo() === 'SP' && !l.some(x => x[0] === 'SP') ? [['SP', 'S&P 500', 'sp'], ...l] : l;
   }
   // % de cada acción sobre el total de bolsa (a partes iguales hasta que lo fijes)
   function plBolsaActual() {
