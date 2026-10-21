@@ -106,3 +106,64 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   });
   fx.onChange(pintar);
 })();
+
+/* Crypto: datos de DefiLlama y CoinGecko (los genera scripts/update_crypto.py). Se cargan al abrir la pestaña Crypto por primera vez. */
+(function () {
+  const fx = window.mkFx;
+  let datos = null;
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, txt, cls) => { const e = document.createElement(tag); e.textContent = txt; if (cls) e.className = cls; return e; };
+  const celda = (x, cls) => { const t = el('td', '', cls); t.append(x); return t; };
+  const num = (txt) => celda(txt, 'text-right');
+  const fila = (...celdas) => { const t = document.createElement('tr'); t.append(...celdas); return t; };
+  const n1 = (v) => v.toLocaleString('es-ES', { maximumFractionDigits: 1 });
+  const compacto = (usd) => {   // 92,1 mil M$ · 6,2 M$ · 48.469 $ (en la moneda elegida)
+    const v = fx.toCur(usd), m = fx.cur() === 'EUR' ? '€' : '$';
+    return v >= 1e9 ? `${n1(v / 1e9)} mil M${m}` : v >= 1e6 ? `${n1(v / 1e6)} M${m}` : `${Math.round(v).toLocaleString('es-ES')} ${m}`;
+  };
+  const pct = (v) => n1(v) + ' %';
+  const pct2 = (v) => v.toLocaleString('es-ES', { maximumFractionDigits: 2 }) + ' %';   // el % de suministro es pequeño: 0,21 % no es 0,2 %
+  const chip = (v) => el('span', (v > 0 ? '▲ +' : '▼ ') + pct(v), 'chip ' + (v > 0 ? 'up' : 'dn'));
+  const opcional = (v, f) => (v === null || v === undefined ? num('sin datos') : num(f(v)));
+  const CABECERA = '<thead><tr><th>Empresa</th><th class="text-right">Cantidad</th><th class="text-right">% suministro</th><th class="text-right">Coste de compra</th><th class="text-right">Valor hoy</th></tr></thead>';
+
+  function tenedores(t, simbolo, nombre) {
+    const kpi = (etiqueta, valor) => { const c = el('div', '', 'card'); c.append(el('div', etiqueta, 'card-label'), el('div', valor, 'card-value')); return c; };
+    const kpis = el('div', '', 'kpis'); kpis.style.marginBottom = '12px';
+    kpis.append(kpi(`${simbolo} en empresas cotizadas`, `${Math.round(t.total).toLocaleString('es-ES')} ${simbolo}`), kpi('Valor', compacto(t.valor_usd)), kpi('% del suministro', pct2(t.pct_suministro)), kpi('Empresas', t.n_empresas));
+    const tbody = document.createElement('tbody');
+    t.top.forEach((c) => {
+      const empresa = celda(''); empresa.append(el('span', c.simbolo, 'tk'), el('div', `${c.nombre} (${c.pais})`, 'nm'));
+      const valor = num(compacto(c.valor_usd));
+      if (c.coste_usd) valor.append(' ', chip(Math.round((c.valor_usd / c.coste_usd - 1) * 100)));
+      tbody.append(fila(empresa, num(Math.round(c.cantidad).toLocaleString('es-ES')), num(pct2(c.pct_suministro)), c.coste_usd ? num(compacto(c.coste_usd)) : num('—'), valor));
+    });
+    const tabla = document.createElement('table'); tabla.innerHTML = CABECERA; tabla.append(tbody);
+    const wrap = el('div', '', 'table-wrapper'); wrap.append(tabla);
+    return [el('h2', `${nombre} en empresas cotizadas`, 'section-title'), kpis, wrap];
+  }
+
+  function pintar() {
+    if (!datos) return;
+    const { tvl_total: tvl, stablecoins: st } = datos;
+    $('c-tvl').textContent = tvl ? compacto(tvl.usd) : 'sin datos';
+    $('c-tvl-sub').textContent = tvl ? `${tvl.cambio_7d_pct > 0 ? '+' : ''}${pct(tvl.cambio_7d_pct)} en 7 días` : '';
+    $('c-stable').textContent = st ? compacto(st.usd) : 'sin datos';
+    $('c-flujo').textContent = st ? (st.flujo_7d_usd >= 0 ? '+' : '−') + compacto(Math.abs(st.flujo_7d_usd)) : 'sin datos';
+    $('c-flujo').style.color = st ? (st.flujo_7d_usd >= 0 ? 'var(--accent-green)' : 'var(--accent-red)') : '';
+    $('c-fecha').textContent = new Date(datos.actualizado).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+    $('c-monedas').replaceChildren(...datos.monedas.map((m) => {
+      const moneda = celda(''); moneda.append(el('span', m.simbolo, 'tk'), el('div', m.nombre, 'nm'));
+      const cambio = m.comisiones_cambio_7d_pct === null ? num('sin datos') : celda(chip(m.comisiones_cambio_7d_pct), 'text-right');
+      return fila(moneda, opcional(m.tvl_usd, compacto), opcional(m.comisiones_30d_usd, compacto), cambio, opcional(m.ingresos_30d_usd, compacto));
+    }));
+    $('c-tenedores').replaceChildren(...[['bitcoin', 'BTC', 'Bitcoin'], ['ethereum', 'ETH', 'Ether']].flatMap(([k, simbolo, nombre]) =>
+      datos.tenedores[k] ? tenedores(datos.tenedores[k], simbolo, nombre) : [el('p', `${nombre}: sin datos`, 'reparto-hint')]));
+  }
+  $('mkb2').addEventListener('click', () => {
+    if (datos) return;
+    fetch('data/crypto.json').then((r) => r.json()).then((d) => { datos = d; pintar(); })
+      .catch(() => { $('c-tenedores').textContent = 'No se pudieron cargar los datos de crypto.'; });
+  });
+  fx.onChange(pintar);
+})();
