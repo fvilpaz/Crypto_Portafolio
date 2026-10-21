@@ -112,5 +112,20 @@ half. Each does one thing well and they link to each other.
 - Stocks/ETFs (e.g. an S&P 500 ETF for DCA or extra pay): symbol search with
   Twelve Data (CORS open; price needs a free key), price in EUR/USD with the
   existing rate, and its own "Bolsa" total kept apart from the crypto cards
+- Traditional-market metrics next to the crypto ones (allocation, performance and
+  evolution of the "Bolsa" side, same charts as crypto)
+- Market analysis zone ("smart money" tracker): connect to real data on what the big
+  investors hold (Dalio/Bridgewater, Buffett/Berkshire, Gates Foundation, etc.),
+  e.g. from public SEC 13F filings (EDGAR), then compute statistics on the overlap:
+  which companies several of them hold at once, as candidates for my own investing.
+  Note: 13F is quarterly and lags up to 45 days, so it shows what they held, not what
+  they hold today
+  - Base the analysis on quarter-to-quarter changes (new buys, increases) and portfolio
+    weight, not only on plain overlap
+  - Per-company drill-down: who holds it, since when, weight, plus recent news and
+    fundamentals, to learn why the big investors went in (the goal is to learn to
+    analyse on my own, copying is the toll until then)
+  - Crypto side: DefiLlama (free, no key, CORS open) for TVL, protocol revenue and
+    stablecoin flows
 
 ---
