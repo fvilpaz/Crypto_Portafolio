@@ -104,6 +104,39 @@ half. Each does one thing well and they link to each other.
 
 ## 🔮 Roadmap
 
+- **NEXT, do this first:** market analysis zone ("smart money" tracker): connect to
+  real data on what the big investors hold (Dalio/Bridgewater, Buffett/Berkshire,
+  Gates Foundation, etc.), e.g. from public SEC 13F filings (EDGAR), then compute
+  statistics on the overlap: which companies several of them hold at once, as
+  candidates for my own investing. Note: 13F is quarterly and lags up to 45 days, so
+  it shows what they held, not what they hold today
+  - Base the analysis on quarter-to-quarter changes (new buys, increases) and portfolio
+    weight, not only on plain overlap
+  - Per-company drill-down: who holds it, since when, weight, plus recent news and
+    fundamentals, to learn why the big investors went in (the goal is to learn to
+    analyse on my own, copying is the toll until then)
+  - Crypto side: DefiLlama (free, no key, CORS open) for TVL, protocol revenue and
+    stablecoin flows
+  - Placement: separate "Mercado" view opened from a header button (not a nav anchor),
+    with a Bolsa / Crypto selector; data loaded only when opened
+  - Architecture: a scheduled script (GitHub Action) downloads EDGAR 13F, DefiLlama
+    and news, and writes small static JSON files to the repo; the app only reads those.
+    Tested 2026-10-21: EDGAR holdings XML and Google News have no CORS (browser cannot
+    read them), EDGAR needs a User-Agent, DefiLlama files are large (protocols 9 MB,
+    fees 29 MB), Yahoo returned 429. A script avoids CORS, API limits and keys in
+    the frontend. Live prices stay in the browser (Twelve Data)
+  - 13F quirk: the same company can appear in several rows (e.g. Apple in
+    Berkshire's filing); sum positions per issuer before comparing
+  - Crypto holders: companies holding BTC/ETH (Strategy, Metaplanet, BitMine...) from
+    CoinGecko's public-treasury endpoint, fetched by the same script (DefiLlama's
+    treasuries/ETF endpoints are paid). Bitcoin ETFs such as IBIT are funds, not companies
+  - Scope: get the basics working first (fixed list of ~5 managers, static JSON,
+    read-only view). Everything below is a later phase, only if the app grows
+  - Later, phase 1: configurable manager list (name + SEC CIK in a file the script reads)
+  - Later, phase 2: small cloud function (e.g. Cloudflare Worker) as a proxy: it solves
+    EDGAR's missing CORS and keeps any API key out of the frontend
+  - Later, phase 3, on top of that function: in-app manager search, and an analysis chat
+    over the same data (13F data only changes quarterly; only prices and news are live)
 - Automatic cross-device sync (a "Nando profile" backed by a private GitHub Gist),
   so state travels between devices without carrying a file by hand
 - Add brand-new coins via CoinGecko search (auto-resolves id, name and icon,
@@ -114,18 +147,32 @@ half. Each does one thing well and they link to each other.
   existing rate, and its own "Bolsa" total kept apart from the crypto cards
 - Traditional-market metrics next to the crypto ones (allocation, performance and
   evolution of the "Bolsa" side, same charts as crypto)
-- Market analysis zone ("smart money" tracker): connect to real data on what the big
-  investors hold (Dalio/Bridgewater, Buffett/Berkshire, Gates Foundation, etc.),
-  e.g. from public SEC 13F filings (EDGAR), then compute statistics on the overlap:
-  which companies several of them hold at once, as candidates for my own investing.
-  Note: 13F is quarterly and lags up to 45 days, so it shows what they held, not what
-  they hold today
-  - Base the analysis on quarter-to-quarter changes (new buys, increases) and portfolio
-    weight, not only on plain overlap
-  - Per-company drill-down: who holds it, since when, weight, plus recent news and
-    fundamentals, to learn why the big investors went in (the goal is to learn to
-    analyse on my own, copying is the toll until then)
-  - Crypto side: DefiLlama (free, no key, CORS open) for TVL, protocol revenue and
-    stablecoin flows
+  - New summary card "Bolsa" in the card row (same format as Núcleo / Satélites /
+    Refugio: icons of the holdings, % of the portfolio, bar with target mark). The
+    header button "Mercado" is for analysis (Bolsa + Crypto); the card is what I own
+  - Stock holdings must add to the portfolio total in the hero; needs a buy price per
+    stock (for P&L) and the live EUR/USD rate for conversion
+  - Targets: Núcleo / Satélites / Refugio / Bolsa must add up to 100 %, so the current
+    60/20/20 targets and the "Reparto del mes" templates need rethinking
+  - Header button toggles its own label: "Mercado" on the portfolio view, "Cartera"
+    on the market view (no second back button inside the view)
+  - Design decided in the prototype (market view + Bolsa card + monthly plan):
+    - "Reparto del mes": each template gets two collapsible groups, Crypto and Bolsa,
+      with a subtotal; plus a fifth block "Tu plan" that counts only what is invested
+      (savings and living costs are not investment and stay out of the split)
+    - Split cards in %: "Reparto de crypto" (BTC, ETH, USDC, ATOM, TIA, SOL) and
+      "Reparto de la bolsa" (S&P 500, SpaceX, Tesla, Nvidia, Microsoft); the bolsa
+      catalogue is hardcoded like COINS, a search to add more comes later
+    - Monthly contribution has a fixed crypto base, a variable cushion (up to a cap)
+      and a bolsa amount; the rest of the budget is not part of the split
+    - Estimate panel: weight of the bolsa in the portfolio after N months, and the month
+      the bolsa target is reached (ignores price changes)
+    - EUR / USD toggle must keep working everywhere (same rate and format as the app)
+    - Desktop: the template blocks scroll horizontally with 3 visible; mobile keeps the
+      stacked grid
+    - Reuse existing classes (token-icon, reparto-row, strat-bar, card, section-badge...)
+      instead of new styles; one row-building function for every list
+    - Open: base of the template maths (600 EUR budget vs invested only), whether "Tu
+      plan" goes first, and the bolsa rows' progress bar (split share, not progress)
 
 ---
