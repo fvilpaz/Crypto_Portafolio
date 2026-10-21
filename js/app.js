@@ -1083,10 +1083,17 @@ const App = (() => {
     const sufijos = new Set(['inc', 'corp', 'corporation', 'co', 'ltd', 'plc', 'holdings', 'common', 'stock', 'ordinary', 'share', 'shares', 'class', 'a', 'b', 'c']);
     return nombre.replace(/[,.]/g, ' ').split(' ').filter(w => w && !sufijos.has(w.toLowerCase())).slice(0, 2).join(' ') || nombre;
   }
-  // % de cada acción sobre el total de bolsa (a partes iguales hasta que lo fijes)
+  // % de cada acción sobre el total de bolsa. Sin reparto guardado: el núcleo lleva la mayoría (70 %, como las plantillas; si solo hay núcleo, todo) y los
+  // satélites se reparten el resto a partes iguales. Con reparto guardado: el que fijaste (una acción que aún no está en él cuenta 0 hasta que la repartas).
   function plBolsaActual() {
-    const sp = settings.stockSplit || {}, l = bolsaLista();
-    return Object.fromEntries(l.map(([tk]) => [tk, (sp[tk] ?? 1 / l.length) * 100]));
+    const l = bolsaLista(), nuc = bolsaNucleo(), sp = settings.stockSplit || {}, peso = {};
+    if (!Object.keys(sp).length) {
+      const sats = l.filter(x => x[0] !== nuc).length;
+      l.forEach(([t]) => { peso[t] = t === nuc ? (sats ? 70 : 100) : 30 / sats; });
+      return peso;
+    }
+    l.forEach(([t]) => { peso[t] = (sp[t] ?? 0) * 100; });
+    return peso;
   }
 
   // Bolsa de una plantilla: en bolsa no hay refugio, así que el dinero se reparte entre núcleo (S&P 500) y satélites (el resto) en la misma
@@ -1373,7 +1380,16 @@ const App = (() => {
         btn.addEventListener('click', () => { delete tokenMap[btn.dataset.remove]; renderTokens(); });
       });
       document.querySelectorAll('#bucket-tokens [data-star]').forEach(b => {
-        b.addEventListener('click', () => { nucleo = b.dataset.star; renderTokens(); });
+        b.addEventListener('click', () => {
+          const nuevo = b.dataset.star;
+          if (nuevo !== nucleo) {   // hereda el % más alto: intercambia con quien lo tenga (a igualdad, con el núcleo de antes)
+            const claves = Object.keys(tokenMap);
+            const top = claves.reduce((m, t) => tokenMap[t] > tokenMap[m] ? t : m, claves.includes(nucleo) ? nucleo : claves[0]);
+            if (top !== nuevo) { const tmp = tokenMap[top]; tokenMap[top] = tokenMap[nuevo]; tokenMap[nuevo] = tmp; }
+            nucleo = nuevo;
+          }
+          renderTokens();
+        });
       });
     }
     renderTokens();
