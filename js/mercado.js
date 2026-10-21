@@ -37,32 +37,44 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   btn.addEventListener('click', () => show(view.hidden));
 })();
 
-/* Datos reales: ultimo 13F de Berkshire (lo genera scripts/update_13f.py). Se carga al abrir Mercado por primera vez. */
+/* Datos reales: ultimo 13F de cada gestor (los genera scripts/update_13f.py). Se cargan al abrir Mercado por primera vez. */
 (function () {
-  const fx = window.mkFx, view = document.getElementById('mercado');
+  const fx = window.mkFx, view = document.getElementById('mercado'), cont = document.getElementById('b13f');
   let datos = null;
   const el = (tag, txt, cls) => { const e = document.createElement(tag); e.textContent = txt; if (cls) e.className = cls; return e; };
   const billones = (usd) => (fx.toCur(usd) / 1e9).toLocaleString('es-ES', { maximumFractionDigits: 1 }) + ' mil M' + (fx.cur() === 'EUR' ? '€' : '$');
   const dia = (iso) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-  function pintar() {
-    if (!datos) return;
-    document.getElementById('b13f-hint').textContent = `Presentado el ${dia(datos.presentado)} · cierre de ${dia(datos.periodo)} · ${datos.n_emisores} empresas · total ${billones(datos.total_usd)} · fuente: ${datos.fuente}. Es lo que tenían a esa fecha, no lo que tienen hoy.`;
-    const body = document.getElementById('b13f-body'); body.replaceChildren();
-    datos.top.forEach((t) => {
-      const c = t.cambio_acciones_pct, tr = document.createElement('tr');
-      const cambio = document.createElement('td');
+  function seccion(d) {
+    const sec = document.createElement('section');
+    const badge = el('span', '13F · SEC', 'section-badge');
+    badge.style.cssText = 'background:var(--accent-green-bg);color:var(--accent-green);';
+    const h = el('h2', d.gestor + ' · datos reales ', 'section-title'); h.append(badge);
+    const hint = el('p', `Presentado el ${dia(d.presentado)} · cierre de ${dia(d.periodo)} · ${d.n_emisores} empresas · total ${billones(d.total_usd)} · fuente: ${d.fuente}. Es lo que tenían a esa fecha, no lo que tienen hoy.`, 'reparto-hint');
+    const tbody = document.createElement('tbody');
+    d.top.forEach((t) => {
+      const c = t.cambio_acciones_pct, tr = document.createElement('tr'), cambio = document.createElement('td');
       if (c === 'nueva') cambio.append(el('span', '★ Compra nueva', 'chip new'));
       else if (c === 0) cambio.textContent = 'Sin cambios';
       else cambio.append(el('span', (c > 0 ? '▲ +' : '▼ ') + c.toLocaleString('es-ES') + ' % acciones', 'chip ' + (c > 0 ? 'up' : 'dn')));
       const num = (txt) => el('td', txt, 'text-right');
       tr.append(el('td', t.emisor, 'tk'), num(billones(t.valor_usd)), num(t.peso_pct.toLocaleString('es-ES') + ' %'), num(t.acciones.toLocaleString('es-ES')), cambio);
-      body.append(tr);
+      tbody.append(tr);
     });
+    const tabla = document.createElement('table');
+    tabla.innerHTML = '<thead><tr><th>Empresa</th><th class="text-right">Valor</th><th class="text-right">Peso</th><th class="text-right">Acciones</th><th>Cambio frente al trimestre anterior</th></tr></thead>';
+    tabla.append(tbody);
+    const wrap = el('div', '', 'table-wrapper'); wrap.append(tabla);
+    sec.append(h, hint, wrap);
+    return sec;
   }
+  function pintar() { if (datos) cont.replaceChildren(...datos.map(seccion)); }
   document.getElementById('mk-btn').addEventListener('click', () => {
     if (view.hidden || datos) return;
-    fetch('data/13f_berkshire.json').then((r) => r.json()).then((d) => { datos = d; pintar(); })
-      .catch(() => { document.getElementById('b13f-hint').textContent = 'No se pudieron cargar los datos de Berkshire.'; });
+    const json = (url) => fetch(url).then((r) => r.json());
+    json('data/13f_indice.json')
+      .then((ix) => Promise.all(ix.map((g) => json('data/13f_' + encodeURIComponent(g.clave) + '.json'))))
+      .then((ds) => { datos = ds; pintar(); })
+      .catch(() => { cont.textContent = 'No se pudieron cargar los datos de los gestores.'; });
   });
   fx.onChange(pintar);
 })();

@@ -1,0 +1,14 @@
+[
+  {
+    "clave": "berkshire",
+    "nombre": "Berkshire Hathaway"
+  },
+  {
+    "clave": "bridgewater",
+    "nombre": "Bridgewater Associates"
+  },
+  {
+    "clave": "gates",
+    "nombre": "Gates Foundation Trust"
+  }
+]

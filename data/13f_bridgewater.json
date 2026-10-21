@@ -1,0 +1,83 @@
+{
+  "gestor": "Bridgewater Associates",
+  "cik": "0001350694",
+  "periodo": "2026-06-30",
+  "presentado": "2026-08-14",
+  "periodo_anterior": "2026-03-31",
+  "accesion": "0001350694-26-000003",
+  "fuente": "SEC EDGAR, formulario 13F-HR",
+  "total_usd": 24376086530,
+  "n_emisores": 990,
+  "top": [
+    {
+      "emisor": "STATE STR SPDR S&P 500 ETF T",
+      "valor_usd": 3973046405,
+      "peso_pct": 16.3,
+      "acciones": 5320308,
+      "cambio_acciones_pct": 21.9
+    },
+    {
+      "emisor": "ISHARES TR",
+      "valor_usd": 2494609800,
+      "peso_pct": 10.23,
+      "acciones": 5446707,
+      "cambio_acciones_pct": 7.5
+    },
+    {
+      "emisor": "NVIDIA CORPORATION",
+      "valor_usd": 773586958,
+      "peso_pct": 3.17,
+      "acciones": 3866195,
+      "cambio_acciones_pct": -17.6
+    },
+    {
+      "emisor": "ALPHABET INC",
+      "valor_usd": 498725596,
+      "peso_pct": 2.05,
+      "acciones": 1396383,
+      "cambio_acciones_pct": -41.4
+    },
+    {
+      "emisor": "BROADCOM INC",
+      "valor_usd": 497845413,
+      "peso_pct": 2.04,
+      "acciones": 1317923,
+      "cambio_acciones_pct": -28.2
+    },
+    {
+      "emisor": "ISHARES INC",
+      "valor_usd": 496484181,
+      "peso_pct": 2.04,
+      "acciones": 3816595,
+      "cambio_acciones_pct": -12.8
+    },
+    {
+      "emisor": "AMAZON COM INC",
+      "valor_usd": 482753142,
+      "peso_pct": 1.98,
+      "acciones": 2025481,
+      "cambio_acciones_pct": -53.8
+    },
+    {
+      "emisor": "LAM RESEARCH CORP",
+      "valor_usd": 406560606,
+      "peso_pct": 1.67,
+      "acciones": 938224,
+      "cambio_acciones_pct": -40.3
+    },
+    {
+      "emisor": "VANGUARD INDEX FDS",
+      "valor_usd": 314820655,
+      "peso_pct": 1.29,
+      "acciones": 458381,
+      "cambio_acciones_pct": 189.0
+    },
+    {
+      "emisor": "ADVANCED MICRO DEVICES INC",
+      "valor_usd": 312896715,
+      "peso_pct": 1.28,
+      "acciones": 538632,
+      "cambio_acciones_pct": -58.3
+    }
+  ]
+}

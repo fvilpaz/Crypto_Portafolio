@@ -1,0 +1,83 @@
+{
+  "gestor": "Gates Foundation Trust",
+  "cik": "0001166559",
+  "periodo": "2026-06-30",
+  "presentado": "2026-08-14",
+  "periodo_anterior": "2026-03-31",
+  "accesion": "0001104659-26-097175",
+  "fuente": "SEC EDGAR, formulario 13F-HR",
+  "total_usd": 34424791932,
+  "n_emisores": 24,
+  "top": [
+    {
+      "emisor": "BERKSHIRE HATHAWAY INC DEL",
+      "valor_usd": 7350651039,
+      "peso_pct": 21.35,
+      "acciones": 14689844,
+      "cambio_acciones_pct": -13.8
+    },
+    {
+      "emisor": "CATERPILLAR INC",
+      "valor_usd": 6765963549,
+      "peso_pct": 19.65,
+      "acciones": 6353614,
+      "cambio_acciones_pct": 0.0
+    },
+    {
+      "emisor": "CANADIAN NATL RY CO",
+      "valor_usd": 6179825963,
+      "peso_pct": 17.95,
+      "acciones": 51826786,
+      "cambio_acciones_pct": 0.0
+    },
+    {
+      "emisor": "WASTE MGMT INC DEL",
+      "valor_usd": 5955519423,
+      "peso_pct": 17.3,
+      "acciones": 26720744,
+      "cambio_acciones_pct": -3.3
+    },
+    {
+      "emisor": "DEERE & CO",
+      "valor_usd": 2256551587,
+      "peso_pct": 6.56,
+      "acciones": 3557378,
+      "cambio_acciones_pct": 0.0
+    },
+    {
+      "emisor": "ECOLAB INC",
+      "valor_usd": 1453799239,
+      "peso_pct": 4.22,
+      "acciones": 5218044,
+      "cambio_acciones_pct": 0.0
+    },
+    {
+      "emisor": "WALMART INC",
+      "valor_usd": 950305425,
+      "peso_pct": 2.76,
+      "acciones": 8390477,
+      "cambio_acciones_pct": 0.0
+    },
+    {
+      "emisor": "FEDEX CORP",
+      "valor_usd": 746615273,
+      "peso_pct": 2.17,
+      "acciones": 2384362,
+      "cambio_acciones_pct": 0.0
+    },
+    {
+      "emisor": "COCA-COLA FEMSA SAB DE CV",
+      "valor_usd": 660313894,
+      "peso_pct": 1.92,
+      "acciones": 6214719,
+      "cambio_acciones_pct": 0.0
+    },
+    {
+      "emisor": "HOME DEPOT INC",
+      "valor_usd": 352680000,
+      "peso_pct": 1.02,
+      "acciones": 1000000,
+      "cambio_acciones_pct": "nueva"
+    }
+  ]
+}
