@@ -47,11 +47,17 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   const billones = (usd) => (fx.toCur(usd) / 1e9).toLocaleString('es-ES', { maximumFractionDigits: 1 }) + ' mil M' + (fx.cur() === 'EUR' ? '€' : '$');
   const dia = (iso) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
   function seccion(d) {
-    const sec = document.createElement('section');
+    const sec = document.createElement('details');
+    sec.className = 'card'; sec.style.cssText = 'margin-top:12px;padding:12px 16px';
     const badge = el('span', '13F · SEC', 'section-badge');
     badge.style.cssText = 'background:var(--accent-green-bg);color:var(--accent-green);';
-    const h = el('h2', d.gestor + ' · datos reales ', 'section-title'); h.append(badge);
-    const hint = el('p', `Presentado el ${dia(d.presentado)} · cierre de ${dia(d.periodo)} · ${d.n_emisores} empresas · total ${billones(d.total_usd)} · fuente: ${d.fuente}. Es lo que tenían a esa fecha, no lo que tienen hoy.`, 'reparto-hint');
+    const h = document.createElement('summary');
+    h.style.cssText = 'cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap';
+    const nombre = el('span', d.gestor, ''); nombre.style.cssText = 'font-weight:700;font-size:15px;color:var(--text-primary)';
+    const resumen = el('span', `en qué invierte · ${d.n_emisores} empresas · ${billones(d.total_usd)}`, ''); resumen.style.cssText = 'color:var(--text-muted);font-size:12px;margin-left:auto';
+    h.append(nombre, badge, resumen);
+    const cuantas = d.top.length < d.n_emisores ? `Las ${d.top.length} mayores de las ${d.n_emisores} empresas` : `Las ${d.n_emisores} empresas`;
+    const hint = el('p', `${cuantas} en las que ha invertido (${billones(d.total_usd)} en total). Informe 13F a la SEC con cierre el ${dia(d.periodo)}, presentado el ${dia(d.presentado)}: es lo que tenían entonces, no lo que tienen hoy. Fuente: ${d.fuente}.`, 'reparto-hint');
     const tbody = document.createElement('tbody');
     d.top.forEach((t) => {
       const c = t.cambio_acciones_pct, tr = document.createElement('tr'), cambio = document.createElement('td');
@@ -64,9 +70,9 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
       tbody.append(tr);
     });
     const tabla = document.createElement('table');
-    tabla.innerHTML = '<thead><tr><th>Empresa</th><th class="text-right">Valor</th><th class="text-right">Peso</th><th class="text-right">Acciones</th><th>Cambio frente al trimestre anterior</th></tr></thead>';
+    tabla.innerHTML = '<thead><tr><th>Empresa en la que invierte</th><th class="text-right">Valor invertido</th><th class="text-right">% de su cartera</th><th class="text-right">Nº de acciones</th><th>Cambio frente al trimestre anterior</th></tr></thead>';
     tabla.append(tbody);
-    const wrap = el('div', '', 'table-wrapper'); wrap.append(tabla);
+    const wrap = el('div', '', 'table-wrapper'); wrap.append(tabla); wrap.style.marginTop = '12px';
     sec.append(h, hint, wrap);
     return sec;
   }
