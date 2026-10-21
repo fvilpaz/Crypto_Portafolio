@@ -110,6 +110,16 @@ half. Each does one thing well and they link to each other.
   statistics on the overlap: which companies several of them hold at once, as
   candidates for my own investing. Note: 13F is quarterly and lags up to 45 days, so
   it shows what they held, not what they hold today
+  - **Status (2026-10-21), branch `feat/mercado-bolsa`.** Done and checked in the browser: header button
+    "Mercado" and its view; real 13F tables for Berkshire, Bridgewater and the Gates Foundation Trust
+    (`scripts/update_13f.py`, one JSON per manager in `data/`, run by hand with `SEC_USER_AGENT`); real "Dónde
+    coinciden" and "Las que sigues" computed from the full positions, not only the top 10; teal highlight for the
+    stocks I follow; Crypto tab from DefiLlama and CoinGecko (`scripts/update_crypto.py`, no keys); "Reparto del
+    mes" groups Crypto / Bolsa (shown only when `settings.bolsaMonthly` > 0). Still example data (yellow label):
+    the text cards "Inversores y gestoras" and "Empresas y fondos". **Not done:** Bolsa card with real holdings,
+    targets adding up to 100 %, live stock prices (Twelve Data), a scheduled GitHub Action running both scripts
+    (the SEC contact would be a repo secret), and people such as Elon Musk (not 13F filers: they show up in
+    Form 4 and 13D/13G filings, a different source)
   - Base the analysis on quarter-to-quarter changes (new buys, increases) and portfolio
     weight, not only on plain overlap
   - Per-company drill-down: who holds it, since when, weight, plus recent news and
