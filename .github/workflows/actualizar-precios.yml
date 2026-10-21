@@ -2,11 +2,14 @@ name: Actualizar precios de acciones
 
 # Baja de Twelve Data el precio de las acciones/ETF de data/acciones.json (clave en el secreto TWELVE_DATA_KEY) y, si cambia, lo sube
 # a master y lanza el despliegue. Plan gratuito de Twelve Data: 8 creditos por minuto y 800 al dia, 1 credito por simbolo y llamada.
-# El script hace una llamada por simbolo cada 10 s y como mucho 40 simbolos: 8 ejecuciones al dia x 40 = 320 creditos como maximo
-# (con los 5 simbolos de ahora, 40 al dia). Una ejecucion manual (Run workflow) gasta otros tantos creditos: no abusar.
+# Solo 2 ejecuciones al dia (media sesion y despues del cierre de EE. UU.): para aportaciones mensuales y pesos de cartera sobra.
+# El script hace una llamada por simbolo cada 10 s y como mucho 40 simbolos: 2 x 40 = 80 creditos al dia como maximo (con los 5 simbolos
+# de ahora, 10). Si un simbolo falla, se conserva su ultimo precio bueno; la app lo descarta si tiene mas de 5 dias.
+# Una ejecucion manual (Run workflow) gasta otros tantos creditos.
 on:
   schedule:
-    - cron: '35 14-21 * * 1-5'   # cada hora de 14:35 a 21:35 UTC, de lunes a viernes (el mercado de EE. UU. esta abierto)
+    - cron: '5 15 * * 1-5'    # 15:05 UTC, de lunes a viernes: el mercado de EE. UU. esta abierto en horario de verano y de invierno
+    - cron: '5 22 * * 1-5'    # 22:05 UTC, de lunes a viernes: ya ha cerrado en los dos horarios (precio de cierre)
   workflow_dispatch:
 
 permissions:

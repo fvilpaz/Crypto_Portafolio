@@ -5,8 +5,8 @@ La clave solo va como variable de entorno (en GitHub, el secreto TWELVE_DATA_KEY
 
 Limites del plan gratuito (twelvedata.com/pricing): 8 creditos por minuto y 800 al dia; /quote cuesta 1 credito por simbolo.
 Por eso: UNA llamada por simbolo, una cada PAUSA segundos (6 por minuto), como mucho MAX_SIMBOLOS por ejecucion y, si la API
-responde 429, se para en seco (sin reintentar) y se conservan los precios anteriores. Con las 8 ejecuciones al dia de la Action son
-como mucho 8 x MAX_SIMBOLOS = 320 creditos. El plan gratuito lista acciones y ETF de EE. UU.; los europeos (p. ej. VUAA) pueden
+responde 429, se para en seco (sin reintentar) y se conservan los precios anteriores. Con las 2 ejecuciones al dia de la Action son
+como mucho 2 x MAX_SIMBOLOS = 80 creditos. El plan gratuito lista acciones y ETF de EE. UU.; los europeos (p. ej. VUAA) pueden
 fallar: su error queda en "errores" y la app los sigue valorando a precio de compra. No se inventa ningun precio.
 """
 import json, os, sys, time, urllib.error, urllib.parse, urllib.request
