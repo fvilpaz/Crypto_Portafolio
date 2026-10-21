@@ -1,0 +1,48 @@
+name: Actualizar precios de acciones
+
+# Baja de Twelve Data el precio de las acciones/ETF de data/acciones.json (clave en el secreto TWELVE_DATA_KEY) y, si cambia, lo sube
+# a master y lanza el despliegue. Plan gratuito de Twelve Data: 8 creditos por minuto y 800 al dia, 1 credito por simbolo y llamada.
+# El script hace una llamada por simbolo cada 10 s y como mucho 40 simbolos: 8 ejecuciones al dia x 40 = 320 creditos como maximo
+# (con los 5 simbolos de ahora, 40 al dia). Una ejecucion manual (Run workflow) gasta otros tantos creditos: no abusar.
+on:
+  schedule:
+    - cron: '35 14-21 * * 1-5'   # cada hora de 14:35 a 21:35 UTC, de lunes a viernes (el mercado de EE. UU. esta abierto)
+  workflow_dispatch:
+
+permissions:
+  contents: write   # subir el JSON a master
+  actions: write    # lanzar el despliegue: un push hecho con el token del workflow no dispara otros workflows
+
+concurrency:
+  group: actualizar-precios
+  cancel-in-progress: false
+
+jobs:
+  precios:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # Si el script falla (limite, clave mala, sin precios) se deshacen sus cambios: no se publica un dato a medias.
+      - name: Precios (Twelve Data)
+        env:
+          TWELVE_DATA_KEY: ${{ secrets.TWELVE_DATA_KEY }}
+        run: |
+          python scripts/update_precios.py || { echo "::warning::Fallo update_precios.py: se conservan los precios anteriores"; git checkout -- data/precios.json; }
+      - name: Subir si hay cambios y desplegar
+        run: |
+          git add data/precios.json
+          if git diff --cached --quiet; then echo "Sin cambios"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(precios): actualizacion automatica de precios de acciones"
+          git pull --rebase origin master
+          git push origin master
+          gh workflow run gh-pages.yml --ref master

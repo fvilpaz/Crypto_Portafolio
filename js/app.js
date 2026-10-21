@@ -593,10 +593,28 @@ const App = (() => {
 
   // ── COINGECKO API ──
   let fetchingPrices = false;   // evita ticks solapados (interval 60s + refresh manual)
+  // Precios de acciones/ETF: los baja la Action 'Actualizar precios de acciones' (Twelve Data, clave en un secreto de GitHub) a data/precios.json;
+  // aquí solo se lee ese archivo. Sin precio reciente (más de 5 días) o en otra moneda, la acción sigue valiendo a precio de compra.
+  async function fetchStockPrices() {
+    if (!portfolio.some(a => a.kind === 'stock')) return;
+    try {
+      const res = await fetch('data/precios.json', { cache: 'no-cache' });
+      if (!res.ok) return;
+      const d = await res.json();
+      portfolio.filter(a => a.kind === 'stock').forEach(a => {
+        const p = d.precios?.[a.token];
+        if (!p || !(p.price > 0) || Date.now() - Date.parse(p.ts || d.updated) > 5 * 86400000) return;
+        const usd = p.currency === 'USD' ? p.price : p.currency === 'EUR' ? p.price / EUR_USD : null;   // EUR_USD = € por $
+        if (usd) applyPrice(a.token, usd, p.change || 0);
+      });
+    } catch (e) { console.warn('Precios de acciones no disponibles:', e.message); }
+  }
+
   async function fetchPrices() {
     if (fetchingPrices) return;
     fetchingPrices = true;
     try {
+      await fetchStockPrices();
       await fetchPricesImpl();
     } finally {
       fetchingPrices = false;
@@ -890,7 +908,7 @@ const App = (() => {
     const bolsaNeed = bolsaFrac > 0 && bolsaFrac < 1 ? Math.max((bolsaFrac * total - bolsaVal) / (1 - bolsaFrac), 0) : 0;   // lo que hay que comprar para llegar
     bolsaLabel.textContent = bolsaTarget > 0 ? (bolsaNeed > 0 ? `Objetivo ${bolsaTarget}% · Faltan ${fmtCurrency(bolsaNeed)}` : `Objetivo ${bolsaTarget}% · Cubierto`) : 'Sin objetivo';
     bolsaLabel.style.color = bolsaTarget > 0 ? barColor(bolsaRatio, 'var(--accent-teal)') : '';
-    document.getElementById('card-bolsa-sub').textContent = stocks.length ? `${stocks.length} ${stocks.length === 1 ? 'posición' : 'posiciones'} · a precio de compra` : 'Sin posiciones todavía';
+    document.getElementById('card-bolsa-sub').textContent = stocks.length ? `${stocks.length} ${stocks.length === 1 ? 'posición' : 'posiciones'} · ${stocks.every(a => liveTokens.has(a.token)) ? 'a precio de mercado' : stocks.some(a => liveTokens.has(a.token)) ? 'algunas a precio de compra' : 'a precio de compra'}` : 'Sin posiciones todavía';
     // listeners de edición de cubos — se registran en init(), no aquí
   }
 
