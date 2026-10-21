@@ -41,6 +41,9 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
 (function () {
   const fx = window.mkFx, view = document.getElementById('mercado'), cont = document.getElementById('b13f');
   let datos = null, indice = null, coin = null;
+  // Empresas que sigo en bolsa (el catalogo de la app: S&P 500, SpaceX, Tesla, Nvidia, Microsoft). [texto del emisor en el 13F, nombre]
+  const SEGUIDAS = [['S&P 500', 'S&P 500'], ['SPACE EXPLORATION', 'SpaceX'], ['TESLA', 'Tesla'], ['NVIDIA', 'Nvidia'], ['MICROSOFT', 'Microsoft']];
+  const sigo = (emisor) => SEGUIDAS.some(([k]) => emisor.toUpperCase().includes(k));
   const el = (tag, txt, cls) => { const e = document.createElement(tag); e.textContent = txt; if (cls) e.className = cls; return e; };
   const billones = (usd) => (fx.toCur(usd) / 1e9).toLocaleString('es-ES', { maximumFractionDigits: 1 }) + ' mil M' + (fx.cur() === 'EUR' ? '€' : '$');
   const dia = (iso) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -53,6 +56,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     const tbody = document.createElement('tbody');
     d.top.forEach((t) => {
       const c = t.cambio_acciones_pct, tr = document.createElement('tr'), cambio = document.createElement('td');
+      if (sigo(t.emisor)) tr.className = 'sigo';
       if (c === 'nueva') cambio.append(el('span', '★ Compra nueva', 'chip new'));
       else if (c === 0) cambio.textContent = 'Sin cambios';
       else cambio.append(el('span', (c > 0 ? '▲ +' : '▼ ') + c.toLocaleString('es-ES') + ' % acciones', 'chip ' + (c > 0 ? 'up' : 'dn')));
@@ -67,7 +71,11 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     sec.append(h, hint, wrap);
     return sec;
   }
-  function pintar() { if (datos) cont.replaceChildren(...datos.map(seccion)); }
+  function pintar() {
+    if (!datos) return;
+    const leyenda = el('p', `En turquesa, las empresas que sigues en bolsa (${SEGUIDAS.map(([, n]) => n).join(', ')}).`, 'reparto-hint');
+    cont.replaceChildren(leyenda, ...datos.map(seccion));
+  }
   const pct = (n) => n.toLocaleString('es-ES') + ' %';
   const MOVIMIENTOS = [   // [simbolo, singular, plural, clase del chip, test sobre cambio_acciones_pct]
     ['★', 'nueva', 'nuevas', 'new', (c) => c === 'nueva'], ['▲', 'sube', 'suben', 'up', (c) => c > 0], ['▼', 'baja', 'bajan', 'dn', (c) => c !== 'nueva' && c < 0],
@@ -85,6 +93,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     if (!mov.hasChildNodes()) mov.textContent = 'Sin cambios';
     const celdaQuien = el('td', ''); celdaQuien.append(quien);
     const tr = document.createElement('tr');
+    if (sigo(f.emisor)) tr.className = 'sigo';
     tr.append(el('td', f.emisor, 'tk'), celdaQuien, el('td', f.gestores.length, 'text-right'), el('td', `${pct(mayor.peso_pct)} (${gestor(mayor.clave).corto})`, 'text-right'), mov);
     return tr;
   }
