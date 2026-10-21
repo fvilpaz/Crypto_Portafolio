@@ -27,9 +27,12 @@ const App = (() => {
     SOL:   { name: 'Solana', coingeckoId: 'solana', icon: `${COINGECKO_IMG}/4128/small/solana.png`, color: '#9945ff', cssClass: 'sol' },
   };
 
-  // Tokens que cuentan como satelites (todo lo que no es BTC, ETH ni USDC).
-  // Anadir aqui cada nuevo satelite que entre en la cartera.
-  const SATELLITE_TOKENS = ['ATOM', 'TIA', 'SOL'];
+  // Tokens que cuentan como satélites: los de tu reparto interno de Satélites (settings.satSplit, el del lápiz de la tarjeta). Para que una moneda
+  // nueva salga en la tarjeta y en las recomendaciones, añádela ahí.
+  function getSatTokens() {
+    const ks = Object.keys(settings.satSplit || {}), base = ['ATOM', 'TIA', 'SOL'];   // las de siempre, en su orden de siempre; las nuevas detrás
+    return [...base.filter(t => ks.includes(t)), ...ks.filter(t => !base.includes(t))];
+  }
   const REPARTO_OPEN = new Set();   // grupos (crypto/bolsa) que tienes abiertos: renderReparto repinta todo
 
   // La cartera es UN SOLO monedero. Cada moneda lleva un tag:
@@ -711,7 +714,7 @@ const App = (() => {
   function getSatPct() {
     const invested = getInvestedValue();
     if (invested === 0) return 0;
-    const satVal = SATELLITE_TOKENS.reduce((sum, tok) => {
+    const satVal = getSatTokens().reduce((sum, tok) => {
       return sum + getAssetValue(portfolio.find(a => a.token === tok));
     }, 0);
     return satVal / invested;
@@ -811,13 +814,14 @@ const App = (() => {
     if (btcEthSub) {
       btcEthSub.innerHTML = '';
     }
-    // Satelites: todos los tokens de SATELLITE_TOKENS presentes en la cartera.
+    // Satelites: todos los tokens de getSatTokens() presentes en la cartera.
     const cosmosNum = document.getElementById('card-cosmos-pct');
     cosmosNum.textContent = `${(cosmosPct * 100).toFixed(1)}%`;
     cosmosNum.classList.toggle('negative', cosmosPct > cosmosTopPct());
     const cosmosIconsEl = document.getElementById('cosmos-icons');
-    if (cosmosIconsEl && !cosmosIconsEl.childElementCount) {
-      cosmosIconsEl.innerHTML = SATELLITE_TOKENS
+    if (cosmosIconsEl && cosmosIconsEl.dataset.sig !== getSatTokens().join()) {   // se repinta si cambia la lista de satélites
+      cosmosIconsEl.dataset.sig = getSatTokens().join();
+      cosmosIconsEl.innerHTML = getSatTokens()
         .map(tok => { const c = COINS[tok]; return c ? iconHtml(tok, c.cssClass, 30) : ''; })
         .join('');
     }
@@ -917,7 +921,7 @@ const App = (() => {
       const vals = [
         getAssetValue(portfolio.find(a => a.token === 'USDC')),
         btcVal + ethVal,
-        SATELLITE_TOKENS.reduce((s, tok) => s + getAssetValue(portfolio.find(a => a.token === tok)), 0),
+        getSatTokens().reduce((s, tok) => s + getAssetValue(portfolio.find(a => a.token === tok)), 0),
       ];
       const gaps = targets.map((t, i) => Math.max(t / 100 * after - vals[i], 0));
       const gapSum = gaps[0] + gaps[1] + gaps[2];
@@ -1018,7 +1022,7 @@ const App = (() => {
     const stk = portfolio.filter(a => a.kind === 'stock' && a.tag !== 'airdrop');
     return { mensual: Math.max(monthlySplit().totalUsd - dcaMonthBoughtUsd(), 0), ratioCrypto: rc,
       pesos: { crypto: { nucleo: t[0], satelites: t[1], refugio: t[2] }, bolsa: { nucleo: bs.nucleo, satelites: bs.satelites } },
-      valores: { crypto: { nucleo: val(['BTC', 'ETH']), satelites: val(SATELLITE_TOKENS), refugio: val(['USDC']) },
+      valores: { crypto: { nucleo: val(['BTC', 'ETH']), satelites: val(getSatTokens()), refugio: val(['USDC']) },
         bolsa: { nucleo: stk.filter(a => a.token === nuc).reduce((s, a) => s + getAssetValue(a), 0), satelites: stk.filter(a => a.token !== nuc).reduce((s, a) => s + getAssetValue(a), 0) } } };
   }
 
@@ -1157,7 +1161,7 @@ const App = (() => {
         const mix = s.byTargets ? { refugio: share(r.toRefugio), core: share(r.toBtc + r.toEth), satelites: share(r.toSat) } : s;
         // Progreso actual de cada token respecto a su objetivo
         const coreTotal = getAssetValue(portfolio.find(a => a.token === 'BTC')) + getAssetValue(portfolio.find(a => a.token === 'ETH'));
-        const satTotal  = SATELLITE_TOKENS.reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t)), 0);
+        const satTotal  = getSatTokens().reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t)), 0);
         const invTotal  = getInvestedValue();
         const defFrac   = (settings.defenseTarget || 0) / 100;
 
@@ -1170,7 +1174,7 @@ const App = (() => {
           return (split > 0 && satTotal > 0) ? Math.min((val / satTotal) / split, 1) : 0;
         }
 
-        const satRows = SATELLITE_TOKENS.map(tok => {
+        const satRows = getSatTokens().map(tok => {
           const c = COINS[tok] || { cssClass: tok.toLowerCase() };
           const amount = r.satAlloc?.[tok] ?? 0;
           return { token: tok, cssClass: c.cssClass, amount, label: tok };
@@ -2245,7 +2249,7 @@ const App = (() => {
       satelites: {
         label: 'Satelites',
         color: 'var(--accent-yellow)',
-        tokens: SATELLITE_TOKENS,
+        tokens: getSatTokens(),
         target: settings.satTarget ?? DEFAULT_SAT_TARGET,   // el mismo objetivo que la tarjeta Satélites (antes: un 35 escrito a mano)
       },
       refugio: {
