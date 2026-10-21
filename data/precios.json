@@ -1,6 +1,37 @@
 {
- "updated": null,
+ "updated": "2026-10-21T22:45:36+00:00",
  "fuente": "Twelve Data",
- "precios": {},
- "errores": {}
+ "precios": {
+  "NVDA": {
+   "price": 221.97,
+   "change": 2.54077,
+   "currency": "USD",
+   "exchange": "NASDAQ",
+   "ts": "2026-10-21T22:45:36+00:00"
+  },
+  "TSLA": {
+   "price": 386.47,
+   "change": 3.41441,
+   "currency": "USD",
+   "exchange": "NASDAQ",
+   "ts": "2026-10-21T22:45:36+00:00"
+  },
+  "AMD": {
+   "price": 552.71997,
+   "change": 3.36238,
+   "currency": "USD",
+   "exchange": "NASDAQ",
+   "ts": "2026-10-21T22:45:36+00:00"
+  },
+  "SPCX": {
+   "price": 159.28,
+   "change": 7.77455,
+   "currency": "USD",
+   "exchange": "NASDAQ",
+   "ts": "2026-10-21T22:45:36+00:00"
+  }
+ },
+ "errores": {
+  "VUAA": "404: This symbol is available starting with the Grow or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
+ }
 }
