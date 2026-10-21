@@ -2231,6 +2231,9 @@ input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 #mercado .drawer .cols div { background: var(--bg-card); border-radius: 10px; padding: 12px; font-size: 13px; }
 #mercado .drawer .cols small { color: var(--text-secondary); }
 #mercado .drawer .add-actions { justify-content: flex-start; }
+/* empresa que sigo en bolsa: turquesa (el color de la Bolsa) */
+#mercado tr.sigo { background: rgba(45, 212, 191, 0.10); }
+#mercado tr.sigo td:first-child { box-shadow: inset 3px 0 0 var(--accent-teal); }
 #mercado .warn { font-size: 12px; color: var(--text-secondary); margin-top: 14px; border-left: 3px solid var(--accent-yellow); padding-left: 10px; }
 #mercado .mgrs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
 #mercado .mg { background: var(--bg-card); border-radius: 10px; padding: 14px; }
