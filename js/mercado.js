@@ -54,7 +54,9 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     const h = document.createElement('summary');
     h.style.cssText = 'cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap';
     const nombre = el('span', d.gestor, ''); nombre.style.cssText = 'font-weight:700;font-size:15px;color:var(--text-primary)';
-    const resumen = el('span', `en qué invierte · ${d.n_emisores} empresas · ${billones(d.total_usd)}`, ''); resumen.style.cssText = 'color:var(--text-muted);font-size:12px;margin-left:auto';
+    const resumen = document.createElement('span'); resumen.style.cssText = 'display:inline-flex;align-items:center;gap:8px;margin-left:auto;color:var(--text-muted);font-size:12px';
+    const chipInv = el('span', 'Inversiones', 'section-badge'); chipInv.style.cssText = 'background:var(--bg-input);color:var(--text-secondary);';
+    resumen.append(chipInv, `${d.n_emisores} empresas · ${billones(d.total_usd)}`);
     const flecha = document.createElement('span'); flecha.innerHTML = '<svg class="strat-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
     h.append(nombre, badge, resumen, flecha);
     const cuantas = d.top.length < d.n_emisores ? `Las ${d.top.length} mayores de las ${d.n_emisores} empresas` : `Las ${d.n_emisores} empresas`;
@@ -79,8 +81,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   }
   function pintar() {
     if (!datos || !coin) return;
-    const leyenda = el('p', `En turquesa, las empresas que sigues en bolsa (${coin.seguidas.map((s) => s.nombre).join(', ')}).`, 'reparto-hint');
-    cont.replaceChildren(leyenda, ...datos.map(seccion));
+    cont.replaceChildren(...datos.map(seccion));
   }
   const pct = (n) => n.toLocaleString('es-ES') + ' %';
   const MOVIMIENTOS = [   // [simbolo, singular, plural, clase del chip, test sobre cambio_acciones_pct]
@@ -106,7 +107,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   function filaSeguida(s) {
     if (s.gestores.length) { const tr = filaCoinciden({ emisor: s.nombre, gestores: s.gestores }); tr.className = 'sigo'; return tr; }
     const tr = document.createElement('tr'); tr.className = 'sigo';
-    const sin = el('td', 'Ningún gestor de la lista la tiene entre sus posiciones', 'nm'); sin.colSpan = 4;
+    const sin = el('td', 'Ningún inversor de la lista la tiene entre sus posiciones', 'nm'); sin.colSpan = 4;
     tr.append(el('td', s.nombre, 'tk'), sin);
     return tr;
   }
@@ -118,7 +119,9 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     poner('k-2mas', coin.en_2_o_mas); poner('k-todas', coin.en_todas);
     document.getElementById('b13f-coinciden').replaceChildren(...coin.filas.map(filaCoinciden));
     poner('k-coinciden-resumen', `${coin.en_2_o_mas} empresas en 2 o más carteras`);
-    if (indice) poner('b13f-leyenda', indice.map((g) => `${g.corto} = ${g.nombre}`).join(' · ') + '. En movimientos: ▲ aumenta su posición, ▼ la reduce, ★ compra nueva (el número es cuántos de ellos).');
+    if (indice) { const ley = indice.map((g) => `${g.corto} = ${g.nombre}`).join(' · ') + '. En movimientos: ▲ aumenta su posición, ▼ la reduce, ★ compra nueva (el número es cuántos de ellos).'; poner('b13f-leyenda', ley); poner('b13f-leyenda2', ley); }
+    poner('k-seguimiento-resumen', `${coin.seguidas.filter((s) => s.gestores.length).length} de ${coin.seguidas.length} las tiene algún inversor`);
+    poner('b13f-sigues', `Tus empresas en seguimiento: ${coin.seguidas.map((s) => s.nombre).join(', ')}. Donde aparecen en las tablas de Mercado, se marcan en turquesa.`);
     document.getElementById('b13f-seguidas').replaceChildren(...coin.seguidas.map(filaSeguida));
   }
   document.getElementById('mk-btn').addEventListener('click', () => {
