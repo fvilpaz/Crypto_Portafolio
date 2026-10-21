@@ -2103,7 +2103,7 @@ const App = (() => {
         label: 'Satelites',
         color: 'var(--accent-yellow)',
         tokens: SATELLITE_TOKENS,
-        target: 35,
+        target: settings.satTarget ?? DEFAULT_SAT_TARGET,   // el mismo objetivo que la tarjeta Satélites (antes: un 35 escrito a mano)
       },
       refugio: {
         label: 'Refugio',
