@@ -52,7 +52,7 @@
   </header>
 
   <main class="container" id="mercado" hidden>
-    <div class="mk-top"><span class="section-badge" style="background:var(--accent-yellow-bg);color:var(--accent-yellow);">SIMULACIÓN · datos de ejemplo</span></div>
+    <div class="mk-top"><span class="section-badge" style="background:var(--accent-yellow-bg);color:var(--accent-yellow);">SIMULACIÓN · datos de ejemplo, salvo el bloque de Berkshire (datos reales)</span></div>
     <div class="mk-seg"><button id="mkb1" class="on" onclick="mkSw(1)">🏛 Bolsa · Grandes inversores</button><button id="mkb2" onclick="mkSw(2)">◎ Crypto · DefiLlama</button></div>
 
 <!-- ═════════ BOLSA ═════════ -->
@@ -63,6 +63,10 @@
     <div class="card"><div class="card-label">Empresas en 3+ carteras</div><div class="card-value">14</div></div>
     <div class="card"><div class="card-label">Compras nuevas este trimestre</div><div class="card-value" style="color:var(--accent-green)">9</div></div>
   </div>
+
+  <h2 class="section-title">Berkshire Hathaway · datos reales <span class="section-badge" style="background:var(--accent-green-bg);color:var(--accent-green);">13F · SEC</span></h2>
+  <p class="reparto-hint" id="b13f-hint">Cargando…</p>
+  <div class="table-wrapper"><table><thead><tr><th>Empresa</th><th class="text-right">Valor</th><th class="text-right">Peso</th><th class="text-right">Acciones</th><th>Cambio frente al trimestre anterior</th></tr></thead><tbody id="b13f-body"></tbody></table></div>
 
   <h2 class="section-title">Dónde coinciden</h2>
   <p class="reparto-hint">Empresas que varios gestores tienen a la vez. Pulsa una fila para ver la ficha. Se excluyen los gigantes del índice que están en todas.</p>
@@ -519,6 +523,7 @@
 
   <script src="js/config.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/fx.js"></script>
   <script src="js/mercado.js"></script>
 </body>
 </html>
