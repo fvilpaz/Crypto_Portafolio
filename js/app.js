@@ -264,14 +264,14 @@ const App = (() => {
   const fmtCurrency = (n) => {
     if (n === null || n === undefined || isNaN(n)) return '—';
     const value = currency === 'EUR' ? n * EUR_USD : n;
-    return currency === 'EUR' ? fmt(value) + ' €' : '$' + fmt(value);
+    return currency === 'EUR' ? fmt(value) + ' €' : '$' + fmt(value);   // espacio duro: el € no salta de línea
   };
 
   // Importe de UN movimiento (su total o su precio, en $). En € usa los euros
   // exactos del movimiento (totalEur), no los dólares reconvertidos al cambio de hoy.
   const fmtTxAmount = (tx, usd) => {
     if (currency !== 'EUR' || !(tx.totalUsd > 0) || tx.totalEur == null) return fmtCurrency(usd);
-    return fmt(usd * tx.totalEur / tx.totalUsd) + ' €';
+    return fmt(usd * tx.totalEur / tx.totalUsd) + ' €';
   };
 
   const fmtPct = (n) => {
@@ -1491,11 +1491,11 @@ const App = (() => {
     const target = currency === 'EUR' ? dcaTargetEur : dcaTargetEur / EUR_USD;
     const pct = target > 0 ? Math.min((invested / target) * 100, 100) : 0;
     const remaining = Math.max(target - invested, 0);
-    const symFmt = (v, d = 2) => currency === 'EUR' ? fmt(v, d) + ' €' : '$' + fmt(v, d);
+    const symFmt = (v, d = 2) => currency === 'EUR' ? fmt(v, d) + ' €' : '$' + fmt(v, d);
 
     // Cabecera: objetivo siempre en € (es como lo piensa el usuario).
     const headerDca = document.getElementById('header-dca');
-    if (headerDca) headerDca.textContent = `${fmt(dcaTargetEur, 0)} €`;
+    if (headerDca) headerDca.textContent = `${fmt(dcaTargetEur, 0)} €`;
 
     const el = document.getElementById('dca-summary');
     if (!el) return;
@@ -1696,7 +1696,7 @@ const App = (() => {
 
     // Las dos series van ya en la moneda elegida; el tooltip y el eje solo ponen el símbolo.
     const inEur = currency === 'EUR';
-    const money = (v) => inEur ? fmt(v) + ' €' : '$' + fmt(v);
+    const money = (v) => inEur ? fmt(v) + ' €' : '$' + fmt(v);
     const monthlyInvest = {};
     transactions.forEach(tx => {
       if (tx.type === 'Compra' && tx.totalUsd > 0) {
