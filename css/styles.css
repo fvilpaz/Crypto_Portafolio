@@ -2268,3 +2268,9 @@ body.light #mercado .new { color: #8a6500; }
 /* Tabla de activos con carteras separadas (Crypto / Bolsa) */
 .asset-group-row td { padding: 16px 16px 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
 .asset-group-name { font-weight: 700; margin-right: 10px; }
+
+/* Enlaces de interés de Mercado */
+.mk-links { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.mk-links a { color: var(--accent-blue); font-weight: 600; text-decoration: none; }
+.mk-links a:hover { text-decoration: underline; }
+.mk-links a span { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--text-muted); }
