@@ -1562,7 +1562,7 @@ const App = (() => {
     if (badge) badge.textContent = `${portfolio.length} activo${portfolio.length === 1 ? '' : 's'}`;
     const sorted = [...visible].sort((a, b) => getAssetValue(b) - getAssetValue(a));
 
-    tbody.innerHTML = sorted.map((asset, i) => {
+    const rowHtml = (asset, i) => {
       const p = prices[asset.token]?.price || asset.avgPrice;
       const change = prices[asset.token]?.change24h || 0;
       const value = getAssetValue(asset);
@@ -1591,7 +1591,18 @@ const App = (() => {
           <td class="text-right">${(weight * 100).toFixed(1)}%</td>
         </tr>
       `;
-    }).join('');
+    };
+    // Con acciones en la cartera se ven dos carteras independientes (Crypto y Bolsa), cada una con su subtotal; el total sigue sumando las dos.
+    const grupoHtml = (nombre, color, lista) => {
+      const v = lista.reduce((s, a) => s + getAssetValue(a), 0);
+      return `<tr class="asset-group-row"><td colspan="9"><span class="asset-group-name" style="color:${color}">${nombre}</span>
+        <span>${lista.length} activo${lista.length === 1 ? '' : 's'} · ${fmtCurrency(v)} · ${total > 0 ? (v / total * 100).toFixed(1) : '0.0'}% de la cartera</span></td></tr>`;
+    };
+    const cryptoList = sorted.filter(a => a.kind !== 'stock'), bolsaList = sorted.filter(a => a.kind === 'stock');
+    tbody.innerHTML = bolsaList.length
+      ? [['Cartera crypto', 'var(--accent-green)', cryptoList], ['Cartera bolsa', 'var(--accent-teal)', bolsaList]]
+          .filter(g => g[2].length).map(([n, col, l]) => grupoHtml(n, col, l) + l.map(rowHtml).join('')).join('')
+      : sorted.map(rowHtml).join('');
 
     if (hiddenCount > 0) {
       tbody.innerHTML += `
@@ -1987,16 +1998,24 @@ const App = (() => {
         const dir = th.dataset.dir === 'asc' ? 'desc' : 'asc';
         th.dataset.dir = dir;
 
-        rows.sort((a, b) => {
+        const cmp = (a, b) => {
           let va = a.cells[idx]?.textContent.trim() || '';
           let vb = b.cells[idx]?.textContent.trim() || '';
           const na = parseFloat(va.replace(/[$€,%+\s]/g, ''));
           const nb = parseFloat(vb.replace(/[$€,%+\s]/g, ''));
           if (!isNaN(na) && !isNaN(nb)) return dir === 'asc' ? na - nb : nb - na;
           return dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
-        });
+        };
 
-        rows.forEach(r => tbody.appendChild(r));
+        if (tbody.querySelector('.asset-group-row')) {   // tabla con carteras separadas: cada una se ordena por su cuenta
+          const grupos = [], toggle = rows.filter(r => r.classList.contains('asset-hidden-toggle'));
+          rows.forEach(r => { if (r.classList.contains('asset-group-row')) grupos.push({ head: r, rows: [] }); else if (grupos.length && !toggle.includes(r)) grupos[grupos.length - 1].rows.push(r); });
+          grupos.forEach(g => { g.rows.sort(cmp); tbody.appendChild(g.head); g.rows.forEach(r => tbody.appendChild(r)); });
+          toggle.forEach(r => tbody.appendChild(r));
+        } else {
+          rows.sort(cmp);
+          rows.forEach(r => tbody.appendChild(r));
+        }
       });
     });
   }
