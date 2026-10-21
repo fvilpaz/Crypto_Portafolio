@@ -997,7 +997,7 @@ const App = (() => {
   // Reparto del mes: un desplegable por plantilla y, dentro, cuánto meter en cada
   // sitio este mes según esa estrategia. Abres las tres para comparar.
   // Panel "Plan de inversión": entradas (dinero, ratio, % dentro de cada lado) y resultado, todo leído de UN cálculo (Plan.modelo, js/modelo.js).
-  // Escribe en los ajustes que ya existen (dcaTarget, bolsaTarget, coreTarget/satTarget/defenseTarget) y en bolsaSplit (núcleo/satélites de la bolsa).
+  // Escribe en los ajustes que ya existen (dcaTarget, bolsaTarget, coreTarget/satTarget/defenseTarget) y en stockSplit (% de cada acción de la bolsa).
   const PL_ICONO = { nucleo: 'sp', satelites: 'cush', refugio: 'sv' }, PL_COLOR = { crypto: 'var(--accent-green)', bolsa: 'var(--accent-teal)' };
   const PL_NOMBRE = { nucleo: 'Núcleo', satelites: 'Satélites', refugio: 'Refugio' };
   const PL_TONO = { crypto: 'background:var(--accent-green-bg);color:var(--accent-green);', bolsa: 'background:rgba(45,212,191,.12);color:var(--accent-teal);',
@@ -1014,7 +1014,7 @@ const App = (() => {
     const val = (toks) => toks.reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t && a.tag !== 'airdrop')), 0);
     const bolsa = settings.bolsaTarget || 0, rc = 100 - bolsa;
     const t = [settings.coreTarget ?? DEFAULT_CORE_TARGET, settings.satTarget ?? DEFAULT_SAT_TARGET, settings.defenseTarget || 0].map(v => rc > 0 ? v * 100 / rc : 0);
-    const bs = settings.bolsaSplit || { nucleo: 50, satelites: 50 };
+    const sb = plBolsaActual(), bs = { nucleo: sb.SP, satelites: 100 - sb.SP };   // núcleo = S&P 500; satélites = el resto de acciones
     const stk = portfolio.filter(a => a.kind === 'stock' && a.tag !== 'airdrop');
     return { mensual: Math.max(monthlySplit().totalUsd - dcaMonthBoughtUsd(), 0), ratioCrypto: rc,
       pesos: { crypto: { nucleo: t[0], satelites: t[1], refugio: t[2] }, bolsa: { nucleo: bs.nucleo, satelites: bs.satelites } },
@@ -1026,39 +1026,52 @@ const App = (() => {
   function planDonde(lado, cubo, usd) {
     let pos;
     if (lado === 'crypto') pos = cubo === 'nucleo' ? Object.entries(settings.coreSplit) : cubo === 'satelites' ? Object.entries(settings.satSplit) : [['USDC', 1]];
-    else pos = cubo === 'nucleo' ? [['S&P 500', 1]] : STOCKS.filter(s => s[0] !== 'SP').map(s => [s[1], 1]);
+    else pos = cubo === 'nucleo' ? [['S&P 500', 1]] : STOCKS.filter(s => s[0] !== 'SP').map(s => [s[1], plBolsaActual()[s[0]]]);
     const s = pos.reduce((x, [, w]) => x + w, 0);
     return pos.map(([n, w]) => `${n} ${fmtCurrency(usd * w / s)}`).join(' · ');
   }
 
-  // Reparto interno de cada cubo crypto (coreSplit / satSplit). Lo que se teclea y aún no suma 100 vive en planDraft y no se guarda.
+  // Paneles para fijar los porcentajes: Objetivos de la cartera (4 %), Reparto de crypto (por moneda) y Reparto de la bolsa (por acción).
+  // Objetivos escribe en coreTarget/satTarget/defenseTarget/bolsaTarget; el reparto de crypto en esos mismos + coreSplit/satSplit; el de la
+  // bolsa en stockSplit (nuevo: % de cada acción). Un reparto que no suma 100 vive en planDraft y no se guarda hasta que sume.
   let planDraft = {};
-  const PL_GRUPOS = { core: ['Núcleo', 'coreSplit'], sat: ['Satélites', 'satSplit'] };
-  function planSplitCard(g) {
-    const [nombre, key] = PL_GRUPOS[g];
-    const cur = planDraft[g] || Object.fromEntries(Object.entries(settings[key] || {}).map(([t, f]) => [t, +(f * 100).toFixed(1)]));
-    const s = +Object.values(cur).reduce((x, y) => x + y, 0).toFixed(1), ok = Math.abs(s - 100) <= 0.05, d = +Math.abs(s - 100).toFixed(1);
-    const filas = Object.entries(cur).map(([t, v]) => `
-      <div class="reparto-row"><span class="reparto-coin">${iconHtml(t, COINS[t]?.cssClass || '', 24)}</span>
-        <div class="reparto-mid"><span class="reparto-name">${t}</span></div>
-        <div class="add-field" style="flex:0 0 84px;min-width:0"><input type="number" min="0" max="100" step="1" data-plan="sp" data-grp="${g}" data-tok="${t}" value="${v}"></div></div>`).join('');
-    return `<div class="card"><div class="strat-head"><span class="strat-name">Reparto de ${nombre.toLowerCase()}</span>
-      <span class="section-badge" style="${PL_TONO[ok ? 'bien' : 'mal']}white-space:nowrap">${ok ? 'suman 100 %' : (s > 100 ? 'sobran ' : 'faltan ') + d + ' pts'}</span></div>
-      <div class="card-sub">Qué parte del cubo va a cada moneda.</div><div class="reparto-group">${filas}</div>
-      ${ok ? '' : `<button class="tx-btn" data-plan="spfit" data-grp="${g}" style="margin-top:8px">Ajustar a 100</button>`}</div>`;
+  const plSuma = (s) => { const ok = Math.abs(s - 100) <= 0.05; return `<span class="section-badge" style="${PL_TONO[ok ? 'bien' : 'mal']}white-space:nowrap">suma ${+s.toFixed(1)} %</span>`; };
+  const plCampo = (k, tok, v, etiqueta, icono) => `<span style="display:inline-flex;align-items:center;gap:8px">${icono || ''}<span>${etiqueta}</span><span class="add-field" style="flex:0 0 76px;width:76px"><input type="number" min="0" max="100" step="1" data-plan="${k}" data-tok="${tok}" value="${+v.toFixed(1)}" style="text-align:right"></span><span>%</span></span>`;
+  const plPanel = (titulo, s, campos, extra, nota) => `<div class="card" style="margin-top:14px"><div class="strat-head" style="justify-content:flex-start;gap:12px"><span class="strat-name">${titulo}</span>${plSuma(s)}</div>
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px 18px;margin-top:12px">${campos}${extra}</div><div class="card-sub" style="margin-top:10px">${nota}</div></div>`;
+  const plBoton = (k, txt) => `<button type="button" class="add-submit" data-plan="${k}" style="width:auto;padding:10px 22px">${txt}</button>`;
+
+  // % de cada moneda sobre el total crypto, a partir de los objetivos de cubo y del reparto interno
+  function plCryptoActual() {
+    const t = [settings.coreTarget ?? DEFAULT_CORE_TARGET, settings.satTarget ?? DEFAULT_SAT_TARGET, settings.defenseTarget || 0], s = t[0] + t[1] + t[2] || 1, out = {};
+    Object.entries(settings.coreSplit || {}).forEach(([tk, f]) => { out[tk] = t[0] / s * f * 100; });
+    out.USDC = t[2] / s * 100;
+    Object.entries(settings.satSplit || {}).forEach(([tk, f]) => { out[tk] = t[1] / s * f * 100; });
+    return out;
+  }
+  // % de cada acción sobre el total de bolsa (a partes iguales hasta que lo fijes)
+  function plBolsaActual() {
+    const sp = settings.stockSplit || {};
+    return Object.fromEntries(STOCKS.map(([tk]) => [tk, (sp[tk] ?? 1 / STOCKS.length) * 100]));
+  }
+
+  function planPanelesHtml() {
+    const ob = [['core', 'Núcleo', settings.coreTarget ?? DEFAULT_CORE_TARGET], ['sat', 'Satélites', settings.satTarget ?? DEFAULT_SAT_TARGET],
+      ['def', 'Refugio', settings.defenseTarget || 0], ['bolsa', 'Bolsa', settings.bolsaTarget || 0]];
+    const cr = planDraft.crypto || plCryptoActual(), bo = planDraft.bolsa || plBolsaActual();
+    const sCr = Object.values(cr).reduce((x, y) => x + y, 0), sBo = Object.values(bo).reduce((x, y) => x + y, 0);
+    return plPanel('Objetivos de la cartera', ob.reduce((s, x) => s + x[2], 0), ob.map(([k, n, v]) => plCampo('ob', k, v, n)).join(''), plBoton('obfit', 'Ajustar los otros tres para sumar 100'),
+        'Cuánto de la cartera quieres en cada sitio. Al darle peso a la bolsa, los demás tienen que bajar.')
+      + plPanel('Reparto de crypto', sCr, Object.entries(cr).map(([tk, v]) => plCampo('cr', tk, v, tk, iconHtml(tk, COINS[tk]?.cssClass || '', 28))).join(''),
+        Math.abs(sCr - 100) > 0.05 ? plBoton('crfit', 'Ajustar a 100') : '', 'Qué parte de lo que metes en crypto va a cada moneda.')
+      + plPanel('Reparto de la bolsa', sBo, STOCKS.map(([tk, nombre, css]) => plCampo('bo', tk, bo[tk] || 0, nombre, iconHtml(tk, css, 28))).join(''),
+        Math.abs(sBo - 100) > 0.05 ? plBoton('bofit', 'Ajustar a 100') : '', 'Qué parte de lo que metes en bolsa va a cada acción. Lo decides tú; por defecto, a partes iguales.');
   }
 
   function renderPlanPanel() {
     const box = document.getElementById('plan-panel');
     if (!box || typeof Plan === 'undefined') return;
     const p = planInput(), m = Plan.modelo(p), pr = Plan.proyeccion({ ...p, mensual: monthlySplit().totalUsd }, [12, 24]);   // la proyección usa el mes entero
-    const campo = (k, lab, v) => `<div class="add-field"><label>${lab}</label><input type="number" min="0" step="1" data-plan="${k}" value="${+v.toFixed(1)}"></div>`;
-    const cabeza = (nombre, ws, fitKey) => {
-      const s = +ws.reduce((x, y) => x + y, 0).toFixed(1), ok = Math.abs(s - 100) <= 0.05, d = +Math.abs(s - 100).toFixed(1);
-      return `<div class="strat-head"><span class="strat-name">${nombre}</span><span class="section-badge" style="${PL_TONO[ok ? 'bien' : 'mal']}white-space:nowrap">${ok ? 'suman 100 %' : (s > 100 ? 'sobran ' : 'faltan ') + d + ' pts'}</span></div>`
-        + (ok ? '' : `<button class="tx-btn" data-plan="${fitKey}" style="margin-top:8px">Ajustar a 100</button>`);
-    };
-    const wc = [p.pesos.crypto.nucleo, p.pesos.crypto.satelites, p.pesos.crypto.refugio], wb = [p.pesos.bolsa.nucleo, p.pesos.bolsa.satelites];
     const rc = p.ratioCrypto;
     const llega = pr.llega === 0 ? 'Ya estás' : pr.llega === null ? 'No en 20 años' : `${pr.llega} ${pr.llega === 1 ? 'mes' : 'meses'}`;
     const chip = (lado, txt) => `<span class="section-badge" style="${PL_TONO[lado]}white-space:nowrap">${txt}</span>`;
@@ -1078,15 +1091,7 @@ const App = (() => {
         ${L.rec < 0.005 && L.peso > L.objetivo ? '<div class="card-sub" style="color:var(--accent-yellow)">Ya está por encima de su objetivo: este mes no recibe dinero, aunque algún cubo esté por debajo.</div>' : ''}<div class="reparto-group">${filas}</div></div>`;
     }).join('');
     box.innerHTML = `
-      <div class="cards-grid">
-        <div class="card"><div class="card-label">Dinero al mes para invertir (€)</div><div class="add-field"><input type="number" min="0" step="10" data-plan="dca" value="${settings.dcaTarget || 0}"></div></div>
-        <div class="card"><div class="card-label">Ratio crypto / bolsa</div><input type="range" class="pl-rango" min="0" max="100" step="1" data-plan="rc" value="${rc}">
-          <div class="strat-head"><span class="strat-legend lg-core">Crypto ${rc} %</span><span class="strat-legend lg-bolsa">Bolsa ${100 - rc} %</span></div>
-          <div class="strat-bar"><span class="seg seg-core" style="width:${rc}%"></span><span class="seg seg-bolsa" style="width:${100 - rc}%"></span></div></div>
-        <div class="card">${cabeza('Crypto', wc, 'fit')}<div class="pl-tres">${campo('w0', 'Núcleo', wc[0])}${campo('w1', 'Satélites', wc[1])}${campo('w2', 'Refugio', wc[2])}</div></div>
-        <div class="card">${cabeza('Bolsa', wb, 'fitb')}<div class="pl-tres">${campo('b0', 'Núcleo', wb[0])}${campo('b1', 'Satélites', wb[1])}</div></div>
-      </div>
-      <div class="cards-grid" style="margin-top:14px">${planSplitCard('core')}${planSplitCard('sat')}</div>
+      ${planPanelesHtml()}
       <div class="cards-grid" style="margin-top:14px">
         <div class="card"><div class="card-label">Cartera</div><div class="card-value">${fmtCurrency(m.total)}</div>
           <div class="pl-chips">${chip('crypto', `Crypto <b>${fmtCurrency(m.lados.crypto.valor)}</b>`)}${chip('bolsa', `Bolsa <b>${fmtCurrency(m.lados.bolsa.valor)}</b>`)}</div></div>
@@ -1102,28 +1107,29 @@ const App = (() => {
   function onPlanPanelChange(e) {
     const k = e.target.dataset?.plan;
     if (!k) return;
-    if (k === 'sp' || k === 'spfit') {
-      const g = e.target.dataset.grp, key = PL_GRUPOS[g][1], draft = {};
-      document.querySelectorAll(`#plan-panel input[data-plan="sp"][data-grp="${g}"]`).forEach(i => { draft[i.dataset.tok] = Math.max(parseFloat(i.value) || 0, 0); });
-      let s = Object.values(draft).reduce((x, y) => x + y, 0);
-      if (k === 'spfit') { if (s <= 0) return; Object.keys(draft).forEach(t => { draft[t] = draft[t] * 100 / s; }); s = 100; }
-      if (Math.abs(s - 100) <= 0.05) { settings[key] = Object.fromEntries(Object.entries(draft).map(([t, v]) => [t, v / s])); delete planDraft[g]; persist(); }
-      else planDraft[g] = draft;
-      render();
-      return;
-    }
-    const n = (sel) => Math.max(parseFloat(document.querySelector(`#plan-panel [data-plan="${sel}"]`)?.value) || 0, 0);
-    if (k === 'dca') settings.dcaTarget = n('dca');
-    else if (k === 'b0' || k === 'b1' || k === 'fitb') {
-      let b = [n('b0'), n('b1')];
-      if (k === 'fitb') { const s = b[0] + b[1]; if (s <= 0) return; b = b.map(v => v * 100 / s); }
-      settings.bolsaSplit = { nucleo: +b[0].toFixed(1), satelites: +b[1].toFixed(1) };
-    } else {
-      const rc = Math.min(n('rc'), 100);
-      let w = [n('w0'), n('w1'), n('w2')];
-      if (k === 'fit') { const s = w.reduce((x, y) => x + y, 0); if (s <= 0) return; w = w.map(v => v * 100 / s); }
-      settings.bolsaTarget = +(100 - rc).toFixed(1);
-      [settings.coreTarget, settings.satTarget, settings.defenseTarget] = w.map(v => +(rc * v / 100).toFixed(1));
+    const q = (g) => [...document.querySelectorAll(`#plan-panel input[data-plan="${g}"]`)];
+    const num = (i) => Math.max(parseFloat(i.value) || 0, 0);
+    if (k === 'ob' || k === 'obfit') {
+      const v = {}; q('ob').forEach(i => { v[i.dataset.tok] = num(i); });
+      settings.coreTarget = v.core; settings.satTarget = v.sat; settings.defenseTarget = v.def; settings.bolsaTarget = Math.min(v.bolsa, 100);
+      if (k === 'obfit') fitTargetsTo100();
+      delete planDraft.crypto;
+    } else if (k === 'cr' || k === 'crfit' || k === 'bo' || k === 'bofit') {
+      const g = k.startsWith('cr') ? 'crypto' : 'bolsa', d = {};
+      q(g === 'crypto' ? 'cr' : 'bo').forEach(i => { d[i.dataset.tok] = num(i); });
+      let s = Object.values(d).reduce((x, y) => x + y, 0);
+      if (k.endsWith('fit')) { if (s <= 0) return; Object.keys(d).forEach(t => { d[t] = d[t] * 100 / s; }); s = 100; }
+      if (Math.abs(s - 100) > 0.05) { planDraft[g] = d; render(); return; }
+      delete planDraft[g];
+      if (g === 'bolsa') settings.stockSplit = Object.fromEntries(Object.entries(d).map(([t, v]) => [t, v / s]));
+      else {
+        const core = Object.keys(settings.coreSplit || {}), sat = Object.keys(settings.satSplit || {}), libre = 100 - (settings.bolsaTarget || 0);
+        const nC = core.reduce((x, t) => x + (d[t] || 0), 0), nS = sat.reduce((x, t) => x + (d[t] || 0), 0);
+        if (nC > 0) settings.coreSplit = Object.fromEntries(core.map(t => [t, (d[t] || 0) / nC]));
+        if (nS > 0) settings.satSplit = Object.fromEntries(sat.map(t => [t, (d[t] || 0) / nS]));
+        settings.satTarget = +(libre * nS / s).toFixed(1); settings.defenseTarget = +(libre * (d.USDC || 0) / s).toFixed(1);
+        settings.coreTarget = nC > 0 ? +(libre - settings.satTarget - settings.defenseTarget).toFixed(1) : 0;   // el redondeo lo absorbe el núcleo
+      }
     }
     persist();
     render();
@@ -1183,7 +1189,7 @@ const App = (() => {
           const barColor = prog >= 1 ? 'var(--accent-green)' : prog >= 0.8 ? 'var(--accent-yellow)' : 'var(--accent-blue)';
           return repartoRowHtml({ icon: iconHtml(row.token, row.cssClass, 24), label: row.label, amountText: on ? fmtCurrency(row.amount) : `${pct}%`, pct, barColor, idle: !on });
         }).join('');
-        const stockRows = STOCKS.map(([tok, name, css]) => repartoRowHtml({ icon: iconHtml(tok, css, 24), label: name, amountText: fmtCurrency(bolsaUsd / STOCKS.length) })).join('');
+        const stockRows = STOCKS.map(([tok, name, css]) => repartoRowHtml({ icon: iconHtml(tok, css, 24), label: name, amountText: fmtCurrency(bolsaUsd * plBolsaActual()[tok] / 100) })).join('');
         return `
           <details class="strat-block ${key === settings.strategy ? 'active' : ''}" data-strat="${key}" open>
             <summary class="strat-sum">
@@ -1486,6 +1492,7 @@ const App = (() => {
     el.innerHTML = `
       <div class="dca-top">
         <span class="dca-month">${period.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</span>
+        <button type="button" class="dca-edit" id="dca-amount" title="Editar objetivo mensual" aria-label="Editar objetivo mensual">✎</button>
       </div>
       <div class="dca-amount">
         <span class="dca-invested">${symFmt(invested)}</span>
@@ -3095,7 +3102,7 @@ const App = (() => {
 
     const planBox = document.getElementById('plan-panel');
     planBox.addEventListener('change', onPlanPanelChange);
-    planBox.addEventListener('click', (e) => { if (['fit', 'fitb', 'spfit'].includes(e.target.dataset?.plan)) onPlanPanelChange(e); });
+    planBox.addEventListener('click', (e) => { if (['obfit', 'crfit', 'bofit'].includes(e.target.dataset?.plan)) onPlanPanelChange(e); });
 
     document.getElementById('sec-cartera').addEventListener('click', (e) => {
       const editBtn = e.target.closest('.card-edit');
