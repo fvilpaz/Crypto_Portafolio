@@ -36,7 +36,8 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
       try {
-        const resp = await fetch(event.request);
+        // no-cache = revalidar siempre con el servidor (304 si no hay cambios): GitHub Pages manda max-age=600 y, sin esto, un deploy tardaba hasta 10 min en verse
+        const resp = await fetch(event.request, { cache: 'no-cache' });
         if (resp && resp.status === 200) cache.put(event.request, resp.clone());
         return resp;
       } catch (e) {
