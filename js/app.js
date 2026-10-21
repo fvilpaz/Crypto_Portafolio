@@ -993,7 +993,43 @@ const App = (() => {
 
   // Reparto del mes: un desplegable por plantilla y, dentro, cuánto meter en cada
   // sitio este mes según esa estrategia. Abres las tres para comparar.
+  // Panel "Plan de inversión": dinero mensual, ratio crypto/bolsa y % dentro de crypto. Escribe en los ajustes que ya existen
+  // (dcaTarget, bolsaTarget y los objetivos de Núcleo/Satélites/Refugio = ratio crypto × peso), sin cálculo propio.
+  function renderPlanPanel() {
+    const box = document.getElementById('plan-panel');
+    if (!box) return;
+    const bolsa = settings.bolsaTarget || 0, rc = 100 - bolsa;
+    const t = [settings.coreTarget ?? DEFAULT_CORE_TARGET, settings.satTarget ?? DEFAULT_SAT_TARGET, settings.defenseTarget || 0];
+    const w = t.map(v => rc > 0 ? +(v * 100 / rc).toFixed(1) : 0), suma = +w.reduce((s, v) => s + v, 0).toFixed(1), ok = Math.abs(suma - 100) <= 0.05;
+    const campo = (k, lab, val) => `<div class="add-field"><label>${lab}</label><input type="number" min="0" step="1" data-plan="${k}" value="${val}"></div>`;
+    box.innerHTML = `
+      <div class="card"><div class="card-label">Dinero al mes para invertir (€)</div><div class="add-field"><input type="number" min="0" step="10" data-plan="dca" value="${settings.dcaTarget || 0}"></div></div>
+      <div class="card"><div class="card-label">Crypto en la cartera (%)</div><div class="add-field"><input type="number" min="0" max="100" step="1" data-plan="rc" value="${rc}"></div>
+        <div class="card-sub">Bolsa ${bolsa} % (el resto)</div></div>
+      <div class="card"><div class="strat-head"><span class="strat-name">Dentro de crypto</span>
+        <span class="section-badge" style="${ok ? 'background:var(--accent-green-bg);color:var(--accent-green);' : 'background:var(--accent-red-bg);color:var(--accent-red);'}white-space:nowrap">${ok ? 'suman 100 %' : (suma > 100 ? 'sobran ' : 'faltan ') + +Math.abs(suma - 100).toFixed(1) + ' pts'}</span></div>
+        <div class="add-field-row" style="display:flex;gap:8px">${campo('w0', 'Núcleo', w[0])}${campo('w1', 'Satélites', w[1])}${campo('w2', 'Refugio', w[2])}</div>
+        ${ok ? '' : '<button class="tx-btn" data-plan="fit" style="margin-top:8px">Ajustar a 100</button>'}</div>`;
+  }
+
+  function onPlanPanelChange(e) {
+    const k = e.target.dataset?.plan;
+    if (!k) return;
+    const n = (sel) => Math.max(parseFloat(document.querySelector(`#plan-panel [data-plan="${sel}"]`)?.value) || 0, 0);
+    if (k === 'dca') settings.dcaTarget = n('dca');
+    else {
+      const rc = Math.min(n('rc'), 100);
+      let w = [n('w0'), n('w1'), n('w2')];
+      if (k === 'fit') { const s = w.reduce((x, y) => x + y, 0); if (s <= 0) return; w = w.map(v => v * 100 / s); }
+      settings.bolsaTarget = +(100 - rc).toFixed(1);
+      [settings.coreTarget, settings.satTarget, settings.defenseTarget] = w.map(v => +(rc * v / 100).toFixed(1));
+    }
+    persist();
+    render();
+  }
+
   function renderReparto() {
+    renderPlanPanel();
     const split = monthlySplit(), monthlyUsd = split.cryptoUsd, bolsaUsd = split.bolsaUsd;   // bolsaUsd 0 = sin objetivo de bolsa
     const hint = document.getElementById('reparto-hint');
     if (hint) hint.innerHTML = settings.bolsaTarget > 0
@@ -2956,6 +2992,10 @@ const App = (() => {
 
     setupSortable('asset-table');
     setupSortable('tx-table');
+
+    const planBox = document.getElementById('plan-panel');
+    planBox.addEventListener('change', onPlanPanelChange);
+    planBox.addEventListener('click', (e) => { if (e.target.dataset?.plan === 'fit') onPlanPanelChange(e); });
 
     document.getElementById('sec-cartera').addEventListener('click', (e) => {
       const editBtn = e.target.closest('.card-edit');
