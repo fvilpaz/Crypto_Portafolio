@@ -168,7 +168,9 @@ const App = (() => {
   function registerCustomStocks() {
     Object.entries(settings.customStocks || {}).forEach(([tok, m]) => {
       if (!/^[A-Z0-9.]{1,10}$/.test(tok) || COINS[tok]) return;
-      COINS[tok] = { name: String(m?.name || tok).replace(/[<>&"']/g, ''), kind: 'stock', icon: `https://financialmodelingprep.com/image-stock/${tok}.png`, color: '#2dd4bf', cssClass: 'stk' };   // logo público; si no carga, iconHtml vuelve a las letras
+      COINS[tok] = { name: String(m?.name || tok).replace(/[<>&"']/g, ''), kind: 'stock', color: '#2dd4bf', cssClass: 'stk',
+        // logo público; si no carga, iconHtml vuelve a las letras. Los Vanguard (también los UCITS europeos, que la otra fuente no tiene) llevan el logo de la gestora.
+        icon: /vanguard/i.test(m?.name || '') ? 'https://www.google.com/s2/favicons?domain=vanguard.com&sz=64' : `https://financialmodelingprep.com/image-stock/${tok}.png` };
     });
   }
   registerCustomStocks();
@@ -1050,10 +1052,10 @@ const App = (() => {
     const toks = [...new Set([...Object.keys(settings.customStocks || {}), ...portfolio.filter(a => a.kind === 'stock').map(a => a.token)])];
     return toks.map(t => [t, COINS[t]?.name || t, COINS[t]?.cssClass || 'stk']);
   }
-  // Núcleo de la bolsa: la que marques con la estrella; si no, el primer ETF del S&P 500 que tengas; si no tienes ninguno, el S&P 500 ('SP', virtual).
+  // Núcleo de la bolsa: la que marques con la estrella; si no, el primer ETF del S&P 500 que tengas (europeo o americano); si no tienes ninguno, el S&P 500 ('SP', virtual).
   function bolsaNucleo() {
     const l = bolsaListaReal().map(x => x[0]);
-    return l.includes(settings.bolsaCore) ? settings.bolsaCore : ['SPY', 'VOO', 'IVV', 'SPLG'].find(t => l.includes(t)) || 'SP';
+    return l.includes(settings.bolsaCore) ? settings.bolsaCore : ['VUAA', 'VUSA', 'CSPX', 'SXR8', 'SPYL', 'VOO', 'SPY', 'IVV', 'SPLG'].find(t => l.includes(t)) || 'SP';
   }
   // Lista que se reparte: tus acciones y, si ninguna es núcleo, el S&P 500 delante como núcleo a comprar (sin posición todavía).
   function bolsaLista() {
