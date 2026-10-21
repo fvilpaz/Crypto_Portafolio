@@ -817,7 +817,7 @@ const App = (() => {
     // Satelites: todos los tokens de getSatTokens() presentes en la cartera.
     const cosmosNum = document.getElementById('card-cosmos-pct');
     cosmosNum.textContent = `${(cosmosPct * 100).toFixed(1)}%`;
-    cosmosNum.classList.toggle('negative', cosmosPct > cosmosTopPct());
+    cosmosNum.classList.remove('negative');   // pasarse del objetivo ya no se pinta en rojo (como en Núcleo, Refugio y Bolsa)
     const cosmosIconsEl = document.getElementById('cosmos-icons');
     if (cosmosIconsEl && cosmosIconsEl.dataset.sig !== getSatTokens().join()) {   // se repinta si cambia la lista de satélites
       cosmosIconsEl.dataset.sig = getSatTokens().join();
@@ -1530,15 +1530,9 @@ const App = (() => {
 
     const satTarget = settings.satTarget ?? DEFAULT_SAT_TARGET;
     const satRatio = satTarget > 0 ? cosmosPct / satTarget : 1;
-    const overTop = cosmosPct > cosmosTopPct() * 100;
-    const nearTop = cosmosPct > (cosmosTopPct() - 0.05) * 100;
 
-    // Para satelites el objetivo es un rango: alcanzar satTarget pero no superar cosmosTopPct.
-    // Color: verde si en rango, amarillo si cerca del tope, rojo si lo supera.
-    let barCol;
-    if (overTop)            barCol = '#f6465d';
-    else if (nearTop)       barCol = '#f0b90b';
-    else                    barCol = barColor(satRatio, 'var(--accent-yellow)');
+    // Igual que Núcleo, Refugio y Bolsa: verde si llega al objetivo o lo supera; amarillo, naranja o rojo según lo lejos que esté.
+    const barCol = barColor(satRatio, '#0ecb81');
 
     bar.style.width = `${Math.min(cosmosPct, 100)}%`;
     bar.style.background = barCol;
@@ -2362,7 +2356,7 @@ const App = (() => {
           <div class="modal-token-cell">
             <div>
               <div class="modal-token-name">${b.label}</div>
-              <div class="modal-token-symbol">${fmtCurrency(bucketTotal)} · ${(bucketPct * 100).toFixed(1)}% de la cartera${b.target ? ` · tope ${b.target}%` : ''}</div>
+              <div class="modal-token-symbol">${fmtCurrency(bucketTotal)} · ${(bucketPct * 100).toFixed(1)}% de la cartera${b.target ? ` · objetivo ${b.target}%` : ''}</div>
             </div>
           </div>
           <button class="modal-close" id="modal-close-btn">&times;</button>
