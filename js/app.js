@@ -2403,9 +2403,19 @@ const App = (() => {
     return (await res.json()).coins.slice(0, 8);
   }
 
-  // ETF americanos habituales, para encontrarlos por nombre ("sp500", "global vanguard"...): la búsqueda de Twelve Data es literal y solo
-  // entiende símbolos y nombres exactos. [símbolo, nombre, palabras clave]
+  // ETF habituales, para encontrarlos por nombre ("sp500", "global vanguard"...): la búsqueda de Twelve Data es literal y solo entiende símbolos y
+  // nombres exactos, y deja fuera todo lo que no cotiza en EE. UU. Primero los UCITS europeos (los que se compran desde España, p. ej. en Revolut);
+  // después los americanos. [símbolo, nombre, palabras clave, mercado (opcional)]
+  const UCITS = 'Europa (UCITS)';
   const ETF_POPULARES = [
+    ['VUAA', 'Vanguard S&P 500 UCITS ETF (Acc)', 'sp500 s&p vanguard ucits acc', UCITS], ['VUSA', 'Vanguard S&P 500 UCITS ETF (Dist)', 'sp500 s&p vanguard ucits dist', UCITS],
+    ['CSPX', 'iShares Core S&P 500 UCITS ETF (Acc)', 'sp500 s&p ishares ucits acc', UCITS], ['SXR8', 'iShares Core S&P 500 UCITS ETF (Acc, Xetra)', 'sp500 s&p ishares ucits acc xetra', UCITS],
+    ['SPYL', 'SPDR S&P 500 UCITS ETF', 'sp500 s&p spdr ucits', UCITS],
+    ['VWCE', 'Vanguard FTSE All-World UCITS ETF (Acc)', 'vanguard global world mundo allworld ucits acc', UCITS], ['VWRL', 'Vanguard FTSE All-World UCITS ETF (Dist)', 'vanguard global world mundo allworld ucits dist', UCITS],
+    ['IWDA', 'iShares Core MSCI World UCITS ETF (Acc)', 'global world mundo msci ishares ucits acc', UCITS], ['EUNL', 'iShares Core MSCI World UCITS ETF (Acc, Xetra)', 'global world mundo msci ishares ucits acc xetra', UCITS],
+    ['SWDA', 'iShares Core MSCI World UCITS ETF (Acc, Londres)', 'global world mundo msci ishares ucits acc londres', UCITS],
+    ['EQQQ', 'Invesco EQQQ NASDAQ-100 UCITS ETF', 'nasdaq 100 invesco ucits tecnologia', UCITS], ['CNDX', 'iShares NASDAQ 100 UCITS ETF (Acc)', 'nasdaq 100 ishares ucits acc tecnologia', UCITS],
+    ['EMIM', 'iShares Core MSCI EM IMI UCITS ETF (Acc)', 'emergentes emerging msci ishares ucits acc', UCITS],
     ['VOO', 'Vanguard S&P 500 ETF', 'sp500 s&p vanguard'], ['SPY', 'SPDR S&P 500 ETF Trust', 'sp500 s&p spdr'], ['IVV', 'iShares Core S&P 500 ETF', 'sp500 s&p ishares'],
     ['VTI', 'Vanguard Total Stock Market ETF', 'vanguard total usa bolsa'], ['VT', 'Vanguard Total World Stock ETF', 'vanguard global world mundo total'],
     ['VXUS', 'Vanguard Total International Stock ETF', 'vanguard global internacional mundo'], ['QQQ', 'Invesco QQQ Trust', 'nasdaq 100 tecnologia'],
@@ -2419,7 +2429,7 @@ const App = (() => {
     const vistos = new Set();
     // 1) los ETF habituales que encajan por nombre o palabras clave (todas las palabras tienen que aparecer)
     const locales = palabras.length ? ETF_POPULARES.filter(([sym, nom, claves]) => { const t = norm(`${sym} ${nom} ${claves}`); return palabras.every(p => t.includes(p)); })
-      .map(([symbol, name]) => ({ kind: 'stock', symbol, name, exchange: 'EE. UU.' })) : [];
+      .map(([symbol, name, , exchange]) => ({ kind: 'stock', symbol, name, exchange: exchange || 'EE. UU.' })) : [];
     locales.forEach(x => vistos.add(x.symbol));
     // 2) la búsqueda de Twelve Data (más resultados que antes, antes de quedarnos solo con EE. UU.)
     let remotos = [];
@@ -2429,7 +2439,7 @@ const App = (() => {
         .filter(x => x.country === 'United States' && /^[A-Z][A-Z0-9.]{0,9}$/.test(x.symbol) && !vistos.has(x.symbol) && vistos.add(x.symbol))   // sin códigos que empiezan por número (ids de fondos, no tickers)
         .map(x => ({ kind: 'stock', symbol: x.symbol, name: x.instrument_name, exchange: x.exchange }));
     } catch (e) { /* sin red: quedan los ETF habituales */ }
-    return [...locales, ...remotos].slice(0, 8);
+    return [...locales, ...remotos].slice(0, 12);
   }
 
   function renderCoinResults(list) {
