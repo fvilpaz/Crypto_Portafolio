@@ -28,6 +28,7 @@
         </div>
       </div>
       <div class="header-actions">
+        <button id="mk-btn" class="currency-switch mk-nav" type="button" title="Mercado: grandes inversores y crypto" aria-label="Mercado"><span class="currency-switch__glyph"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span><span class="currency-switch__code">Mercado</span></button>
         <button id="export-btn" class="refresh-btn" title="Exportar (JSON completo o CSV de movimientos)" aria-label="Exportar">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         </button>
@@ -49,6 +50,146 @@
       </div>
     </div>
   </header>
+
+  <main class="container" id="mercado" hidden>
+    <div class="mk-top"><span class="section-badge" style="background:var(--accent-yellow-bg);color:var(--accent-yellow);">SIMULACIÓN · datos de ejemplo</span></div>
+    <div class="mk-seg"><button id="mkb1" class="on" onclick="mkSw(1)">🏛 Bolsa · Grandes inversores</button><button id="mkb2" onclick="mkSw(2)">◎ Crypto · DefiLlama</button></div>
+
+<!-- ═════════ BOLSA ═════════ -->
+<div id="mkv1" class="view on">
+  <div class="kpis">
+    <div class="card"><div class="card-label">Gestores seguidos</div><div class="card-value">10</div></div>
+    <div class="card"><div class="card-label">Último 13F (trimestre)</div><div class="card-value">T2 2026</div></div>
+    <div class="card"><div class="card-label">Empresas en 3+ carteras</div><div class="card-value">14</div></div>
+    <div class="card"><div class="card-label">Compras nuevas este trimestre</div><div class="card-value" style="color:var(--accent-green)">9</div></div>
+  </div>
+
+  <h2 class="section-title">Dónde coinciden</h2>
+  <p class="reparto-hint">Empresas que varios gestores tienen a la vez. Pulsa una fila para ver la ficha. Se excluyen los gigantes del índice que están en todas.</p>
+  <div class="table-wrapper"><table><thead><tr><th>Empresa</th><th>Quién la tiene</th><th class="text-right">Nº</th><th>Peso medio</th><th>Movimiento T2</th><th class="text-right">Precio</th></tr></thead><tbody>
+    <tr class="row" onclick="mkFicha('CEG')"><td><span class="tk">CEG</span><div class="nm">Constellation Energy</div></td><td><div class="who"><span class="token-icon">BR</span><span class="token-icon">BK</span><span class="token-icon">TG</span><span class="token-icon">DC</span></div></td><td class="text-right">4</td><td><span class="reparto-prog-wrap" style="display:inline-block;width:90px;vertical-align:middle"><span class="reparto-prog-bar" style="display:block;width:62%;background:var(--accent-yellow)"></span></span> 2,4 %</td><td><span class="chip up">▲ 3 aumentan</span></td><td class="text-right">$312,40</td></tr>
+    <tr class="row" onclick="mkFicha('VST')"><td><span class="tk">VST</span><div class="nm">Vistra</div></td><td><div class="who"><span class="token-icon">BR</span><span class="token-icon">TG</span><span class="token-icon">DC</span></div></td><td class="text-right">3</td><td><span class="reparto-prog-wrap" style="display:inline-block;width:90px;vertical-align:middle"><span class="reparto-prog-bar" style="display:block;width:48%;background:var(--accent-yellow)"></span></span> 1,9 %</td><td><span class="chip new">★ 2 compras nuevas</span></td><td class="text-right">$187,15</td></tr>
+    <tr class="row" onclick="mkFicha('NEE')"><td><span class="tk">NEE</span><div class="nm">NextEra Energy</div></td><td><div class="who"><span class="token-icon">BK</span><span class="token-icon">DC</span><span class="token-icon">TG</span></div></td><td class="text-right">3</td><td><span class="reparto-prog-wrap" style="display:inline-block;width:90px;vertical-align:middle"><span class="reparto-prog-bar" style="display:block;width:30%;background:var(--accent-yellow)"></span></span> 1,2 %</td><td><span class="chip up">▲ 1 aumenta</span></td><td class="text-right">$84,02</td></tr>
+    <tr class="row" onclick="mkFicha('DE')"><td><span class="tk">DE</span><div class="nm">Deere &amp; Co (agrícola)</div></td><td><div class="who"><span class="token-icon">BK</span><span class="token-icon">BR</span><span class="token-icon">GF</span></div></td><td class="text-right">3</td><td><span class="reparto-prog-wrap" style="display:inline-block;width:90px;vertical-align:middle"><span class="reparto-prog-bar" style="display:block;width:22%;background:var(--accent-yellow)"></span></span> 0,9 %</td><td><span class="chip dn">▼ 2 reducen</span></td><td class="text-right">$455,60</td></tr>
+  </tbody></table></div>
+
+  <details class="card" style="margin-top:12px;padding:12px 16px"><summary style="cursor:pointer;color:var(--text-secondary);font-size:13px;font-weight:600">Inversores y gestoras</summary>
+    <div class="mgrs">
+      <div class="mg"><div class="mh"><span class="token-icon">BK</span><span class="mn">Berkshire Hathaway</span></div>
+        <div class="ml"><span>Dirige</span><b>Greg Abel, CEO desde 2026. Warren Buffett sigue como presidente</b></div>
+        <div class="ml"><span>Cartera 13F</span><b>≈ 299.000 M$ · T2 2026</b></div>
+        <div class="ml"><span>Estilo</span><b>Pocas posiciones, alta convicción y largo plazo</b></div>
+        <div class="ml"><span>Tamaño</span><b>Valor en bolsa ≈ 1 billón de $ y caja récord cercana a 400.000 M$ (≈ 40 % de su valor)</b></div>
+        <div class="ml"><span>Año 2026</span><b>Primera etapa con Abel: vendió Amazon y recortó posiciones, y en el T2 volvió a comprar más de lo que vendió</b></div></div>
+      <div class="mg"><div class="mh"><span class="token-icon">BR</span><span class="mn">Bridgewater Associates</span></div>
+        <div class="ml"><span>Dirige</span><b>Un CEO y tres co-CIOs. Ray Dalio es el fundador</b></div>
+        <div class="ml"><span>Cartera 13F</span><b>≈ 24.000 M$ en ~1.000 posiciones, sobre todo ETF del S&amp;P 500</b></div>
+        <div class="ml"><span>A tener en cuenta</span><b>Gestiona ≈ 150.000 M$ en total; el 13F solo muestra una parte</b></div>
+        <div class="ml"><span>Rentabilidad</span><b>Pure Alpha ≈ 11 % anual desde su inicio y ≈ +33 % en 2025, según fuentes anónimas</b></div>
+        <div class="ml"><span>Años malos</span><b>All Weather perdió ≈ 7 % en 2015 y ≈ 5 % en 2018; Pure Alpha cayó con fuerza al inicio de la crisis del COVID en 2020</b></div></div>
+      <div class="mg"><div class="mh"><span class="token-icon">TG</span><span class="mn">Tiger Global</span></div>
+        <div class="ml"><span>Dirige</span><b>Chase Coleman</b></div>
+        <div class="ml"><span>Cartera 13F</span><b>≈ 23.000 M$ en ~54 posiciones</b></div>
+        <div class="ml"><span>Estilo</span><b>Tecnología y crecimiento: Alphabet, Nvidia, Amazon, TSMC y Meta lideran</b></div>
+        <div class="ml"><span>Crisis</span><b>2022, su peor año desde 2001: el fondo principal perdió ≈ 56 % y el de solo compras ≈ 67 %. Pasó de ≈ 35.000 M$ a ≈ 19.000 M$ y limitó los reembolsos</b></div>
+        <div class="ml"><span>Recuperación</span><b>En 2023 ganó ≈ 28 %, aún por debajo de su máximo anterior</b></div></div>
+      <div class="mg"><div class="mh"><span class="token-icon">DC</span><span class="mn">D1 Capital Partners</span></div>
+        <div class="ml"><span>Dirige</span><b>Dan Sundheim</b></div>
+        <div class="ml"><span>Cartera 13F</span><b>≈ 35.000 M$ en ~55 posiciones</b></div>
+        <div class="ml"><span>A tener en cuenta</span><b>SpaceX supone ~62 % de su cartera declarada</b></div>
+        <div class="ml"><span>Crisis</span><b>2022: cayó ≈ 30 % (el S&amp;P 500, ≈ 19 %), sobre todo por sus apuestas privadas en tecnología</b></div>
+        <div class="ml"><span>Recuperación</span><b>2023 ≈ +19 %; en 2024 su cartera pública subió ≈ 44 %, con las privadas en solo ≈ +4 %</b></div></div>
+      <div class="mg"><div class="mh"><span class="token-icon">GF</span><span class="mn">Gates Foundation Trust</span></div>
+        <div class="ml"><span>Qué es</span><b>La dotación de la fundación. Bill Gates es el único fideicomisario y la gestiona el día a día Cascade Asset Management</b></div>
+        <div class="ml"><span>A tener en cuenta</span><b>No incluye toda la fortuna personal de Gates, que se mueve por Cascade Investment</b></div>
+        <div class="ml"><span>Mayor posición</span><b>Berkshire Hathaway, ~21 %</b></div>
+        <div class="ml"><span>Movimiento 2026</span><b>Vendió todo su Microsoft en el T1 (≈ 3.200 M$)</b></div>
+        <div class="ml"><span>Horizonte</span><b>La fundación cerrará el 31-dic-2045 y planea gastar ≈ 9.000 M$ en 2026</b></div></div>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:12px">Cifras de agregadores de 13F y prensa. Solo el total de Berkshire está verificado en EDGAR: contrástalo antes de decidir.</div>
+    </details>
+  <div class="drawer" id="mkdrw"></div>
+
+  <div class="warn">Fuente: formularios 13F de la SEC. Salen cada trimestre y con hasta 45 días de retraso: muestran lo que tenían, no lo que tienen hoy. No incluyen crypto ni posiciones cortas. Coincidir no es una recomendación de compra.</div>
+</div>
+
+<!-- ═════════ CRYPTO ═════════ -->
+<div id="mkv2" class="view">
+  <div class="kpis">
+    <div class="card"><div class="card-label">TVL total DeFi</div><div class="card-value">$128 B</div></div>
+    <div class="card"><div class="card-label">Stablecoins en circulación</div><div class="card-value">$214 B</div></div>
+    <div class="card"><div class="card-label">Flujo stablecoins 7d</div><div class="card-value" style="color:var(--accent-green)">+$1,9 B</div></div>
+    <div class="card"><div class="card-label">Mis monedas con datos</div><div class="card-value">7 / 9</div></div>
+  </div>
+
+  <h2 class="section-title">Mis monedas, por dentro</h2>
+  <p class="reparto-hint">Lo que dice DefiLlama de los protocolos de las monedas que ya tienes en cartera.</p>
+  <div class="table-wrapper"><table><thead><tr><th>Moneda</th><th class="text-right">TVL</th><th class="text-right">TVL 7d</th><th class="text-right">Ingresos 30d</th><th class="text-right">Comisiones 30d</th><th>Tendencia</th></tr></thead><tbody>
+    <tr><td><span class="tk">SOL</span><div class="nm">Solana</div></td><td class="text-right">$9,8 B</td><td class="text-right"><span class="chip up">+4,1 %</span></td><td class="text-right">$62 M</td><td class="text-right">$130 M</td><td>▁▂▃▅▆▇</td></tr>
+    <tr><td><span class="tk">ETH</span><div class="nm">Ethereum</div></td><td class="text-right">$61 B</td><td class="text-right"><span class="chip dn">−1,3 %</span></td><td class="text-right">$48 M</td><td class="text-right">$210 M</td><td>▆▆▅▅▄▄</td></tr>
+    <tr><td><span class="tk">ATOM</span><div class="nm">Cosmos</div></td><td class="text-right">$0,6 B</td><td class="text-right"><span class="chip up">+0,8 %</span></td><td class="text-right">$0,4 M</td><td class="text-right">$1,1 M</td><td>▃▃▃▄▃▄</td></tr>
+    <tr><td><span class="tk">TIA</span><div class="nm">Celestia</div></td><td class="text-right">$0,3 B</td><td class="text-right"><span class="chip dn">−5,2 %</span></td><td class="text-right">$0,2 M</td><td class="text-right">$0,5 M</td><td>▅▄▄▃▂▂</td></tr>
+  </tbody></table></div>
+
+  <h2 class="section-title">Grandes tenedores</h2>
+  <p class="reparto-hint">Quién acumula crypto: empresas cotizadas con bitcoin y ether en balance. Datos reales de CoinGecko (21-oct-2026), el resto de la maqueta sigue siendo de ejemplo.</p>
+  <div class="kpis" style="margin-bottom:12px">
+    <div class="card"><div class="card-label">BTC en empresas cotizadas</div><div class="card-value">1,30 M BTC</div></div>
+    <div class="card"><div class="card-label">Valor</div><div class="card-value">$108,7 B</div></div>
+    <div class="card"><div class="card-label">% del suministro</div><div class="card-value">6,2 %</div></div>
+    <div class="card"><div class="card-label">Empresas con BTC</div><div class="card-value">180</div></div>
+  </div>
+  <div class="table-wrapper"><table><thead><tr><th>Empresa</th><th class="text-right">BTC</th><th class="text-right">% suministro</th><th class="text-right">Coste de compra</th><th class="text-right">Valor hoy</th></tr></thead><tbody>
+    <tr><td><span class="tk">MSTR</span><div class="nm">Strategy (EE. UU.)</div></td><td class="text-right">848.517</td><td class="text-right">4,04 %</td><td class="text-right">$64,6 B</td><td class="text-right">$70,7 B <span class="chip up">+9 %</span></td></tr>
+    <tr><td><span class="tk">3350</span><div class="nm">Metaplanet (Japón)</div></td><td class="text-right">44.000</td><td class="text-right">0,21 %</td><td class="text-right">$3,9 B</td><td class="text-right">$3,7 B <span class="chip dn">−5 %</span></td></tr>
+    <tr><td><span class="tk">XXI</span><div class="nm">Twenty One Capital</div></td><td class="text-right">43.514</td><td class="text-right">0,21 %</td><td class="text-right">—</td><td class="text-right">$3,6 B</td></tr>
+    <tr><td><span class="tk">MARA</span><div class="nm">MARA Holdings (minería)</div></td><td class="text-right">35.577</td><td class="text-right">0,17 %</td><td class="text-right">—</td><td class="text-right">$3,0 B</td></tr>
+    <tr><td><span class="tk">ASST</span><div class="nm">Strive</div></td><td class="text-right">33.996</td><td class="text-right">0,16 %</td><td class="text-right">$3,0 B</td><td class="text-right">$2,8 B <span class="chip dn">−7 %</span></td></tr>
+  </tbody></table></div>
+  <details class="card" style="margin-top:12px;padding:12px 16px"><summary style="cursor:pointer;color:var(--text-secondary);font-size:13px;font-weight:600">Empresas y fondos</summary>
+    <div class="mgrs">
+      <div class="mg"><div class="mh"><span class="token-icon">MS</span><span class="mn">Strategy</span></div>
+        <div class="ml"><span>Dirige</span><b>Michael Saylor</b></div>
+        <div class="ml"><span>Bitcoin</span><b>848.517 BTC, el 4,04 % del suministro y ≈ 65 % de todo el de las empresas cotizadas</b></div>
+        <div class="ml"><span>Resultado</span><b>Coste 64.600 M$ frente a 70.700 M$ hoy: ≈ +9 %</b></div>
+        <div class="ml"><span>Cómo se financia</span><b>Vendiendo acciones propias: en ago-2026 colocó 334 M$ sin comprar ni vender bitcoin</b></div>
+        <div class="ml"><span>A tener en cuenta</span><b>Podría salir de los índices MSCI según una propuesta de metodología</b></div></div>
+      <div class="mg"><div class="mh"><span class="token-icon">MP</span><span class="mn">Metaplanet</span></div>
+        <div class="ml"><span>País</span><b>Japón</b></div>
+        <div class="ml"><span>Bitcoin</span><b>44.000 BTC, el 0,21 % del suministro</b></div>
+        <div class="ml"><span>Resultado</span><b>Coste 3.900 M$ frente a 3.700 M$ hoy: ≈ −5 %</b></div></div>
+      <div class="mg"><div class="mh"><span class="token-icon">21</span><span class="mn">Twenty One Capital</span></div>
+        <div class="ml"><span>País</span><b>EE. UU.</b></div>
+        <div class="ml"><span>Bitcoin</span><b>43.514 BTC, el 0,21 % del suministro</b></div>
+        <div class="ml"><span>Valor hoy</span><b>≈ 3.600 M$ (sin dato de coste)</b></div></div>
+      <div class="mg"><div class="mh"><span class="token-icon">BM</span><span class="mn">BitMine Immersion</span></div>
+        <div class="ml"><span>Ether</span><b>6,04 M ETH, el ≈ 4,9 % del suministro</b></div>
+        <div class="ml"><span>Peso en el sector</span><b>Casi el 75 % del ether de las 34 empresas que lo tienen</b></div>
+        <div class="ml"><span>Valor hoy</span><b>≈ 14.900 M$</b></div></div>
+      <div class="mg"><div class="mh"><span class="token-icon">IB</span><span class="mn">BlackRock · fondo IBIT</span></div>
+        <div class="ml"><span>Qué es</span><b>Un ETF de bitcoin al contado, no una empresa que invierta con su propio dinero</b></div>
+        <div class="ml"><span>Bitcoin</span><b>≈ 803.000 BTC según una fuente de abril de 2026</b></div>
+        <div class="ml"><span>A tener en cuenta</span><b>Las fuentes difieren; hay que contrastarlo en la web de BlackRock</b></div></div>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-top:12px">Cifras de CoinGecko y prensa. Strategy y las tesorerías: CoinGecko, 21-oct-2026. IBIT: sin verificar en la fuente oficial.</div>
+  </details>
+  <div class="two">
+    <div><h2 class="section-title">Dónde crece el dinero</h2><p class="reparto-hint">Protocolos con mayor subida de TVL en 7 días.</p>
+      <div class="table-wrapper"><table><thead><tr><th>Protocolo</th><th>Cadena</th><th class="text-right">TVL 7d</th></tr></thead><tbody>
+        <tr><td class="tk">Protocolo A</td><td>Solana</td><td class="text-right"><span class="chip up">+18 %</span></td></tr>
+        <tr><td class="tk">Protocolo B</td><td>Ethereum</td><td class="text-right"><span class="chip up">+12 %</span></td></tr>
+        <tr><td class="tk">Protocolo C</td><td>Base</td><td class="text-right"><span class="chip up">+9 %</span></td></tr>
+      </tbody></table></div></div>
+    <div><h2 class="section-title">Stablecoins por cadena</h2><p class="reparto-hint">Dónde está entrando liquidez.</p>
+      <div class="table-wrapper"><table><thead><tr><th>Cadena</th><th class="text-right">Stablecoins</th><th class="text-right">7d</th></tr></thead><tbody>
+        <tr><td class="tk">Ethereum</td><td class="text-right">$98 B</td><td class="text-right"><span class="chip up">+0,6 %</span></td></tr>
+        <tr><td class="tk">Tron</td><td class="text-right">$78 B</td><td class="text-right"><span class="chip up">+0,9 %</span></td></tr>
+        <tr><td class="tk">Solana</td><td class="text-right">$12 B</td><td class="text-right"><span class="chip up">+3,2 %</span></td></tr>
+      </tbody></table></div></div>
+  </div>
+  <div class="warn">Fuente: DefiLlama (API pública, sin clave). Protocolos y cifras de ejemplo.</div>
+</div>
+  </main>
 
   <main class="container">
 
@@ -378,5 +519,6 @@
 
   <script src="js/config.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/mercado.js"></script>
 </body>
 </html>
