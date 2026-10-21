@@ -1,0 +1,49 @@
+name: Actualizar datos de Mercado
+
+# Baja los datos de Mercado (DefiLlama, CoinGecko y los 13F de la SEC) y, si cambian, los sube a master y
+# lanza el despliegue. Solo corre desde master. El contacto de la SEC va como secreto SEC_USER_AGENT
+# (Settings > Secrets and variables > Actions), p. ej. "Crypto_Portafolio tu@correo.com"; sin el se omiten los 13F.
+on:
+  schedule:
+    - cron: '17 6 * * *'   # cada dia a las 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write   # subir los JSON a master
+  actions: write    # lanzar el despliegue: un push hecho con el token del workflow no dispara otros workflows
+
+concurrency:
+  group: actualizar-datos
+  cancel-in-progress: false
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # Si un script falla se deshacen sus cambios: un dato a medias (un gestor menos, un null) no se publica.
+      - name: Crypto (DefiLlama y CoinGecko)
+        run: |
+          python scripts/update_crypto.py || { echo "::warning::Fallo update_crypto.py: se conservan los datos anteriores"; git checkout -- data/crypto.json; }
+      - name: 13F (SEC EDGAR)
+        env:
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+        run: |
+          if [ -z "$SEC_USER_AGENT" ]; then echo "::warning::Falta el secreto SEC_USER_AGENT: se omiten los 13F"; exit 0; fi
+          python scripts/update_13f.py || { echo "::warning::Fallo update_13f.py: se conservan los datos anteriores"; git checkout -- data/13f_*.json; }
+      - name: Subir si hay cambios y desplegar
+        run: |
+          git add data/
+          if git diff --cached --quiet; then echo "Sin cambios"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore(datos): actualizacion automatica de Mercado"
+          git push origin master
+          gh workflow run gh-pages.yml --ref master
