@@ -173,13 +173,17 @@ const App = (() => {
   // Logo de los ETF por gestora (el icono de la web de la gestora): los europeos no tienen logo propio en la otra fuente. Sin gestora conocida, null.
   const GESTORAS = [[/vanguard/i, 'vanguard.com'], [/spdr|state street/i, 'ssga.com'], [/ishares|blackrock/i, 'ishares.com'], [/amundi/i, 'amundi.com'], [/invesco/i, 'invesco.com'],
     [/xtrackers/i, 'etf.dws.com'], [/franklin/i, 'franklintempleton.com'], [/vaneck/i, 'vaneck.com'], [/global x/i, 'globalxetfs.eu']];
-  const logoGestora = (nombre) => { const g = GESTORAS.find(([re]) => re.test(nombre || '')); return g ? `https://www.google.com/s2/favicons?domain=${g[1]}&sz=64` : null; };
+  // Si el nombre es solo el símbolo (ETF importados de Revolut: SPYL, VUAA...), se reconoce la gestora por el símbolo de los ETF más habituales.
+  const GESTORA_DE_ETF = { SPYL: 'ssga.com', SPY: 'ssga.com', VUAA: 'vanguard.com', VUSA: 'vanguard.com', VWCE: 'vanguard.com', VWRL: 'vanguard.com', VOO: 'vanguard.com', VTI: 'vanguard.com',
+    VT: 'vanguard.com', VXUS: 'vanguard.com', VUG: 'vanguard.com', VYM: 'vanguard.com', CSPX: 'ishares.com', SXR8: 'ishares.com', IUSA: 'ishares.com', IWDA: 'ishares.com',
+    EUNL: 'ishares.com', SWDA: 'ishares.com', EMIM: 'ishares.com', CNDX: 'ishares.com', IVV: 'ishares.com', EQQQ: 'invesco.com', QQQ: 'invesco.com' };
+  const logoGestora = (nombre, tok) => { const g = GESTORAS.find(([re]) => re.test(nombre || '')); const dom = g ? g[1] : GESTORA_DE_ETF[tok]; return dom ? `https://www.google.com/s2/favicons?domain=${dom}&sz=64` : null; };
   function registerCustomStocks() {
     Object.entries(settings.customStocks || {}).forEach(([tok, m]) => {
       if (!/^[A-Z0-9.]{1,10}$/.test(tok) || COINS[tok]) return;
       COINS[tok] = { name: limpiaNombre(m?.name || tok), kind: 'stock', color: '#2dd4bf', cssClass: 'stk',
         // logo público; si no carga, iconHtml vuelve a las letras. Los Vanguard (también los UCITS europeos, que la otra fuente no tiene) llevan el logo de la gestora.
-        icon: logoGestora(m?.name) || `https://financialmodelingprep.com/image-stock/${tok}.png` };
+        icon: logoGestora(m?.name, tok) || `https://financialmodelingprep.com/image-stock/${tok}.png` };
     });
   }
   registerCustomStocks();
