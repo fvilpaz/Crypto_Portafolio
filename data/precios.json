@@ -1,44 +1,56 @@
 {
- "updated": "2026-10-22T08:55:58+00:00",
- "fuente": "Twelve Data",
+ "updated": "2026-10-22T09:01:39+00:00",
+ "fuente": "Twelve Data y Yahoo Finance",
  "precios": {
   "NVDA": {
    "price": 221.97,
    "change": 2.54077,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T08:55:58+00:00"
+   "ts": "2026-10-22T09:01:39+00:00"
   },
   "TSLA": {
    "price": 386.47,
    "change": 3.41441,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T08:55:58+00:00"
+   "ts": "2026-10-22T09:01:39+00:00"
   },
   "AMD": {
    "price": 552.71997,
    "change": 3.36238,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T08:55:58+00:00"
+   "ts": "2026-10-22T09:01:39+00:00"
   },
   "SPCX": {
    "price": 159.28,
    "change": 7.77455,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T08:55:58+00:00"
+   "ts": "2026-10-22T09:01:39+00:00"
   },
   "MSFT": {
    "price": 532.95001,
    "change": 0.20306035,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T08:55:58+00:00"
+   "ts": "2026-10-22T09:01:39+00:00"
+  },
+  "VUAA": {
+   "price": 132.365,
+   "change": -0.9281089779573981,
+   "currency": "EUR",
+   "exchange": "GER",
+   "ts": "2026-10-22T09:01:39+00:00"
+  },
+  "SPYL": {
+   "price": 16.94,
+   "change": -0.9588400374181405,
+   "currency": "EUR",
+   "exchange": "GER",
+   "ts": "2026-10-22T09:01:39+00:00"
   }
  },
- "errores": {
-  "VUAA": "404: This symbol is available starting with the Grow or Venture plan. Consider upgrading now at https://twelvedata.com/pricing"
- }
+ "errores": {}
 }
