@@ -3063,7 +3063,9 @@ const App = (() => {
     normalizePortfolio(portfolio);
   }
 
+  const EXPORT_KEY = 'miCartera.ultimaExportacion', AVISO_HASTA_KEY = 'miCartera.avisoCopiaHasta';
   function exportState() {
+    try { localStorage.setItem(EXPORT_KEY, String(Date.now())); } catch (e) { /* sin almacenamiento: el aviso semanal saldra siempre */ }
     const blob = new Blob([JSON.stringify(buildState(), null, 2)], { type: 'application/json;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -3096,6 +3098,28 @@ const App = (() => {
   // ── SYNC ENTRE DISPOSITIVOS (Gist privado de GitHub) ──
   // El "perfil" = un token de GitHub (solo permiso gists) guardado en ESTE
   // navegador. El estado (mismo JSON del export) vive en un gist privado.
+  // Aviso de copia de seguridad: la cartera vive solo en este navegador. Si hace más de 7 días que no se exporta a un archivo (o nunca), sale un aviso arriba con un botón
+  // de un toque; "mañana" lo aplaza un día. Si la nube está activa también se dice (esa copia se sube sola, pero no sustituye a tener un archivo).
+  function avisoCopiaSemanal() {
+    document.getElementById('aviso-copia')?.remove();
+    if (!portfolio.length && !transactions.length) return;
+    let ultima = 0, hasta = 0;
+    try { ultima = Number(localStorage.getItem(EXPORT_KEY)) || 0; hasta = Number(localStorage.getItem(AVISO_HASTA_KEY)) || 0; } catch (e) { /* sin almacenamiento */ }
+    const dias = ultima ? Math.floor((Date.now() - ultima) / 86400000) : null;
+    if ((dias !== null && dias < 7) || Date.now() < hasta) return;
+    const main = document.querySelector('main.container:not(#mercado):not(#operaciones)'); if (!main) return;
+    const nube = syncEnabled() ? ` Tu cartera además se copia sola en tu Gist privado${getSync().lastSync ? ' (última subida ' + new Date(getSync().lastSync).toLocaleString('es-ES') + ')' : ''}.` : '';
+    const caja = document.createElement('div'); caja.id = 'aviso-copia'; caja.className = 'warning-banner';
+    caja.style.cssText = 'display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0';
+    const txt = document.createElement('span'); txt.style.flex = '1 1 260px';
+    txt.textContent = (dias === null ? 'Todavía no has guardado una copia de tu cartera en un archivo.' : `Hace ${dias} días que no guardas una copia de tu cartera en un archivo.`) + ' Los datos viven solo en este navegador: si lo borras, se pierden.' + nube;
+    const ahora = document.createElement('button'); ahora.type = 'button'; ahora.className = 'link-btn'; ahora.textContent = 'Exportar ahora';
+    ahora.addEventListener('click', () => { exportState(); caja.remove(); });
+    const luego = document.createElement('button'); luego.type = 'button'; luego.className = 'link-btn'; luego.textContent = 'Mañana';
+    luego.addEventListener('click', () => { try { localStorage.setItem(AVISO_HASTA_KEY, String(Date.now() + 86400000)); } catch (e) { /* sin almacenamiento */ } caja.remove(); });
+    caja.append(txt, ahora, luego); main.prepend(caja);
+  }
+
   const SYNC_KEY = 'miCartera.sync';
   const GIST_FILE = 'mi-cartera.json';
   let pushTimer = null;
@@ -3527,6 +3551,7 @@ const App = (() => {
     const syncBtn = document.getElementById('sync-btn');
     if (syncBtn) syncBtn.addEventListener('click', openSyncModal);
     updateSyncStatus(syncEnabled() ? 'ok' : '');
+    avisoCopiaSemanal();
     if (syncEnabled()) syncPull();   // al arrancar, baja lo último de la nube
 
     const searchInput = document.getElementById('tx-search');

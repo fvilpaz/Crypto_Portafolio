@@ -81,6 +81,8 @@ are intentionally not merged. The apps cross-link, nothing more.
 - **Custody** split (Bit2Me / Autocustodia / Bitget)
 - **Movements** table (buys, sells, rewards), searchable
 - Collapsible sections + sticky section navigation
+- **Weekly backup reminder:** the portfolio lives only in the browser, so if it has been more than 7 days since the last JSON export (or never) a notice at the top
+  offers "Exportar ahora" in one tap ("Mañana" snoozes it a day); it also says whether the cloud sync (private Gist) is on
 - Manual refresh + auto-refresh of live prices
 - Installable as a **PWA** (offline-capable app shell via a service worker)
 - Dark theme, responsive / mobile-friendly
