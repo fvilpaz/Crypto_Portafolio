@@ -80,10 +80,12 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     tabla.append(tbody);
     const wrap = el('div', '', 'table-wrapper'); wrap.append(tabla); wrap.style.marginTop = '12px';
     sec.append(h, hint, wrap);
-    if (d.n_emisores > d.top.length && d.tabla_url) {   // más empresas que las 10 mayores: enlace a la página de la SEC con todas
-      const enlace = el('a', `Ver la lista completa en la SEC (${d.n_emisores} empresas) ↗`, ''); enlace.href = d.tabla_url; enlace.target = '_blank'; enlace.rel = 'noopener';
-      enlace.style.cssText = 'display:inline-block;margin-top:12px;font-weight:600;color:var(--accent-blue)';
-      sec.append(enlace);
+    if (d.n_emisores > d.top.length) {   // más empresas que las 10 mayores: página propia con todas (buscador y orden) y, aparte, la tabla original de la SEC
+      const pie = document.createElement('div'); pie.style.cssText = 'display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:12px';
+      const todas = el('a', `Ver la lista completa (${d.n_emisores} empresas) ↗`, ''); todas.href = 'gestor.html?g=' + encodeURIComponent(clave); todas.target = '_blank'; todas.rel = 'noopener';
+      todas.style.cssText = 'font-weight:600;color:var(--accent-blue)'; pie.append(todas);
+      if (d.tabla_url) { const sec13 = el('a', 'Tabla original de la SEC ↗', ''); sec13.href = d.tabla_url; sec13.target = '_blank'; sec13.rel = 'noopener'; sec13.style.cssText = 'font-size:12px;color:var(--text-muted)'; pie.append(sec13); }
+      sec.append(pie);
     }
     return sec;
   }
