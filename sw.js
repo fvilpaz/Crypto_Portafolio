@@ -1,9 +1,15 @@
-const CACHE_NAME = 'mi-cartera-v6';
+const CACHE_NAME = 'mi-cartera-v7';
 const ASSETS = [
   './',
   './index.html',
   './css/styles.css',
+  './js/config.js',
+  './js/modelo.js',
   './js/app.js',
+  './js/fx.js',
+  './js/mercado.js',
+  './gestor.html',
+  './js/gestor.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
