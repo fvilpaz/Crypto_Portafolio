@@ -8,6 +8,7 @@
   "fuente": "SEC EDGAR, formulario 13F-HR",
   "total_usd": 34424791932,
   "n_emisores": 24,
+  "tabla_url": "https://www.sec.gov/Archives/edgar/data/1166559/000110465926097175/xslForm13F_X02/infotable.xml",
   "top": [
     {
       "emisor": "BERKSHIRE HATHAWAY INC DEL",

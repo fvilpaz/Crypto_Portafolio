@@ -8,6 +8,7 @@
   "fuente": "SEC EDGAR, formulario 13F-HR",
   "total_usd": 24376086530,
   "n_emisores": 990,
+  "tabla_url": "https://www.sec.gov/Archives/edgar/data/1350694/000135069426000003/xslForm13F_X02/infotable.xml",
   "top": [
     {
       "emisor": "STATE STR SPDR S&P 500 ETF T",

@@ -834,17 +834,34 @@ const App = (() => {
     return '#f6465d';
   }
 
-  // Fila de iconos de una tarjeta: si hay más de los que caben se desliza (rueda del ratón o dedo) y se difumina el borde para avisar de que hay más.
-  function marcaDeslizable(id) {
+  // Fila de iconos de una tarjeta como un dock: caben TODOS (si son muchos se hacen más pequeños) y al pasar el ratón el icono y sus vecinos se agrandan.
+  function marcaDeslizable(id, repetir = true) {
     const e = document.getElementById(id); if (!e) return;
-    if (!e.dataset.rueda) {
-      e.dataset.rueda = '1';
-      e.addEventListener('wheel', (ev) => { if (e.scrollWidth > e.clientWidth && Math.abs(ev.deltaY) > Math.abs(ev.deltaX)) { e.scrollLeft += ev.deltaY; ev.preventDefault(); } }, { passive: false });
-      e.addEventListener('scroll', () => marcaDeslizable(id), { passive: true });
-    }
-    e.classList.toggle('mas-der', e.scrollWidth - e.clientWidth - e.scrollLeft > 2);
-    e.classList.toggle('mas-izq', e.scrollLeft > 2);
+    const visibles = () => [...e.children].filter((h) => getComputedStyle(h).display !== 'none');   // cada icono lleva su letra de respaldo oculta: solo cuentan los visibles
+    const n = visibles().length; if (!n) return;
+    const hueco = n > 6 ? 2 : 5, ancho = e.parentElement ? e.parentElement.clientWidth : 180;
+    const tam = Math.max(6, Math.min(30, Math.floor((ancho - (n - 1) * hueco) / n)));
+    e.style.setProperty('--ic', tam + 'px'); e.style.setProperty('--hueco', hueco + 'px');
+    if (repetir) { clearTimeout(e._re); e._re = setTimeout(() => marcaDeslizable(id, false), 900); }   // un icono cuya imagen no carga cambia a letras: se recalcula
+    if (e.dataset.dock) return;
+    e.dataset.dock = '1';
+    const lupa = (x) => {   // lupa tipo dock: la escala baja con la distancia al puntero o al dedo
+      const t = parseFloat(getComputedStyle(e).getPropertyValue('--ic')) || 30;
+      visibles().forEach((h) => {
+        const r = h.getBoundingClientRect(), d = Math.abs(x - (r.left + r.width / 2)), k = Math.exp(-Math.pow(d / (t * 2.2), 2));
+        h.style.transform = `scale(${(1 + (Math.max(1, 30 / t) * 1.5 - 1) * k).toFixed(2)})`; h.style.zIndex = Math.round(k * 10);
+      });
+    };
+    const quita = () => [...e.children].forEach((h) => { h.style.transform = ''; h.style.zIndex = ''; });
+    e.addEventListener('mousemove', (ev) => lupa(ev.clientX));
+    e.addEventListener('mouseleave', quita);
+    // móvil: al arrastrar el dedo por la fila la lupa sigue al dedo (el desplazamiento vertical de la página sigue funcionando: touch-action: pan-y)
+    e.addEventListener('touchstart', (ev) => lupa(ev.touches[0].clientX), { passive: true });
+    e.addEventListener('touchmove', (ev) => lupa(ev.touches[0].clientX), { passive: true });
+    e.addEventListener('touchend', () => setTimeout(quita, 600));
+    e.addEventListener('touchcancel', quita);
   }
+  window.addEventListener('resize', () => ['btceth-icons', 'cosmos-icons', 'defense-icons', 'bolsa-icons'].forEach(marcaDeslizable));
 
   function renderCards() {
     const total = getInvestedValue();   // base de cubos: capital invertido, sin airdrops (suman 100%)
