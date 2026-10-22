@@ -148,13 +148,17 @@ half. Each does one thing well and they link to each other.
     BANK OF AMER CORP, no longer shows as a sale plus a new buy); the legend of the overlap tables is a flex row of chips; "Dónde
     coinciden" and "Seguimiento de tus empresas" computed from the full positions; teal highlight for the stocks I follow; **Rastreo**: a
     general search over ALL 13F positions (`data/13f_posiciones.json`, ~1,200 companies) plus Twelve Data's symbol search, showing the price when
-    known and one indicator per manager that holds it, or that **sold it entirely** this quarter ("tenía X % · vendió todo"); people who are not 13F filers (Elon Musk first) from the SEC's Form 4 and Schedule 13D/13G
+    known and one indicator per manager that holds it, or that **sold it entirely** this quarter ("tenía X % · vendió todo"). Rastreo is a table with
+    one column per figure: price, change, day low/high, 52-week low/high, where the price sits in the 52-week range, volume (all from Yahoo's chart, in the
+    price Action), and market cap, P/E, EPS, revenue and net income computed from the SEC's XBRL company facts (`scripts/update_fundamentales.py` →
+    `data/fundamentales.json`, US companies that file a 10-K only; market cap = shares × today's price, P/E = price / last fiscal year's EPS; funds, ETFs and
+    foreign companies show "—" with a tooltip saying why); each manager card opens with a profile (`data/gestores_info.json`, hand-written: who runs it,
+    seat, style) and a summary of the quarter computed from its positions (new buys, increases, reductions, whole positions sold); people who are not 13F filers (Elon Musk first) from the SEC's Form 4 and Schedule 13D/13G
     (`scripts/update_insiders.py` → `data/insiders.json`; add a person with one line in `PERSONAS`); Crypto tab from DefiLlama and CoinGecko
     (`scripts/update_crypto.py`, no keys); the daily Action `actualizar-datos.yml` (run on GitHub, OK; the `SEC_USER_AGENT` secret exists).
     The two hand-written example text cards were hidden (commented out, not deleted). **Pending:** the watch list of "Seguimiento" is still a
-    fixed list in `scripts/update_13f.py` (could come from the portfolio); **a technical / fundamental card in Rastreo** (what is free and stable:
-    day range, 52-week range and volume from Yahoo's chart; market cap, P/E, EPS and revenue are not on Yahoo without a key, but can be computed
-    from the SEC's XBRL company facts: shares outstanding × price, EPS, revenue, for US companies); phases 2 and 3 below
+    fixed list in `scripts/update_13f.py` (could come from the portfolio); technical analysis proper (indicators, charts) in Rastreo; fundamentals for
+    non-US companies (not on the SEC's 10-K); phases 2 and 3 below
   - Base the analysis on quarter-to-quarter changes (new buys, increases) and portfolio
     weight, not only on plain overlap
   - Per-company drill-down: who holds it, since when, weight, plus recent news and

@@ -1,0 +1,21 @@
+{
+ "_nota": "Fichas escritas a mano de los inversores de Mercado (quien los dirige, sede, estilo). Solo hechos publicos y sin cifras que cambien; las cifras de la cartera salen siempre del 13F de la SEC. Para anadir uno: una entrada con la misma clave que data/13f_indice.json.",
+ "berkshire": {
+  "persona": "Warren Buffett",
+  "titulo": "Berkshire Hathaway",
+  "datos": [["Quién la dirige", "Warren Buffett es el presidente; Greg Abel es el CEO desde 2026"], ["Sede", "Omaha (Nebraska, EE. UU.)"], ["Al frente desde", "1965, cuando Buffett tomó el control"], ["Estilo", "Pocas posiciones, alta convicción y largo plazo"]],
+  "resumen": "Berkshire Hathaway es la empresa con la que Warren Buffett se hizo famoso. Compra empresas enteras y, además, grandes participaciones en bolsa. Lo que ves aquí es solo la parte cotizada (su informe 13F): una cartera muy concentrada en pocas empresas."
+ },
+ "bridgewater": {
+  "persona": "Ray Dalio",
+  "titulo": "Bridgewater Associates",
+  "datos": [["Fundador", "Ray Dalio, en 1975"], ["Sede", "Westport (Connecticut, EE. UU.)"], ["Tipo", "Fondo de inversión libre (hedge fund), uno de los mayores del mundo"], ["Estilo", "Macro global: reparte entre activos según el ciclo económico (estrategias All Weather y Pure Alpha)"]],
+  "resumen": "Bridgewater es el fondo que fundó Ray Dalio. A diferencia de Berkshire, reparte el dinero entre cientos de empresas con poco peso cada una, y por eso su 13F tiene casi mil posiciones. El 13F solo muestra la parte en acciones de EE. UU.: gestiona bastante más."
+ },
+ "gates": {
+  "persona": "Bill Gates",
+  "titulo": "Gates Foundation Trust",
+  "datos": [["Qué es", "El fideicomiso que gestiona el dinero de la Gates Foundation"], ["Impulsor", "Bill Gates, cofundador de la fundación"], ["Sede", "Seattle (Washington, EE. UU.)"], ["Estilo", "Cartera estable de pocas empresas grandes, para financiar la actividad de la fundación"]],
+  "resumen": "La Gates Foundation es una de las mayores fundaciones privadas del mundo. Este fideicomiso invierte su dotación en bolsa y con las ganancias financia proyectos de salud y desarrollo. Su 13F es corto: pocas empresas y movimientos poco frecuentes."
+ }
+}
