@@ -153,13 +153,17 @@ const App = (() => {
   let transactions = _store.transactions;
   let settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, coreTarget: DEFAULT_CORE_TARGET, satTarget: DEFAULT_SAT_TARGET, strategy: DEFAULT_STRATEGY, coreSplit: { BTC: 0.6, ETH: 0.4 }, satSplit: { SOL: 0.5, ATOM: 0.3, TIA: 0.2 } }, _store.settings || {});   // dcaTarget en €, defenseTarget en %, strategy = plantilla de reparto
 
+  // Nombre de una moneda o acción venida de fuera (CoinGecko, buscador, JSON importado), listo para ir dentro del HTML: se quitan < > " ' y el & se escribe
+  // como &amp; (sin esto "Vanguard S&P 500" quedaba como "Vanguard SP 500"). Se puede aplicar dos veces sin duplicar el &amp;.
+  const limpiaNombre = (s) => String(s).replace(/[<>"']/g, '').replace(/&(?!(amp|lt|gt|quot);)/g, '&amp;');
+
   // Monedas añadidas por búsqueda (settings.customCoins): se registran en COINS y el resto del código las trata como una más.
   // Lo que viene de fuera (CoinGecko, un JSON importado) se limpia, y una moneda de fuera nunca pisa una del catálogo.
   function registerCustomCoins() {
     Object.entries(settings.customCoins || {}).forEach(([tok, m]) => {
       const ya = COINS[tok];
       if (!/^[A-Z0-9]{1,12}$/.test(tok) || !/^[a-z0-9-]+$/.test(m?.coingeckoId || '') || (ya && ya.coingeckoId !== m.coingeckoId)) return;
-      COINS[tok] = { name: String(m.name || tok).replace(/[<>&"']/g, ''), coingeckoId: m.coingeckoId, icon: /^https:\/\//.test(m.icon) ? m.icon : '', color: '#8c94a8', cssClass: '' };
+      COINS[tok] = { name: limpiaNombre(m.name || tok), coingeckoId: m.coingeckoId, icon: /^https:\/\//.test(m.icon) ? m.icon : '', color: '#8c94a8', cssClass: '' };
     });
   }
   registerCustomCoins();
@@ -173,7 +177,7 @@ const App = (() => {
   function registerCustomStocks() {
     Object.entries(settings.customStocks || {}).forEach(([tok, m]) => {
       if (!/^[A-Z0-9.]{1,10}$/.test(tok) || COINS[tok]) return;
-      COINS[tok] = { name: String(m?.name || tok).replace(/[<>&"']/g, ''), kind: 'stock', color: '#2dd4bf', cssClass: 'stk',
+      COINS[tok] = { name: limpiaNombre(m?.name || tok), kind: 'stock', color: '#2dd4bf', cssClass: 'stk',
         // logo público; si no carga, iconHtml vuelve a las letras. Los Vanguard (también los UCITS europeos, que la otra fuente no tiene) llevan el logo de la gestora.
         icon: logoGestora(m?.name) || `https://financialmodelingprep.com/image-stock/${tok}.png` };
     });
@@ -201,6 +205,7 @@ const App = (() => {
         if (!a.color) a.color = cat.color;
         if (!a.cssClass) a.cssClass = cat.cssClass;
         if (!a.name) a.name = cat.name;
+        else if (cat.kind === 'stock' && a.name !== cat.name && a.name === cat.name.replace(/&amp;/g, '')) a.name = cat.name;   // repara los guardados con el & perdido ("Vanguard SP 500")
       }
     });
   }
@@ -1133,7 +1138,7 @@ const App = (() => {
     EQQQ: 'Nasdaq 100', CNDX: 'Nasdaq 100', QQQ: 'Nasdaq 100', EMIM: 'Emergentes', VUG: 'Growth', SCHD: 'Dividendos', VYM: 'Dividendos' };
   function bolsaNombre(tok) {
     if (ETF_CORTO[tok]) return ETF_CORTO[tok];
-    const nombre = String(bolsaLista().find(x => x[0] === tok)?.[1] || COINS[tok]?.name || tok).replace(/[<>&"']/g, '');
+    const nombre = limpiaNombre(bolsaLista().find(x => x[0] === tok)?.[1] || COINS[tok]?.name || tok);
     const sufijos = new Set(['inc', 'corp', 'corporation', 'co', 'ltd', 'plc', 'holdings', 'common', 'stock', 'ordinary', 'share', 'shares', 'class', 'a', 'b', 'c']);
     return nombre.replace(/[,.]/g, ' ').split(' ').filter(w => w && !sufijos.has(w.toLowerCase())).slice(0, 2).join(' ') || nombre;
   }
@@ -1497,7 +1502,7 @@ const App = (() => {
         if (!lista.length) { sugEl.style.display = 'none'; return; }
         sugEl.style.display = '';
         sugEl.innerHTML = lista.map(c => {
-          const sym = c.symbol, nombre = String(c.name || '').replace(/[<>&"']/g, ''), yaEsta = tokenMap[sym] != null;
+          const sym = c.symbol, nombre = limpiaNombre(c.name || ''), yaEsta = tokenMap[sym] != null;
           return `<div data-add="${sym}" style="display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;opacity:${yaEsta ? '.45' : '1'};">
             ${iconHtml(sym, COINS[sym]?.cssClass || 'stk', 22)}
             <span style="font-size:13px;font-weight:600;">${sym}</span>
