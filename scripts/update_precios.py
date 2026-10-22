@@ -44,7 +44,9 @@ def yahoo(ticker):
         with urllib.request.urlopen(req, timeout=30) as r:
             m = json.loads(r.read())["chart"]["result"][0]["meta"]
         precio, previo = float(m["regularMarketPrice"]), float(m.get("chartPreviousClose") or 0)
-        return None, {"close": precio, "percent_change": (precio / previo - 1) * 100 if previo > 0 else 0, "currency": m.get("currency"), "exchange": m.get("exchangeName")}
+        extra = {k: m.get(src) for k, src in (("dia_min", "regularMarketDayLow"), ("dia_max", "regularMarketDayHigh"), ("volumen", "regularMarketVolume"),
+                                              ("min_52s", "fiftyTwoWeekLow"), ("max_52s", "fiftyTwoWeekHigh")) if isinstance(m.get(src), (int, float))}   # datos tecnicos del propio grafico
+        return None, {"close": precio, "percent_change": (precio / previo - 1) * 100 if previo > 0 else 0, "currency": m.get("currency"), "exchange": m.get("exchangeName"), **extra}
     except urllib.error.HTTPError as e:
         return f"{e.code}: Yahoo no dio el precio de {ticker}", None
     except Exception as e:
@@ -117,7 +119,8 @@ def main():
             errores[sim] = err
             print(f"FALLO {sim}: {err}", file=sys.stderr)
             continue
-        precios[sim] = {"price": d["close"], "change": d["percent_change"], "currency": d["currency"], "exchange": d["exchange"], "ts": ahora}
+        precios[sim] = {"price": d["close"], "change": d["percent_change"], "currency": d["currency"], "exchange": d["exchange"], "ts": ahora,
+                        **{k: d[k] for k in ("dia_min", "dia_max", "volumen", "min_52s", "max_52s") if k in d}}
         nuevos += 1
         print(f"OK {sim} ({fuente}): {d['close']} {d['currency']}")
 
