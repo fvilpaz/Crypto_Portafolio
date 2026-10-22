@@ -166,12 +166,16 @@ const App = (() => {
 
   // Acciones/ETF añadidos por búsqueda (settings.customStocks): se registran en COINS con kind 'stock'. Sin coingeckoId no hay
   // precio en vivo, así que valen a precio de compra. Nunca pisan una moneda del catálogo; el nombre se limpia.
+  // Logo de los ETF por gestora (el icono de la web de la gestora): los europeos no tienen logo propio en la otra fuente. Sin gestora conocida, null.
+  const GESTORAS = [[/vanguard/i, 'vanguard.com'], [/spdr|state street/i, 'ssga.com'], [/ishares|blackrock/i, 'ishares.com'], [/amundi/i, 'amundi.com'], [/invesco/i, 'invesco.com'],
+    [/xtrackers/i, 'etf.dws.com'], [/franklin/i, 'franklintempleton.com'], [/vaneck/i, 'vaneck.com'], [/global x/i, 'globalxetfs.eu']];
+  const logoGestora = (nombre) => { const g = GESTORAS.find(([re]) => re.test(nombre || '')); return g ? `https://www.google.com/s2/favicons?domain=${g[1]}&sz=64` : null; };
   function registerCustomStocks() {
     Object.entries(settings.customStocks || {}).forEach(([tok, m]) => {
       if (!/^[A-Z0-9.]{1,10}$/.test(tok) || COINS[tok]) return;
       COINS[tok] = { name: String(m?.name || tok).replace(/[<>&"']/g, ''), kind: 'stock', color: '#2dd4bf', cssClass: 'stk',
         // logo público; si no carga, iconHtml vuelve a las letras. Los Vanguard (también los UCITS europeos, que la otra fuente no tiene) llevan el logo de la gestora.
-        icon: /vanguard/i.test(m?.name || '') ? 'https://www.google.com/s2/favicons?domain=vanguard.com&sz=64' : `https://financialmodelingprep.com/image-stock/${tok}.png` };
+        icon: logoGestora(m?.name) || `https://financialmodelingprep.com/image-stock/${tok}.png` };
     });
   }
   registerCustomStocks();
