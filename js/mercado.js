@@ -224,6 +224,16 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     tr.append(el('td', s.nombre, 'tk'), sin);
     return tr;
   }
+  // Leyenda de las tablas de coincidencias: un chip por inversor (sigla + nombre) y otro por cada movimiento, en una fila que se reparte (flex) y baja de línea.
+  function pintaLeyenda(id) {
+    const caja = document.getElementById(id); if (!caja) return;
+    caja.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:center';
+    const chip = (cls, ...partes) => { const c = document.createElement('span'); c.className = 'chip' + (cls ? ' ' + cls : ''); c.append(...partes); return c; };
+    const grupo = (...hijos) => { const g = document.createElement('div'); g.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:center'; g.append(...hijos); return g; };
+    caja.replaceChildren(
+      grupo(...indice.map((g) => chip('', el('b', g.corto), ' ' + g.nombre))),
+      grupo(el('span', 'En movimientos:', 'nm'), chip('up', '▲ aumenta su posición'), chip('dn', '▼ la reduce'), chip('new', '★ compra nueva'), el('span', 'el número es cuántos de ellos', 'nm')));
+  }
   function pintarCoinciden() {
     if (!coin) return;
     const poner = (id, txt) => { document.getElementById(id).textContent = txt; };
@@ -232,7 +242,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     poner('k-2mas', coin.en_2_o_mas); poner('k-todas', coin.en_todas);
     document.getElementById('b13f-coinciden').replaceChildren(...coin.filas.map(filaCoinciden));
     poner('k-coinciden-resumen', `${coin.en_2_o_mas} empresas en 2 o más carteras`);
-    if (indice) { const ley = indice.map((g) => `${g.corto} = ${g.nombre}`).join(' · ') + '. En movimientos: ▲ aumenta su posición, ▼ la reduce, ★ compra nueva (el número es cuántos de ellos).'; poner('b13f-leyenda', ley); poner('b13f-leyenda2', ley); }
+    if (indice) ['b13f-leyenda', 'b13f-leyenda2'].forEach(pintaLeyenda);
     poner('k-seguimiento-resumen', `${coin.seguidas.filter((s) => s.gestores.length).length} de ${coin.seguidas.length} las tiene algún inversor`);
     poner('b13f-sigues', `Tus empresas en seguimiento: ${coin.seguidas.map((s) => s.nombre).join(', ')}. Donde aparecen en las tablas de Mercado, se marcan en turquesa.`);
     document.getElementById('b13f-seguidas').replaceChildren(...coin.seguidas.map(filaSeguida));
@@ -351,7 +361,6 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
 
 /* Volver desde otra página (p. ej. la lista completa de un inversor, gestor.html) con index.html#mercado: abre directamente la vista Mercado. */
 (function () {
-  if (location.hash !== '#mercado') return;
-  const seg = document.querySelector('#seg-vista [data-g="mercado"]');
-  if (seg) seg.click();
+  const abre = () => { if (location.hash !== '#mercado') return; const seg = document.querySelector('#seg-vista [data-g="mercado"]'); if (seg && !seg.classList.contains('on')) seg.click(); };
+  abre(); window.addEventListener('hashchange', abre);
 })();
