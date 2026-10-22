@@ -78,14 +78,37 @@ def cambio_acciones(prev, acciones):
     return "nueva" if not prev else round((acciones / prev[1] - 1) * 100, 1)
 
 
+def desde_cuando(cik, presentaciones, antes, ahora, acc):
+    """Desde que trimestre tiene el inversor cada empresa: trimestres seguidos contando hacia atras desde el ultimo 13F. Devuelve {emisor: periodo}; si la racha llega al
+    trimestre mas antiguo que se mira, el valor lleva un '<' delante (la tiene desde ese trimestre o desde antes)."""
+    desde = {e: presentaciones[0][1] for e in ahora}
+    vivos = set(ahora)
+    for idx in range(1, len(presentaciones)):
+        acc_i, periodo_i, _ = presentaciones[idx]
+        try:
+            pos_i = antes if idx == 1 else mismos_emisores(posiciones(cik, acc_i), CUSIPS[acc_i], CUSIPS[acc], ahora)
+        except Exception as e:   # un trimestre que no se puede leer corta la busqueda hacia atras
+            print(f"AVISO {cik}: no se pudo leer {acc_i} ({str(e)[:60]})", file=sys.stderr)
+            return desde
+        vivos = {e for e in vivos if e in pos_i}
+        if not vivos:
+            return desde
+        for e in vivos:
+            desde[e] = periodo_i
+    for e in vivos:   # la racha llega hasta el trimestre mas antiguo que se mira
+        desde[e] = "<" + desde[e]
+    return desde
+
+
 def procesar(gestor):
     sub = json.loads(get(f"https://data.sec.gov/submissions/CIK{gestor['cik']}.json"))["filings"]["recent"]
     presentaciones = [(sub["accessionNumber"][i], sub["reportDate"][i], sub["filingDate"][i])
-                      for i, f in enumerate(sub["form"]) if f == "13F-HR"][:2]
-    (acc, periodo, presentado), (acc_ant, periodo_ant, _) = presentaciones
+                      for i, f in enumerate(sub["form"]) if f == "13F-HR"][:TRIMESTRES]
+    (acc, periodo, presentado), (acc_ant, periodo_ant, _) = presentaciones[:2]
     ahora, antes = posiciones(gestor["cik"], acc), posiciones(gestor["cik"], acc_ant)
     antes = mismos_emisores(antes, CUSIPS[acc_ant], CUSIPS[acc], ahora)
     total = sum(v for v, _ in ahora.values())
+    desde = desde_cuando(gestor["cik"], presentaciones, antes, ahora, acc)
 
     top = []
     for emisor, (valor, acciones) in sorted(ahora.items(), key=lambda kv: -kv[1][0])[:10]:
@@ -99,13 +122,14 @@ def procesar(gestor):
         "total_usd": total, "n_emisores": len(ahora), "tabla_url": TABLAS.get(acc), "top": top,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"{gestor['nombre']}: periodo {periodo}, {len(ahora)} emisores, total {total/1e6:,.0f} M$")
-    return {"ahora": ahora, "antes": antes, "total": total, "periodo": periodo}
+    return {"ahora": ahora, "antes": antes, "total": total, "periodo": periodo, "desde": desde}
 
 
 SUFIJOS = {"INC", "CORP", "CORPORATION", "CO", "COMPANY", "LTD", "LIMITED", "PLC", "HOLDINGS", "HOLDING", "HLDGS", "HLDG", "GROUP", "THE", "NV", "SA", "AG", "LLC", "LP", "DE", "DEL", "NEW"}
 # el 13F abrevia los nombres (BANK OF AMER CORP, APPLIED MATLS INC); la lista de tickers de la SEC los lleva enteros
 ABREVIATURAS = {"AMER": "AMERICA", "MATLS": "MATERIALS", "FINL": "FINANCIAL", "NATL": "NATIONAL", "RY": "RAILWAY", "MNG": "MINING", "SYS": "SYSTEMS", "TECHNOLOGIES": "TECHNOLOGIES",
                 "INTL": "INTERNATIONAL", "ENERGY": "ENERGY", "SVCS": "SERVICES", "RESOURCES": "RESOURCES", "PETE": "PETROLEUM", "MFG": "MANUFACTURING", "ELEC": "ELECTRIC", "COMMUNICATIONS": "COMMUNICATIONS"}
+TRIMESTRES = 6     # cuantos 13F se leen por inversor para saber desde cuando tiene cada empresa (el ultimo y los 5 anteriores)
 TOP_PRECIOS = 60   # de cada inversor se sigue el precio de sus TOP_PRECIOS mayores posiciones
 
 
@@ -182,7 +206,7 @@ if todos:   # TODAS las posiciones de cada gestor (no solo las 10 mayores), para
     filas = defaultdict(dict)
     for clave, t in todos.items():
         for emisor, (valor, acciones) in t["ahora"].items():
-            filas[emisor][clave] = [round(valor / t["total"] * 100, 3), acciones, cambio_acciones(t["antes"].get(emisor), acciones)]
+            filas[emisor][clave] = [round(valor / t["total"] * 100, 3), acciones, cambio_acciones(t["antes"].get(emisor), acciones), t["desde"].get(emisor)]
         total_ant = sum(v for v, _ in t["antes"].values())   # lo que tenia el trimestre anterior y ya no tiene: salida total
         for emisor, (valor, acciones) in t["antes"].items():
             if emisor not in t["ahora"]:

@@ -163,7 +163,9 @@ half. Each does one thing well and they link to each other.
     10-K); phases 2 and 3 below (they need a cloud account that only Nando can create)
   - Base the analysis on quarter-to-quarter changes (new buys, increases) and portfolio
     weight, not only on plain overlap
-  - Per-company drill-down: who holds it, since when, weight, plus recent news and
+  - **Done (22-oct): "since when"** — `update_13f.py` reads the last six 13F of each investor and stores, for each holding, the quarter its unbroken streak starts
+    (`<` = since that quarter or earlier); shown in the chip tooltips and in a sortable "Desde" column of each investor's full list.
+- Per-company drill-down: who holds it, since when, weight, plus recent news and
     fundamentals, to learn why the big investors went in (the goal is to learn to
     analyse on my own, copying is the toll until then)
   - Crypto side: DefiLlama (free, no key, CORS open) for TVL, protocol revenue and

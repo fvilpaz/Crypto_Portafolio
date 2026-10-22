@@ -200,6 +200,9 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     c.title = `Último año: de ${n2g(s[0])} a ${n2g(s[s.length - 1])} (${sube ? '+' : ''}${n2g((s[s.length - 1] / s[0] - 1) * 100)} %)`;
     return c;
   }
+  // "Desde cuándo": el 13F trae el periodo (fecha de cierre del trimestre); con '<' delante significa que la tiene desde ese trimestre o desde antes (solo se miran seis).
+  const trimestre = (iso) => { const [a, mes] = iso.split('-'); return 'T' + Math.ceil(+mes / 3) + ' ' + a; };
+  const desdeTexto = (d) => (d && d.startsWith('<') ? `la tiene desde ${trimestre(d.slice(1))} o antes` : d ? `la tiene desde ${trimestre(d)}` : '');
   const n2g = (v) => v.toLocaleString('es-ES', { maximumFractionDigits: 2 });
   const grandeUsd = (v) => (v >= 1e9 ? n2g(v / 1e9) + ' mil M$' : v >= 1e6 ? n2g(v / 1e6) + ' M$' : n2g(v) + ' $');   // 'mil M' = miles de millones, como en el resto de Mercado
   const cambioChip = (c) => c === 'nueva' ? el('span', '★ nueva', 'chip new') : c === 'salio' ? el('span', '✖ vendió todo', 'chip dn') : c === 0 ? el('span', '=', 'chip') : el('span', (c > 0 ? '▲ +' : '▼ ') + c.toLocaleString('es-ES') + ' %', 'chip ' + (c > 0 ? 'up' : 'dn'));
@@ -209,7 +212,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     gestores.filter((g) => por && por[g.clave]).forEach((g) => {
       const v = por[g.clave], chip = document.createElement('span'); chip.className = 'chip'; chip.style.cssText = 'margin:0 6px 4px 0;display:inline-flex;gap:6px;align-items:center';
       const salio = v[2] === 'salio';   // ya no la tiene: v[3] y v[4] son el peso y las acciones que tenía el trimestre anterior
-      chip.title = salio ? `${g.nombre}: la vendió entera este trimestre (tenía ${v[3].toLocaleString('es-ES')} % de su cartera · ${v[4].toLocaleString('es-ES')} acciones)` : `${g.nombre}: ${v[0].toLocaleString('es-ES')} % de su cartera · ${v[1].toLocaleString('es-ES')} acciones`;
+      chip.title = salio ? `${g.nombre}: la vendió entera este trimestre (tenía ${v[3].toLocaleString('es-ES')} % de su cartera · ${v[4].toLocaleString('es-ES')} acciones)` : `${g.nombre}: ${v[0].toLocaleString('es-ES')} % de su cartera · ${v[1].toLocaleString('es-ES')} acciones${v[3] ? ' · ' + desdeTexto(v[3]) : ''}`;
       chip.append(el('b', g.corto), salio ? `tenía ${v[3].toLocaleString('es-ES')} %` : `${v[0].toLocaleString('es-ES')} %`, cambioChip(v[2])); td.append(chip);
     });
     if (!td.hasChildNodes()) { td.textContent = 'Ninguno de tus inversores'; td.style.color = 'var(--text-muted)'; }

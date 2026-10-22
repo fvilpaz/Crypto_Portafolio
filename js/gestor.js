@@ -10,6 +10,8 @@
   const orden = { col: 'peso', dir: -1 };
   let filas = [], datos = null;
 
+  const trimestre = (iso) => { const [a, mes] = iso.split('-'); return 'T' + Math.ceil(+mes / 3) + ' ' + a; };
+  const desdeTxt = (d) => (!d ? '—' : d.startsWith('<') ? 'desde ' + trimestre(d.slice(1)) + ' o antes' : trimestre(d));
   const cambioNum = (c) => (c === 'nueva' ? 1e9 : c === 'salio' ? -1e9 : c);   // para ordenar: las nuevas arriba, las vendidas abajo
   function chipCambio(c) {
     if (c === 'nueva') return el('span', '★ Compra nueva', 'chip new');
@@ -21,7 +23,7 @@
   function pintar() {
     const q = $('g-buscar').value.trim().toUpperCase(), conSalidas = $('g-salidas').checked;
     let lista = filas.filter((f) => (conSalidas || !f.salio) && f.emisor.includes(q));
-    const v = (f) => (orden.col === 'emisor' ? f.emisor : orden.col === 'cambio' ? cambioNum(f.cambio) : f[orden.col]);
+    const v = (f) => (orden.col === 'emisor' ? f.emisor : orden.col === 'cambio' ? cambioNum(f.cambio) : orden.col === 'desde' ? (!f.desde ? '9999' : f.desde.startsWith('<') ? f.desde.slice(1) + '-0' : f.desde + '-1') : f[orden.col]);   // desde: las de racha más antigua primero
     lista.sort((a, b) => { const x = v(a), y = v(b); return (x < y ? -1 : x > y ? 1 : 0) * orden.dir || a.emisor.localeCompare(b.emisor); });
     const tbody = document.createDocumentFragment();
     lista.forEach((f) => {
@@ -29,7 +31,7 @@
       cel.append(chipCambio(f.cambio));
       if (f.salio) tr.style.opacity = '.65';
       tr.append(el('td', f.emisor, 'tk'), num(f.salio ? '—' : dinero(f.valor)), num(f.salio ? `0 % (tenía ${f.pesoAntes.toLocaleString('es-ES')} %)` : f.peso.toLocaleString('es-ES') + ' %'),
-        num(f.salio ? '0' : f.acciones.toLocaleString('es-ES')), cel);
+        num(f.salio ? '0' : f.acciones.toLocaleString('es-ES')), cel, el('td', f.salio ? '—' : desdeTxt(f.desde)));
       tbody.append(tr);
     });
     $('g-filas').replaceChildren(tbody);
@@ -49,7 +51,7 @@
       $('g-resumen').textContent = `Informe 13F a la SEC con cierre el ${dia(g.periodo)}, presentado el ${dia(g.presentado)}: es lo que tenían entonces, no lo que tienen hoy. ${g.n_emisores} empresas en total (${dinero(g.total_usd)}). Ordena pulsando una columna.`;
       filas = Object.entries(p.filas).filter(([, por]) => por[clave]).map(([emisor, por]) => {
         const f = por[clave], salio = f[2] === 'salio';
-        return { emisor, salio, peso: f[0], valor: g.total_usd * f[0] / 100, acciones: f[1], cambio: f[2], pesoAntes: salio ? f[3] : 0 };
+        return { emisor, salio, peso: f[0], valor: g.total_usd * f[0] / 100, acciones: f[1], cambio: f[2], pesoAntes: salio ? f[3] : 0, desde: salio ? null : f[3] };
       });
       if (g.tabla_url) { const a = el('a', 'Tabla original de la SEC ↗', ''); a.href = g.tabla_url; a.target = '_blank'; a.rel = 'noopener'; $('g-pie').append('Fuente: SEC EDGAR, formulario 13F-HR. ', a); }
       $('g-buscar').addEventListener('input', pintar); $('g-salidas').addEventListener('change', pintar);
