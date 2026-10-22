@@ -177,11 +177,13 @@ const App = (() => {
   const GESTORA_DE_ETF = { SPYL: 'ssga.com', SPY: 'ssga.com', VUAA: 'vanguard.com', VUSA: 'vanguard.com', VWCE: 'vanguard.com', VWRL: 'vanguard.com', VOO: 'vanguard.com', VTI: 'vanguard.com',
     VT: 'vanguard.com', VXUS: 'vanguard.com', VUG: 'vanguard.com', VYM: 'vanguard.com', CSPX: 'ishares.com', SXR8: 'ishares.com', IUSA: 'ishares.com', IWDA: 'ishares.com',
     EUNL: 'ishares.com', SWDA: 'ishares.com', EMIM: 'ishares.com', CNDX: 'ishares.com', IVV: 'ishares.com', EQQQ: 'invesco.com', QQQ: 'invesco.com' };
+  // SPDR (SPYL, SPY...) se ve como en Revolut: un círculo verde con las letras SPDR, no el logo de State Street.
+  const esSpdr = (nombre, tok) => /spdr|state street/i.test(nombre || '') || tok === 'SPYL' || tok === 'SPY';
   const logoGestora = (nombre, tok) => { const g = GESTORAS.find(([re]) => re.test(nombre || '')); const dom = g ? g[1] : GESTORA_DE_ETF[tok]; return dom ? `https://www.google.com/s2/favicons?domain=${dom}&sz=64` : null; };
   function registerCustomStocks() {
     Object.entries(settings.customStocks || {}).forEach(([tok, m]) => {
       if (!/^[A-Z0-9.]{1,10}$/.test(tok) || COINS[tok]) return;
-      COINS[tok] = { name: limpiaNombre(m?.name || tok), kind: 'stock', color: '#2dd4bf', cssClass: 'stk',
+      COINS[tok] = { name: limpiaNombre(m?.name || tok), kind: 'stock', color: '#2dd4bf', cssClass: esSpdr(m?.name, tok) ? 'spdr' : 'stk', letras: esSpdr(m?.name, tok) ? 'SPDR' : '',
         // logo público; si no carga, iconHtml vuelve a las letras. Los Vanguard (también los UCITS europeos, que la otra fuente no tiene) llevan el logo de la gestora.
         icon: logoGestora(m?.name, tok) || `https://financialmodelingprep.com/image-stock/${tok}.png` };
     });
@@ -310,11 +312,13 @@ const App = (() => {
     const all = portfolio;
     const asset = all.find(a => a.token === token) || COINS[token];
     // En las acciones/ETF manda el logo del catálogo (se calcula por gestora o por símbolo) y no el que guardó la posición al crearse (p. ej. el de otra fuente que no tiene los ETF europeos).
-    const icon = (COINS[token]?.kind === 'stock' && COINS[token].icon) || asset?.icon || COINS[token]?.icon;
+    const letras = COINS[token]?.letras;   // insignia con letras propias (SPDR): sin imagen
+    const icon = letras ? '' : (COINS[token]?.kind === 'stock' && COINS[token].icon) || asset?.icon || COINS[token]?.icon;
     if (icon) {
       return `<img src="${icon}" alt="${token}" width="${size}" height="${size}" style="border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="token-icon ${cssClass}" style="display:none;width:${size}px;height:${size}px;font-size:${size * 0.38}px;">${token.substring(0, 2)}</div>`;
     }
-    return `<div class="token-icon ${cssClass}" style="width:${size}px;height:${size}px;font-size:${size * 0.38}px;">${token.substring(0, 2)}</div>`;
+    const texto = letras || token.substring(0, 2);
+    return `<div class="token-icon ${letras ? COINS[token].cssClass : cssClass}" style="width:${size}px;height:${size}px;font-size:${size * (texto.length > 3 ? 0.27 : 0.38)}px;">${texto}</div>`;
   }
 
   // ── SKELETON LOADING ──
