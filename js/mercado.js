@@ -271,6 +271,38 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
       }));
     });
   }
+  // Ficha de una empresa (se despliega bajo su fila del Rastreo): gráfico del último año con las medias de 10 y 40 semanas (≈ 50 y 200 días), rango de 52 semanas,
+  // cifras y quién la tiene. La serie es semanal (data/tecnico.json); sin ella se avisa y se muestran solo las cifras.
+  function fichaEmpresa(f, pr, tec, fu, gestores, columnas) {
+    const tr = document.createElement('tr'), td = document.createElement('td'); td.colSpan = columnas; tr.append(td);
+    const caja = document.createElement('div');
+    const ancho = (document.querySelector('#b13f-buscar .table-wrapper') || {}).clientWidth || 800;   // la tabla es más ancha que la pantalla: la ficha se queda en la parte visible
+    caja.style.cssText = `display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;padding:14px 8px;align-items:start;position:sticky;left:0;box-sizing:border-box;width:${Math.max(ancho - 28, 280)}px`;
+    const izq = document.createElement('div'), der = document.createElement('div');
+    const s = tec.serie;
+    if (s && s.length >= 10 && typeof Chart !== 'undefined') {
+      const lienzo = document.createElement('div'); lienzo.style.cssText = 'position:relative;height:240px'; const cv = document.createElement('canvas'); lienzo.append(cv); izq.append(lienzo);
+      const media = (n) => s.map((_, i) => (i + 1 >= n ? s.slice(i + 1 - n, i + 1).reduce((a, b) => a + b, 0) / n : null));
+      const css = getComputedStyle(document.body), c = (v, d) => css.getPropertyValue(v).trim() || d;
+      tr._grafica = new Chart(cv.getContext('2d'), { type: 'line', data: { labels: s.map((_, i) => `hace ${s.length - 1 - i} sem.`), datasets: [
+        { label: 'Precio', data: s, borderColor: c('--accent-blue', '#4c8dff'), borderWidth: 2, pointRadius: 0, tension: 0.15 },
+        { label: 'Media 10 sem. (≈ 50 d)', data: media(10), borderColor: c('--accent-yellow', '#f0b90b'), borderWidth: 1.4, pointRadius: 0, tension: 0.15 },
+        { label: 'Media 40 sem. (≈ 200 d)', data: media(40), borderColor: '#cd9eff', borderWidth: 1.4, pointRadius: 0, tension: 0.15 }] },
+        options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { labels: { color: c('--text-secondary', '#a0a8b8'), boxWidth: 12 } } },
+          scales: { x: { display: false }, y: { ticks: { color: c('--text-secondary', '#a0a8b8') }, grid: { color: 'rgba(128,128,128,.15)' } } } } });
+    } else izq.append(el('p', 'Sin gráfica: no hay datos de un año de esta empresa.', 'nm'));
+    const kv = (k, v, t) => { const r = document.createElement('div'); r.style.cssText = 'display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px solid var(--border)'; r.append(el('span', k, 'nm'), el('b', v == null ? '—' : v)); if (t) r.title = t; return r; };
+    const mon = pr && pr.currency === 'EUR' ? '€' : '$', usd = !!pr && pr.currency !== 'EUR';
+    der.append(el('div', f.nombre, ''), kv('Precio', pr ? `${n2g(pr.price)} ${mon}` : null),
+      kv('Rango de 52 semanas', pr && pr.min_52s != null ? `${n2g(pr.min_52s)} – ${n2g(pr.max_52s)}` : null),
+      kv('Media 50 d / 200 d', tec.sma50 != null ? `${n2g(tec.sma50)} / ${n2g(tec.sma200)}` : null), kv('RSI 14', tec.rsi14 != null ? String(Math.round(tec.rsi14)) : null),
+      kv('Capitalización', usd && fu && fu.acciones ? grandeUsd(pr.price * fu.acciones) : null), kv('PER', usd && fu && fu.bpa > 0 ? n2g(pr.price / fu.bpa) : null),
+      kv('Ingresos', fu && fu.ingresos ? grandeUsd(fu.ingresos) : null), kv('Beneficio', fu && fu.beneficio != null ? grandeUsd(fu.beneficio) : null));
+    der.firstChild.style.cssText = 'font-weight:700;font-size:16px;margin-bottom:6px';
+    const poseedores = chipsPoseedores(f.por, gestores); poseedores.style.cssText += ';display:block;padding-top:10px'; der.append(el('div', 'Quién la tiene', 'nm'), poseedores);
+    caja.append(izq, der); td.append(caja);
+    return tr;
+  }
   function buscador(d) {
     const caja = document.getElementById('b13f-buscar');
     const sec = document.createElement('details'); sec.className = 'card mk-desplegable'; sec.open = true; sec.style.cssText = 'margin-top:12px;padding:12px 16px';
@@ -296,6 +328,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
         .sort((x, y) => Object.values(y[1]).reduce((s, v) => s + v[0], 0) - Object.values(x[1]).reduce((s, v) => s + v[0], 0))
         .slice(0, 25).forEach(([e, por]) => filas.push({ nombre: e, simbolo: null, por }));
       if (!filas.length) { res.replaceChildren(el('p', 'No encuentro ninguna empresa con ese nombre.', 'reparto-hint')); return; }
+      res.querySelectorAll('canvas').forEach((cv) => { const g = typeof Chart !== 'undefined' && Chart.getChart(cv); if (g) g.destroy(); });
       const t = document.createElement('table'); t.innerHTML = '<thead><tr><th title="">Empresa</th><th class="text-right" title="Último precio conocido">Precio</th><th class="text-right" title="Cambio del precio frente al cierre anterior">Variación</th><th class="text-right" title="Precio más bajo de hoy">Mín. día</th><th class="text-right" title="Precio más alto de hoy">Máx. día</th><th class="text-right" title="Precio más bajo de las últimas 52 semanas">Mín. 52 sem.</th><th class="text-right" title="Precio más alto de las últimas 52 semanas">Máx. 52 sem.</th><th class="text-right" title="Dónde está el precio entre el mínimo (0 %) y el máximo (100 %) de las últimas 52 semanas. 99 % = casi en máximos del año; 5 % = casi en mínimos">En el rango anual</th><th class="text-right" title="Media del precio de cierre de los últimos 50 días de mercado">Media 50 d</th><th class="text-right" title="Media del precio de cierre de los últimos 200 días de mercado">Media 200 d</th><th class="text-right" title="RSI de 14 días (0-100). Por encima de 70 suele leerse como una subida muy rápida (sobrecompra) y por debajo de 30 como una bajada muy rápida (sobreventa). Es un indicador técnico, no una recomendación">RSI 14</th><th title="Alcista: el precio está por encima de la media de 50 días y esta por encima de la de 200. Bajista: al revés. Mixta: cualquier otro caso. Es una lectura técnica, no una recomendación">Tendencia</th><th title="Evolución del precio en el último año (un punto por semana)">Último año</th><th class="text-right" title="Acciones negociadas hoy">Volumen</th><th class="text-right" title="Valor de toda la empresa en bolsa: acciones en circulación × precio de hoy">Capitalización</th><th class="text-right" title="Precio / beneficio por acción del último ejercicio. Cuántos años de beneficio se pagan">PER</th><th class="text-right" title="Beneficio por acción del último ejercicio fiscal">BPA</th><th class="text-right" title="Ventas del último ejercicio fiscal">Ingresos</th><th class="text-right" title="Beneficio neto del último ejercicio fiscal">Beneficio</th><th title="Cuáles de tus tres inversores la tienen (o la vendieron entera) en su último 13F">Poseedores</th></tr></thead>';
       const tb = document.createElement('tbody');
       filas.slice(0, 30).forEach((f) => {
@@ -327,6 +360,12 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
           fu && fu.beneficio != null ? celda(grande(fu.beneficio), ejercicio) : vacio(sinFund));
         const quien = chipsPoseedores(f.por, d.gestores);
         tr.append(quien); tb.append(tr);
+        const nombreEl = emp.querySelector('.tk'); nombreEl.style.cursor = 'pointer'; nombreEl.title = 'Ver la ficha y el gráfico';
+        let abierta = null;
+        nombreEl.addEventListener('click', () => {   // pulsar el nombre despliega (o pliega) su ficha debajo de la fila
+          if (abierta) { if (abierta._grafica) abierta._grafica.destroy(); abierta.remove(); abierta = null; return; }
+          abierta = fichaEmpresa(f, pr, tec, fu, d.gestores, t.querySelectorAll('thead th').length); tr.after(abierta);
+        });
       });
       t.append(tb); res.replaceChildren(t);
     }

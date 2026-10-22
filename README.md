@@ -154,7 +154,7 @@ half. Each does one thing well and they link to each other.
     `data/fundamentales.json`, US companies that file a 10-K only; market cap = shares × today's price, P/E = price / last fiscal year's EPS; funds, ETFs and
     foreign companies show "—" with a tooltip saying why); technical analysis columns (50- and 200-day moving averages, 14-day RSI, trend label
     — price vs both averages — and a one-year mini chart; computed by the price Action from a year of Yahoo closes: descriptive readings, not recommendations);
-    a star next to each company starts **following** it (a watchlist saved in the browser, `miCartera.seguimiento`); "Seguimiento de tus empresas" lists
+    clicking a company's name opens its sheet under the row (one-year chart with the 10- and 40-week averages, 52-week range, figures and the investors that hold it); a star next to each company starts **following** it (a watchlist saved in the browser, `miCartera.seguimiento`); "Seguimiento de tus empresas" lists
     the stocks of the portfolio (they follow themselves) plus the starred ones, with price, change, annual range, market cap, P/E and the investors that hold it; each manager card opens with a profile (`data/gestores_info.json`, hand-written: who runs it,
     seat, style) and a summary of the quarter computed from its positions (new buys, increases, reductions, whole positions sold); people who are not 13F filers (Elon Musk first) from the SEC's Form 4 and Schedule 13D/13G
     (`scripts/update_insiders.py` → `data/insiders.json`; add a person with one line in `PERSONAS`); Crypto tab from DefiLlama and CoinGecko
@@ -215,7 +215,7 @@ half. Each does one thing well and they link to each other.
     Evolución and Últimos movimientos; ETF logos by issuer (SPDR, iShares, Amundi, Invesco, Vanguard...); the summary cards' icon row slides
     when it does not fit (30 px each, 12 px apart); a **Quitar de mi cartera** button in each coin's detail window (confirmation inside the page, a copy in
     `miCartera.papelera` — the last 10 — and an Undo notice); the Spanish fund **BBVA Megatendencia Tecnología A FI** (searchable by "bbva" or "megatendencia";
-    its price is the Yahoo net asset value in euros); in the monthly plan, "Ahorro y gastos" is now **Fondo restante** (what is left of the contribution
+    its price is the Yahoo net asset value in euros); one-touch 25 / 50 / 75 % buttons under the crypto / bolsa ratio slider; in the monthly plan, "Ahorro y gastos" is now **Fondo restante** (what is left of the contribution
     after investing: savings, expenses and the cushion); warning when the four targets stop adding up to 100 %; names with `&` keep it
     ("Vanguard S&P 500"); the offline cache (`sw.js`, v7) includes `js/modelo.js` and the other scripts; sorting the assets table by a header uses the
     real column; the header no longer shows the "Seguimiento de cartera · DCA" subtitle. **Centro de operaciones**: the monthly split lives in its own
