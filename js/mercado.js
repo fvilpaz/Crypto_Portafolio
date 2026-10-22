@@ -163,11 +163,43 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   // Rastreo: busca CUALQUIER empresa (nombre o símbolo) y muestra su precio si lo tenemos y, con un indicador por inversor, cuáles de tus gestores
   // la tienen en su 13F (todas sus posiciones, no solo las 10 mayores: data/13f_posiciones.json). Las empresas salen del 13F y de la búsqueda de Twelve Data (EE. UU.).
   let preciosAcc = null;
+  let tecAcc = {};   // análisis técnico (medias, RSI, serie de un año): data/tecnico.json
   let fundAcc = {};   // fundamentales de la SEC (data/fundamentales.json); sin el archivo, esas celdas salen como "—"
   const cargaPrecios = () => (preciosAcc ? Promise.resolve(preciosAcc) : fetch('data/precios.json').then((r) => r.json()).then((x) => { preciosAcc = x.precios || {}; return preciosAcc; }).catch(() => (preciosAcc = {}))
-    .then((p) => fetch('data/fundamentales.json').then((r) => r.json()).then((f) => { fundAcc = f.empresas || {}; return p; }).catch(() => p)));
+    .then((p) => Promise.all([fetch('data/fundamentales.json').then((r) => r.json()).then((f) => { fundAcc = f.empresas || {}; }).catch(() => {}), fetch('data/tecnico.json').then((r) => r.json()).then((t) => { tecAcc = t.simbolos || {}; }).catch(() => {})]).then(() => p)));
   const SUFIJOS = new Set(['INC', 'CORP', 'CORPORATION', 'CO', 'COMPANY', 'LTD', 'LIMITED', 'PLC', 'HOLDINGS', 'HLDGS', 'GROUP', 'THE', 'NV', 'SA', 'AG', 'LLC', 'LP']);
   const norm = (s) => String(s).toUpperCase().replace(/[.,&'()/-]/g, ' ').split(/\s+/).filter((w) => w && !SUFIJOS.has(w)).join(' ');
+  // Análisis técnico de Rastreo: RSI, tendencia (precio frente a las medias de 50 y 200 días) y la mini gráfica del último año (los calcula la Action con un año de cierres de Yahoo).
+  function rsiCelda(pr0, simbolo) {
+    const pr = pr0 && { ...pr0, ...(tecAcc[simbolo] || {}) };
+    const c = el('td', '', 'text-right');
+    if (!pr || pr.rsi14 == null) { c.textContent = '—'; return c; }
+    c.append(`${Math.round(pr.rsi14)} `);
+    if (pr.rsi14 >= 70) { const t = el('span', 'sobrecompra', 'chip new'); c.append(t); c.title = 'RSI alto: la acción ha subido muy rápido en las últimas semanas'; }
+    else if (pr.rsi14 <= 30) { const t = el('span', 'sobreventa', 'chip dn'); c.append(t); c.title = 'RSI bajo: la acción ha bajado muy rápido en las últimas semanas'; }
+    else c.title = 'RSI normal (entre 30 y 70)';
+    return c;
+  }
+  function tendenciaCelda(pr0, simbolo) {
+    const pr = pr0 && { ...pr0, ...(tecAcc[simbolo] || {}) };
+    const c = document.createElement('td');
+    if (!pr || pr.sma50 == null || pr.sma200 == null) { c.textContent = '—'; return c; }
+    const alcista = pr.price > pr.sma50 && pr.sma50 > pr.sma200, bajista = pr.price < pr.sma50 && pr.sma50 < pr.sma200;
+    c.append(alcista ? el('span', '▲ Alcista', 'chip up') : bajista ? el('span', '▼ Bajista', 'chip dn') : el('span', 'Mixta', 'chip'));
+    c.title = 'Precio ' + n2g(pr.price) + ' · media 50 d ' + n2g(pr.sma50) + ' · media 200 d ' + n2g(pr.sma200);
+    return c;
+  }
+  function serieCelda(pr0, simbolo) {
+    const c = document.createElement('td');
+    const s = (tecAcc[simbolo] || {}).serie;
+    if (!s || s.length < 5) { c.textContent = '—'; return c; }
+    const lo = Math.min(...s), hi = Math.max(...s), w = 96, h = 30, rg = hi - lo || 1;
+    const pts = s.map((v, i) => `${(i / (s.length - 1) * w).toFixed(1)},${(h - 2 - (v - lo) / rg * (h - 4)).toFixed(1)}`).join(' ');
+    const sube = s[s.length - 1] >= s[0], col = sube ? 'var(--accent-green)' : 'var(--accent-red)';
+    c.innerHTML = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+    c.title = `Último año: de ${n2g(s[0])} a ${n2g(s[s.length - 1])} (${sube ? '+' : ''}${n2g((s[s.length - 1] / s[0] - 1) * 100)} %)`;
+    return c;
+  }
   const n2g = (v) => v.toLocaleString('es-ES', { maximumFractionDigits: 2 });
   const grandeUsd = (v) => (v >= 1e9 ? n2g(v / 1e9) + ' mil M$' : v >= 1e6 ? n2g(v / 1e6) + ' M$' : n2g(v) + ' $');   // 'mil M' = miles de millones, como en el resto de Mercado
   const cambioChip = (c) => c === 'nueva' ? el('span', '★ nueva', 'chip new') : c === 'salio' ? el('span', '✖ vendió todo', 'chip dn') : c === 0 ? el('span', '=', 'chip') : el('span', (c > 0 ? '▲ +' : '▼ ') + c.toLocaleString('es-ES') + ' %', 'chip ' + (c > 0 ? 'up' : 'dn'));
@@ -264,13 +296,13 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
         .sort((x, y) => Object.values(y[1]).reduce((s, v) => s + v[0], 0) - Object.values(x[1]).reduce((s, v) => s + v[0], 0))
         .slice(0, 25).forEach(([e, por]) => filas.push({ nombre: e, simbolo: null, por }));
       if (!filas.length) { res.replaceChildren(el('p', 'No encuentro ninguna empresa con ese nombre.', 'reparto-hint')); return; }
-      const t = document.createElement('table'); t.innerHTML = '<thead><tr><th title="">Empresa</th><th class="text-right" title="Último precio conocido">Precio</th><th class="text-right" title="Cambio del precio frente al cierre anterior">Variación</th><th class="text-right" title="Precio más bajo de hoy">Mín. día</th><th class="text-right" title="Precio más alto de hoy">Máx. día</th><th class="text-right" title="Precio más bajo de las últimas 52 semanas">Mín. 52 sem.</th><th class="text-right" title="Precio más alto de las últimas 52 semanas">Máx. 52 sem.</th><th class="text-right" title="Dónde está el precio entre el mínimo (0 %) y el máximo (100 %) de las últimas 52 semanas. 99 % = casi en máximos del año; 5 % = casi en mínimos">En el rango anual</th><th class="text-right" title="Acciones negociadas hoy">Volumen</th><th class="text-right" title="Valor de toda la empresa en bolsa: acciones en circulación × precio de hoy">Capitalización</th><th class="text-right" title="Precio / beneficio por acción del último ejercicio. Cuántos años de beneficio se pagan">PER</th><th class="text-right" title="Beneficio por acción del último ejercicio fiscal">BPA</th><th class="text-right" title="Ventas del último ejercicio fiscal">Ingresos</th><th class="text-right" title="Beneficio neto del último ejercicio fiscal">Beneficio</th><th title="Cuáles de tus tres inversores la tienen (o la vendieron entera) en su último 13F">Poseedores</th></tr></thead>';
+      const t = document.createElement('table'); t.innerHTML = '<thead><tr><th title="">Empresa</th><th class="text-right" title="Último precio conocido">Precio</th><th class="text-right" title="Cambio del precio frente al cierre anterior">Variación</th><th class="text-right" title="Precio más bajo de hoy">Mín. día</th><th class="text-right" title="Precio más alto de hoy">Máx. día</th><th class="text-right" title="Precio más bajo de las últimas 52 semanas">Mín. 52 sem.</th><th class="text-right" title="Precio más alto de las últimas 52 semanas">Máx. 52 sem.</th><th class="text-right" title="Dónde está el precio entre el mínimo (0 %) y el máximo (100 %) de las últimas 52 semanas. 99 % = casi en máximos del año; 5 % = casi en mínimos">En el rango anual</th><th class="text-right" title="Media del precio de cierre de los últimos 50 días de mercado">Media 50 d</th><th class="text-right" title="Media del precio de cierre de los últimos 200 días de mercado">Media 200 d</th><th class="text-right" title="RSI de 14 días (0-100). Por encima de 70 suele leerse como una subida muy rápida (sobrecompra) y por debajo de 30 como una bajada muy rápida (sobreventa). Es un indicador técnico, no una recomendación">RSI 14</th><th title="Alcista: el precio está por encima de la media de 50 días y esta por encima de la de 200. Bajista: al revés. Mixta: cualquier otro caso. Es una lectura técnica, no una recomendación">Tendencia</th><th title="Evolución del precio en el último año (un punto por semana)">Último año</th><th class="text-right" title="Acciones negociadas hoy">Volumen</th><th class="text-right" title="Valor de toda la empresa en bolsa: acciones en circulación × precio de hoy">Capitalización</th><th class="text-right" title="Precio / beneficio por acción del último ejercicio. Cuántos años de beneficio se pagan">PER</th><th class="text-right" title="Beneficio por acción del último ejercicio fiscal">BPA</th><th class="text-right" title="Ventas del último ejercicio fiscal">Ingresos</th><th class="text-right" title="Beneficio neto del último ejercicio fiscal">Beneficio</th><th title="Cuáles de tus tres inversores la tienen (o la vendieron entera) en su último 13F">Poseedores</th></tr></thead>';
       const tb = document.createElement('tbody');
       filas.slice(0, 30).forEach((f) => {
         const tr = document.createElement('tr'); if (sigo(f.nombre)) tr.className = 'sigo';
         const emp = document.createElement('td'); emp.append(el('span', f.nombre, 'tk')); if (f.simbolo) { const s = el('span', f.simbolo, 'section-badge'); s.style.cssText = 'margin-left:8px;background:var(--bg-input);color:var(--text-secondary);'; emp.append(s); }
         if (f.simbolo) emp.prepend(botonEstrella(f.simbolo, f.nombre));   // ☆ seguir / ★ ya la sigues
-        const pr = f.simbolo && preciosAcc && preciosAcc[f.simbolo], fu = (f.simbolo && fundAcc[f.simbolo]) || null;
+        const pr = f.simbolo && preciosAcc && preciosAcc[f.simbolo], fu = (f.simbolo && fundAcc[f.simbolo]) || null, tec = (f.simbolo && tecAcc[f.simbolo]) || {};
         const n2 = (v) => v.toLocaleString('es-ES', { maximumFractionDigits: 2 }), usd = pr && pr.currency !== 'EUR';
         const mon = pr && pr.currency === 'EUR' ? '€' : '$';
         const celda = (txt, titulo) => { const c = el('td', txt == null ? '—' : txt, 'text-right'); if (titulo) c.title = titulo; return c; };
@@ -287,6 +319,9 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
           pr && pr.dia_min != null ? celda(n2(pr.dia_min)) : vacio(), pr && pr.dia_max != null ? celda(n2(pr.dia_max)) : vacio(),
           pr && pr.min_52s != null ? celda(n2(pr.min_52s)) : vacio(), pr && pr.max_52s != null ? celda(n2(pr.max_52s)) : vacio(),
           rango !== null ? celda(rango + ' %', rango >= 90 ? 'Cerca del máximo del año' : rango <= 10 ? 'Cerca del mínimo del año' : 'A mitad del rango del año') : vacio(),
+          tec.sma50 != null && pr ? celda(n2(tec.sma50), pr.price > tec.sma50 ? 'El precio está por encima de su media de 50 días' : 'El precio está por debajo de su media de 50 días') : vacio(),
+          tec.sma200 != null && pr ? celda(n2(tec.sma200), pr.price > tec.sma200 ? 'El precio está por encima de su media de 200 días' : 'El precio está por debajo de su media de 200 días') : vacio(),
+          rsiCelda(pr, f.simbolo), tendenciaCelda(pr, f.simbolo), serieCelda(pr, f.simbolo),
           pr && pr.volumen ? celda(pr.volumen >= 1e6 ? n2(pr.volumen / 1e6) + ' M' : pr.volumen.toLocaleString('es-ES')) : vacio(), capi, per,
           fu && fu.bpa != null ? celda(n2(fu.bpa) + ' $', ejercicio) : vacio(sinFund), fu && fu.ingresos ? celda(grande(fu.ingresos), ejercicio) : vacio(sinFund),
           fu && fu.beneficio != null ? celda(grande(fu.beneficio), ejercicio) : vacio(sinFund));

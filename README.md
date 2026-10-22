@@ -152,13 +152,15 @@ half. Each does one thing well and they link to each other.
     one column per figure: price, change, day low/high, 52-week low/high, where the price sits in the 52-week range, volume (all from Yahoo's chart, in the
     price Action), and market cap, P/E, EPS, revenue and net income computed from the SEC's XBRL company facts (`scripts/update_fundamentales.py` →
     `data/fundamentales.json`, US companies that file a 10-K only; market cap = shares × today's price, P/E = price / last fiscal year's EPS; funds, ETFs and
-    foreign companies show "—" with a tooltip saying why); each manager card opens with a profile (`data/gestores_info.json`, hand-written: who runs it,
+    foreign companies show "—" with a tooltip saying why); technical analysis columns (50- and 200-day moving averages, 14-day RSI, trend label
+    — price vs both averages — and a one-year mini chart; computed by the price Action from a year of Yahoo closes: descriptive readings, not recommendations);
+    a star next to each company starts **following** it (a watchlist saved in the browser, `miCartera.seguimiento`); "Seguimiento de tus empresas" lists
+    the stocks of the portfolio (they follow themselves) plus the starred ones, with price, change, annual range, market cap, P/E and the investors that hold it; each manager card opens with a profile (`data/gestores_info.json`, hand-written: who runs it,
     seat, style) and a summary of the quarter computed from its positions (new buys, increases, reductions, whole positions sold); people who are not 13F filers (Elon Musk first) from the SEC's Form 4 and Schedule 13D/13G
     (`scripts/update_insiders.py` → `data/insiders.json`; add a person with one line in `PERSONAS`); Crypto tab from DefiLlama and CoinGecko
     (`scripts/update_crypto.py`, no keys); the daily Action `actualizar-datos.yml` (run on GitHub, OK; the `SEC_USER_AGENT` secret exists).
-    The two hand-written example text cards were hidden (commented out, not deleted). **Pending:** the watch list of "Seguimiento" is still a
-    fixed list in `scripts/update_13f.py` (could come from the portfolio); technical analysis proper (indicators, charts) in Rastreo; fundamentals for
-    non-US companies (not on the SEC's 10-K); phases 2 and 3 below
+    The two hand-written example text cards were hidden (commented out, not deleted). **Pending:** fundamentals for non-US companies (not on the SEC's
+    10-K); phases 2 and 3 below (they need a cloud account that only Nando can create)
   - Base the analysis on quarter-to-quarter changes (new buys, increases) and portfolio
     weight, not only on plain overlap
   - Per-company drill-down: who holds it, since when, weight, plus recent news and
@@ -211,7 +213,10 @@ half. Each does one thing well and they link to each other.
     that shares a stock's symbol (TSLA by Backpack) moves to the Bolsa with its quantity and cost; **import of Revolut's transactions
     statement** (adds BUY/SELL rows without rebuilding the portfolio, no duplicates); the **Crypto | Bolsa** selector in Distribución,
     Evolución and Últimos movimientos; ETF logos by issuer (SPDR, iShares, Amundi, Invesco, Vanguard...); the summary cards' icon row slides
-    when it does not fit (30 px each, 12 px apart); warning when the four targets stop adding up to 100 %; names with `&` keep it
+    when it does not fit (30 px each, 12 px apart); a **Quitar de mi cartera** button in each coin's detail window (confirmation inside the page, a copy in
+    `miCartera.papelera` — the last 10 — and an Undo notice); the Spanish fund **BBVA Megatendencia Tecnología A FI** (searchable by "bbva" or "megatendencia";
+    its price is the Yahoo net asset value in euros); in the monthly plan, "Ahorro y gastos" is now **Fondo restante** (what is left of the contribution
+    after investing: savings, expenses and the cushion); warning when the four targets stop adding up to 100 %; names with `&` keep it
     ("Vanguard S&P 500"); the offline cache (`sw.js`, v7) includes `js/modelo.js` and the other scripts; sorting the assets table by a header uses the
     real column; the header no longer shows the "Seguimiento de cartera · DCA" subtitle. **Centro de operaciones**: the monthly split lives in its own
     view with the "Plan de inversión" panel (monthly contribution with "Ahorro y gastos" as a separate account, ratio, "weight of the bolsa in N
