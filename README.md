@@ -69,7 +69,8 @@ are intentionally not merged. The apps cross-link, nothing more.
 - **Live stock prices, no key in the browser:** a scheduled GitHub Action (`scripts/update_precios.py`, Twelve Data free
   plan) writes `data/precios.json` every 2 hours Monday to Friday; the app only reads that file and falls back to the
   purchase price when a stock has no recent price (older than 5 days) or is not in the file. The symbols it tracks are
-  listed in `data/acciones.json`
+  listed in `data/acciones.json`. A stock with no automatic price (e.g. European UCITS ETFs the free plan does not cover)
+  has a **Price** box in its detail window where you type the current price in euros; market price wins when it exists
 - **Satellites** are the coins of your own satellite split (`settings.satSplit`, edited with the card's pencil); a coin
   you add there shows up in the card and in the monthly split
 - **Staking** breakdown (per-asset APR)
