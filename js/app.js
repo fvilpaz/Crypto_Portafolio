@@ -834,32 +834,21 @@ const App = (() => {
     return '#f6465d';
   }
 
-  // Fila de iconos de una tarjeta como un dock: caben TODOS (si son muchos se hacen más pequeños) y al pasar el ratón el icono y sus vecinos se agrandan.
-  function marcaDeslizable(id, repetir = true) {
+  // Fila de iconos de una tarjeta: todos del mismo tamaño y con espacio entre ellos; si no caben se desliza (dedo, rueda o arrastrando con el ratón)
+  // y el borde se difumina para avisar de que hay más.
+  function marcaDeslizable(id) {
     const e = document.getElementById(id); if (!e) return;
-    const visibles = () => [...e.children].filter((h) => getComputedStyle(h).display !== 'none');   // cada icono lleva su letra de respaldo oculta: solo cuentan los visibles
-    const n = visibles().length; if (!n) return;
-    const hueco = n > 14 ? 3 : n > 9 ? 5 : n > 6 ? 7 : 10, ancho = e.parentElement ? e.parentElement.clientWidth : 180;
-    const tam = Math.max(6, Math.min(30, Math.floor((ancho - (n - 1) * hueco) / n)));
-    e.style.setProperty('--ic', tam + 'px'); e.style.setProperty('--hueco', hueco + 'px');
-    if (repetir) { clearTimeout(e._re); e._re = setTimeout(() => marcaDeslizable(id, false), 900); }   // un icono cuya imagen no carga cambia a letras: se recalcula
-    if (e.dataset.dock) return;
-    e.dataset.dock = '1';
-    const lupa = (x) => {   // lupa tipo dock: la escala baja con la distancia al puntero o al dedo
-      const t = parseFloat(getComputedStyle(e).getPropertyValue('--ic')) || 30;
-      visibles().forEach((h) => {
-        const r = h.getBoundingClientRect(), d = Math.abs(x - (r.left + r.width / 2)), k = Math.exp(-Math.pow(d / (t * 2.2), 2));
-        h.style.transform = `scale(${(1 + (Math.max(1, 30 / t) * 1.5 - 1) * k).toFixed(2)})`; h.style.zIndex = Math.round(k * 10);
-      });
-    };
-    const quita = () => [...e.children].forEach((h) => { h.style.transform = ''; h.style.zIndex = ''; });
-    e.addEventListener('mousemove', (ev) => lupa(ev.clientX));
-    e.addEventListener('mouseleave', quita);
-    // móvil: al arrastrar el dedo por la fila la lupa sigue al dedo (el desplazamiento vertical de la página sigue funcionando: touch-action: pan-y)
-    e.addEventListener('touchstart', (ev) => lupa(ev.touches[0].clientX), { passive: true });
-    e.addEventListener('touchmove', (ev) => lupa(ev.touches[0].clientX), { passive: true });
-    e.addEventListener('touchend', () => setTimeout(quita, 600));
-    e.addEventListener('touchcancel', quita);
+    if (!e.dataset.desliza) {
+      e.dataset.desliza = '1';
+      e.addEventListener('wheel', (ev) => { if (e.scrollWidth > e.clientWidth && Math.abs(ev.deltaY) > Math.abs(ev.deltaX)) { e.scrollLeft += ev.deltaY; ev.preventDefault(); } }, { passive: false });
+      e.addEventListener('scroll', () => marcaDeslizable(id), { passive: true });
+      let x0 = null, s0 = 0;   // arrastrar con el ratón (el dedo ya desliza solo)
+      e.addEventListener('mousedown', (ev) => { x0 = ev.clientX; s0 = e.scrollLeft; });
+      window.addEventListener('mousemove', (ev) => { if (x0 !== null) { e.scrollLeft = s0 - (ev.clientX - x0); ev.preventDefault(); } });
+      window.addEventListener('mouseup', () => { x0 = null; });
+    }
+    e.classList.toggle('mas-der', e.scrollWidth - e.clientWidth - e.scrollLeft > 2);
+    e.classList.toggle('mas-izq', e.scrollLeft > 2);
   }
   window.addEventListener('resize', () => ['btceth-icons', 'cosmos-icons', 'defense-icons', 'bolsa-icons'].forEach(marcaDeslizable));
 
