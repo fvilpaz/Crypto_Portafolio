@@ -140,17 +140,17 @@ half. Each does one thing well and they link to each other.
   statistics on the overlap: which companies several of them hold at once, as
   candidates for my own investing. Note: 13F is quarterly and lags up to 45 days, so
   it shows what they held, not what they hold today
-  - **Status (2026-10-22), published in `master`.** Done and checked in the browser: header button "Mercado" and its
-    view; real 13F tables for Berkshire, Bridgewater and the Gates Foundation Trust (`scripts/update_13f.py`, one JSON per
-    manager in `data/`); real "Dónde coinciden" and "Las que sigues" computed from the full positions, not only the top 10;
-    teal highlight for the stocks I follow; Crypto tab from DefiLlama and CoinGecko (`scripts/update_crypto.py`, no keys); the
-    daily Action `actualizar-datos.yml` (written, never run on GitHub yet). Still example data (yellow label): the text cards
-    "Inversores y gestoras" and "Empresas y fondos". **Pending:** create the repo secret `SEC_USER_AGENT` (without it the Action
-    skips the 13F) and run the Action once to check it; phases 2 and 3 below. **Done (22-oct):** people who are not 13F filers
-    (Elon Musk first) come from the SEC's Form 4 and Schedule 13D/13G filings (`scripts/update_insiders.py` → `data/insiders.json`,
-    shown in Mercado under the 13F managers; a **"¿Quién tiene esta empresa?"** search covers ALL positions of each 13F (not just
-    the top 10; `data/13f_posiciones.json`); add a person with one line in `PERSONAS`); the two hand-written example text cards
-    were hidden (commented out, not deleted)
+  - **Status (2026-10-22), published in `master` and checked on the live site.** Done: the "Mercado" view (now one of three views of the
+    **Cartera | Operaciones | Mercado** selector under the header); real 13F tables for Berkshire, Bridgewater and the Gates Foundation Trust
+    (`scripts/update_13f.py`, one JSON per manager in `data/`) with a link under each one to the SEC's full table (`tabla_url`); "Dónde
+    coinciden" and "Seguimiento de tus empresas" computed from the full positions; teal highlight for the stocks I follow; **Rastreo**: a
+    general search over ALL 13F positions (`data/13f_posiciones.json`, ~1,000 companies) plus Twelve Data's symbol search, showing the price when
+    known and one indicator per manager that holds it; people who are not 13F filers (Elon Musk first) from the SEC's Form 4 and Schedule 13D/13G
+    (`scripts/update_insiders.py` → `data/insiders.json`; add a person with one line in `PERSONAS`); Crypto tab from DefiLlama and CoinGecko
+    (`scripts/update_crypto.py`, no keys); the daily Action `actualizar-datos.yml` (run on GitHub, OK; the `SEC_USER_AGENT` secret exists).
+    The two hand-written example text cards were hidden (commented out, not deleted). **Pending:** the watch list of "Seguimiento" is still a
+    fixed list in `scripts/update_13f.py` (could come from the portfolio); a clean page with every position of each manager (sortable, with
+    weight) instead of the SEC's technical table; phases 2 and 3 below
   - Base the analysis on quarter-to-quarter changes (new buys, increases) and portfolio
     weight, not only on plain overlap
   - Per-company drill-down: who holds it, since when, weight, plus recent news and
@@ -195,10 +195,16 @@ half. Each does one thing well and they link to each other.
   - **Phase 2 done (2026-10-22):** separate crypto / stock searches; popular ETFs by name incl. European UCITS; amount-only
     purchases; Crypto / Bolsa blocks in the assets table; the Bolsa pencil opens an editor with per-stock percentages
     (`settings.stockSplit`) and the núcleo (`settings.bolsaCore`); issuer logo for Vanguard and a public logo for the other
-    stocks (letters when none); live prices through the scheduled Action and `data/precios.json`. **Pending / unverified:** the
-    first run of the price Action on GitHub (the free Twelve Data plan lists US stocks and ETFs; European ones such as VUAA
-    may come back without a price, and then they stay at purchase price; it is not confirmed which ones the plan covers); a
-    manual price per stock for those; a warning when editing the other targets breaks the 100 %; the "Tu plan" block
+    stocks (letters when none); live prices through the scheduled Action and `data/precios.json`.
+  - **Phase 3 done (2026-10-22):** prices for ANY US stock and the European ETFs (VUAA, SPYL, VUSA, VWCE...) come from Yahoo Finance's public chart
+    in the Action (no key, no 40-symbol limit: `data/acciones.json` ships ~160 symbols; Twelve Data is only a fallback); a **manual price**
+    per stock in its detail window and a "Precio por unidad" box when a stock has no price, so an amount alone never invents units; a crypto
+    that shares a stock's symbol (TSLA by Backpack) moves to the Bolsa with its quantity and cost; **import of Revolut's transactions
+    statement** (adds BUY/SELL rows without rebuilding the portfolio, no duplicates); the **Crypto | Bolsa** selector in Distribución,
+    Evolución and Últimos movimientos; ETF logos by issuer (SPDR, iShares, Amundi, Invesco, Vanguard...); the summary cards' icon row slides
+    when it does not fit; warning when the four targets stop adding up to 100 %. **Centro de operaciones**: the monthly split lives in its own
+    view with the "Plan de inversión" panel (monthly contribution with "Ahorro y gastos" as a separate account, ratio, "weight of the bolsa in N
+    months" slider, what each bucket receives) and the templates, each with its own núcleo share for the bolsa (50 / 25 / 10 %)
   - **Monthly plan (decided with Nando):** the "Dinero al mes" box is the single amount to invest (crypto + bolsa); the
     slider (or the pencil of the Bolsa card) sets the crypto / bolsa ratio. The three fixed templates divide the amount by
     that ratio and then by their own percentages (crypto: refugio / núcleo / satélites, then the per-coin split of each
