@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Posiciones de un inversor · Mi Cartera</title>
+  <meta name="theme-color" content="#1e2329">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <main class="container" id="gestor" style="padding-bottom:60px">
+    <p style="padding-top:18px"><a href="index.html" class="link-btn">← Volver a Mi Cartera</a></p>
+    <h1 class="section-title" id="g-titulo" style="margin-top:6px">Cargando…</h1>
+    <p class="reparto-hint" id="g-resumen"></p>
+    <div class="add-field" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:12px 0">
+      <input type="text" id="g-buscar" placeholder="Buscar una empresa de esta lista" autocomplete="off" style="flex:1;min-width:220px">
+      <label style="display:flex;gap:6px;align-items:center;font-size:13px;color:var(--text-secondary);white-space:nowrap"><input type="checkbox" id="g-salidas"> Incluir las que vendió entera</label>
+    </div>
+    <p class="reparto-hint" id="g-contador"></p>
+    <div class="table-wrapper">
+      <table>
+        <thead><tr>
+          <th data-col="emisor" style="cursor:pointer">Empresa</th>
+          <th data-col="valor" class="text-right" style="cursor:pointer">Valor invertido</th>
+          <th data-col="peso" class="text-right" style="cursor:pointer">% de su cartera</th>
+          <th data-col="acciones" class="text-right" style="cursor:pointer">Nº de acciones</th>
+          <th data-col="cambio" style="cursor:pointer">Cambio frente al trimestre anterior</th>
+        </tr></thead>
+        <tbody id="g-filas"></tbody>
+      </table>
+    </div>
+    <p class="reparto-hint" id="g-pie"></p>
+  </main>
+  <script src="js/gestor.js"></script>
+</body>
+</html>
