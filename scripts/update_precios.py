@@ -8,6 +8,8 @@ Por eso: UNA llamada por simbolo, una cada PAUSA segundos (6 por minuto), como m
 responde 429, se para en seco (sin reintentar) y se conservan los precios anteriores. Con las 12 ejecuciones al dia de la Action (una cada 2 h)
 son como mucho 12 x MAX_SIMBOLOS = 480 creditos. El plan gratuito lista acciones y ETF de EE. UU.; los europeos (p. ej. VUAA) pueden
 fallar: su error queda en "errores" y la app los sigue valorando a precio de compra. No se inventa ningun precio.
+Para los europeos (VUAA, SPYL...) un simbolo puede llevar "yahoo": "VUAA.DE" en data/acciones.json: entonces el precio sale del grafico publico de
+Yahoo Finance (sin clave ni credito de Twelve Data; coincide con el de Revolut, p. ej. Xetra en euros) y no se llama a Twelve Data para ese simbolo.
 """
 import json, os, sys, time, urllib.error, urllib.parse, urllib.request
 from datetime import datetime, timezone
@@ -30,7 +32,7 @@ def cargar_lista():
         sim = str(it.get("symbol", "")).strip().upper()
         if sim and sim not in vistos:
             vistos.add(sim)
-            lista.append({"symbol": sim, "exchange": it.get("exchange")})
+            lista.append({"symbol": sim, "exchange": it.get("exchange"), "yahoo": it.get("yahoo")})
     return lista
 
 
@@ -52,6 +54,21 @@ def quote(simbolo, exchange, clave):
             cuerpo = {}
     codigo = cuerpo.get("code") or (estado if estado != 200 else None)
     return codigo, cuerpo
+
+
+def yahoo(ticker):
+    """Precio de un valor europeo desde el grafico publico de Yahoo Finance. Devuelve (error, datos); error es None si todo fue bien."""
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(ticker)}?interval=1d&range=1d"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            m = json.loads(r.read())["chart"]["result"][0]["meta"]
+        precio, previo = float(m["regularMarketPrice"]), float(m.get("chartPreviousClose") or 0)
+        return None, {"close": precio, "percent_change": (precio / previo - 1) * 100 if previo > 0 else 0, "currency": m.get("currency"), "exchange": m.get("exchangeName")}
+    except urllib.error.HTTPError as e:
+        return f"{e.code}: Yahoo no dio el precio de {ticker}", None
+    except Exception as e:
+        return f"Yahoo {ticker}: {str(e)[:100]}", None
 
 
 def main():
@@ -77,10 +94,23 @@ def main():
     errores, nuevos = {}, 0
     ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
+    gasto_previo = False   # la pausa de 10 s solo cuenta entre llamadas a Twelve Data
     for i, it in enumerate(lista):
-        if i:
-            time.sleep(PAUSA)
         sim = it["symbol"]
+        if it.get("yahoo"):
+            err, d = yahoo(it["yahoo"])
+            if err:
+                errores[sim] = err
+                print(f"FALLO {sim}: {err}", file=sys.stderr)
+            else:
+                precios[sim] = {"price": d["close"], "change": d["percent_change"], "currency": d["currency"], "exchange": d["exchange"], "ts": ahora}
+                nuevos += 1
+                print(f"OK {sim} (Yahoo): {d['close']} {d['currency']}")
+            time.sleep(1)
+            continue
+        if gasto_previo:
+            time.sleep(PAUSA)
+        gasto_previo = True
         codigo, d = quote(sim, it["exchange"], clave)
         if codigo == 429:
             errores[sim] = "429: limite de la API alcanzado; se para aqui"
@@ -111,7 +141,7 @@ def main():
     if reciente and firma(precios) == firma(previo) and errores == anterior.get("errores", {}):
         print("Sin cambios en los precios: no se reescribe el archivo.")
         return 0
-    SALIDA.write_text(json.dumps({"updated": ahora, "fuente": "Twelve Data", "precios": precios, "errores": errores}, ensure_ascii=False, indent=1) + "\n", encoding="utf8")
+    SALIDA.write_text(json.dumps({"updated": ahora, "fuente": "Twelve Data y Yahoo Finance", "precios": precios, "errores": errores}, ensure_ascii=False, indent=1) + "\n", encoding="utf8")
     return 0
 
 

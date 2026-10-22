@@ -1,4 +1,18 @@
 {
- "_nota": "Simbolos cuyo precio baja la Action 'Actualizar precios de acciones' (Twelve Data). Maximo 40. Se pueden anadir con el editor de GitHub: \"NVDA\" o {\"symbol\": \"VUAA\", \"exchange\": \"LSE\"}. Plan gratuito: 8 creditos/minuto y 800/dia, 1 credito por simbolo y ejecucion.",
- "simbolos": ["NVDA", "TSLA", "AMD", "SPCX", "VUAA", "MSFT"]
+ "_nota": "Simbolos cuyo precio baja la Action 'Actualizar precios de acciones'. Maximo 40. Americanos: \"NVDA\" (Twelve Data: plan gratuito 8 creditos/minuto y 800/dia, 1 credito por simbolo y ejecucion). Europeos: {\"symbol\": \"VUAA\", \"yahoo\": \"VUAA.DE\"} (Yahoo Finance, sin clave; .DE = Xetra en euros).",
+ "simbolos": [
+  "NVDA",
+  "TSLA",
+  "AMD",
+  "SPCX",
+  "MSFT",
+  {
+   "symbol": "VUAA",
+   "yahoo": "VUAA.DE"
+  },
+  {
+   "symbol": "SPYL",
+   "yahoo": "SPYL.DE"
+  }
+ ]
 }
