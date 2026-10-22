@@ -23,6 +23,19 @@ MAX_TWELVE = 40
 API = "https://api.twelvedata.com/quote"
 
 
+def resolver_isin(isin):
+    """Simbolo de Yahoo Finance de un fondo a partir de su ISIN (busqueda publica de Yahoo), o None."""
+    if not isin:
+        return None
+    try:
+        req = urllib.request.Request("https://query2.finance.yahoo.com/v1/finance/search?" + urllib.parse.urlencode({"q": isin, "quotesCount": 3, "newsCount": 0}), headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=30) as r:
+            q = json.loads(r.read()).get("quotes", [])
+        return next((x["symbol"] for x in q if x["symbol"].startswith("0P")), q[0]["symbol"] if q else None)
+    except Exception:
+        return None
+
+
 def cargar_lista():
     """data/acciones.json: {"simbolos": ["NVDA", {"symbol": "VUAA", "yahoo": "VUAA.DE"}, {"symbol": "X", "exchange": "LSE"}, ...]}"""
     datos = json.loads(LISTA.read_text(encoding="utf8"))
@@ -32,6 +45,14 @@ def cargar_lista():
             extra = json.loads((RAIZ / "data" / "acciones_13f.json").read_text(encoding="utf8")).get("simbolos", [])
         except (OSError, ValueError):
             pass
+    try:
+        fondos = json.loads((RAIZ / "data" / "fondos.json").read_text(encoding="utf8")).get("fondos", []) if len(sys.argv) <= 1 else []
+    except (OSError, ValueError):
+        fondos = []
+    for fd in fondos:   # fondos por ISIN: el simbolo de Yahoo (0P...F); si no esta escrito se busca por ISIN
+        y = fd.get("yahoo") or resolver_isin(fd.get("isin", ""))
+        if y:
+            extra.append({"symbol": fd.get("symbol") or y.split(".")[0], "yahoo": y})
     vistos, lista = set(), []
     for x in datos.get("simbolos", []) + extra:
         it = x if isinstance(x, dict) else {"symbol": x}

@@ -180,7 +180,9 @@ const App = (() => {
   // SPDR (SPYL, SPY...) se ve como en Revolut: un círculo verde con las letras SPDR, no el logo de State Street.
   const esSpdr = (nombre, tok) => /spdr|state street/i.test(nombre || '') || tok === 'SPYL' || tok === 'SPY';
   const esBbva = (nombre, tok) => /bbva/i.test(nombre || '') || tok === '0P00000V7Q';   // fondo BBVA Megatendencia Tecnología A (símbolo de Yahoo)
-  const insignia = (nombre, tok) => (esSpdr(nombre, tok) ? { letras: 'SPDR', cls: 'spdr' } : esBbva(nombre, tok) ? { letras: 'BBVA', cls: 'bbva' } : null);
+  const esFondo = (tok) => /^0P[0-9A-Z]{8}$/.test(tok);   // los fondos no tienen ticker: usan el símbolo de Yahoo (0P…)
+  const insignia = (nombre, tok) => (esSpdr(nombre, tok) ? { letras: 'SPDR', cls: 'spdr' } : esBbva(nombre, tok) ? { letras: 'BBVA', cls: 'bbva' }
+    : esFondo(tok) ? { letras: String(nombre || '').replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ]/g, ' ').trim().split(' ')[0].slice(0, 4).toUpperCase() || 'FI', cls: 'fondo' } : null);
   const logoGestora = (nombre, tok) => { const g = GESTORAS.find(([re]) => re.test(nombre || '')); const dom = g ? g[1] : GESTORA_DE_ETF[tok]; return dom ? `https://www.google.com/s2/favicons?domain=${dom}&sz=64` : null; };
   function registerCustomStocks() {
     Object.entries(settings.customStocks || {}).forEach(([tok, m]) => {
@@ -2652,7 +2654,6 @@ const App = (() => {
     ['VUAA', 'Vanguard S&P 500 UCITS ETF (Acc)', 'sp500 s&p vanguard ucits acc', UCITS], ['VUSA', 'Vanguard S&P 500 UCITS ETF (Dist)', 'sp500 s&p vanguard ucits dist', UCITS],
     ['CSPX', 'iShares Core S&P 500 UCITS ETF (Acc)', 'sp500 s&p ishares ucits acc', UCITS], ['SXR8', 'iShares Core S&P 500 UCITS ETF (Acc, Xetra)', 'sp500 s&p ishares ucits acc xetra', UCITS],
     ['SPYL', 'SPDR S&P 500 UCITS ETF', 'sp500 s&p spdr ucits', UCITS],
-    ['0P00000V7Q', 'BBVA Megatendencia Tecnología A FI', 'bbva megatendencia mega tendencia tecnologia fondo inversion fi ES0147711032 tecnologico', 'Fondo (España)'],
     ['VWCE', 'Vanguard FTSE All-World UCITS ETF (Acc)', 'vanguard global world mundo allworld ucits acc', UCITS], ['VWRL', 'Vanguard FTSE All-World UCITS ETF (Dist)', 'vanguard global world mundo allworld ucits dist', UCITS],
     ['IWDA', 'iShares Core MSCI World UCITS ETF (Acc)', 'global world mundo msci ishares ucits acc', UCITS], ['EUNL', 'iShares Core MSCI World UCITS ETF (Acc, Xetra)', 'global world mundo msci ishares ucits acc xetra', UCITS],
     ['SWDA', 'iShares Core MSCI World UCITS ETF (Acc, Londres)', 'global world mundo msci ishares ucits acc londres', UCITS],
@@ -2665,7 +2666,16 @@ const App = (() => {
   ];
 
   // Buscar acciones/ETF (Twelve Data: la búsqueda no pide clave). Solo cotizaciones de EE. UU., una por símbolo.
+  // Fondos de inversión (data/fondos.json): se buscan por nombre o ISIN junto a las acciones y ETF; su valor liquidativo lo baja la Action desde Yahoo.
+  let fondosCargados = null;
+  function cargaFondos() {
+    if (!fondosCargados) fondosCargados = fetch('data/fondos.json').then(r => r.json()).then(x => {
+      (x.fondos || []).forEach(f => { if (/^[A-Z0-9.]{1,10}$/.test(f.symbol || '') && !ETF_POPULARES.some(e => e[0] === f.symbol)) ETF_POPULARES.push([f.symbol, f.nombre, `fondo inversion fi ${f.isin} ${f.nombre}`, 'Fondo']); });
+    }).catch(() => {});
+    return fondosCargados;
+  }
   async function searchStocks(q) {
+    await cargaFondos();
     const norm = (s) => String(s).toLowerCase().replace(/[\s&.\-]/g, '');
     const palabras = String(q).toLowerCase().split(/\s+/).map(norm).filter(Boolean);
     const vistos = new Set();

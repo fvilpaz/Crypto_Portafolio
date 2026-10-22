@@ -1,0 +1,53 @@
+{
+ "_nota": "Fondos de inversion que se pueden buscar en la app y cuyo valor liquidativo baja la Action de precios desde Yahoo Finance. Para anadir uno: una entrada con el ISIN y el nombre; si falta 'yahoo' la Action lo busca por ISIN (Yahoo lo da como 0P...F). Se ven al buscar su nombre o su ISIN en Buscar accion o ETF.",
+ "fondos": [
+  {
+   "isin": "ES0147711032",
+   "nombre": "BBVA Megatendencia Tecnología A FI",
+   "symbol": "0P00000V7Q",
+   "yahoo": "0P00000V7Q.F"
+  },
+  {
+   "isin": "IE00B03HD191",
+   "nombre": "Vanguard Global Stock Index Fund EUR Acc",
+   "symbol": "0P00000WLG",
+   "yahoo": "0P00000WLG.F"
+  },
+  {
+   "isin": "IE00BYX5NX33",
+   "nombre": "Fidelity MSCI World Index Fund EUR P Acc",
+   "symbol": "0P0001CLDK",
+   "yahoo": "0P0001CLDK.F"
+  },
+  {
+   "isin": "IE00BD0NCM55",
+   "nombre": "iShares Developed World Index Fund (IE) D Acc EUR",
+   "symbol": "0P0001AINF",
+   "yahoo": "0P0001AINF.F"
+  },
+  {
+   "isin": "LU0996182563",
+   "nombre": "Amundi Index MSCI World AE-C",
+   "symbol": "0P00012PP6",
+   "yahoo": "0P00012PP6.F"
+  },
+  {
+   "isin": "ES0112611001",
+   "nombre": "Azvalor Internacional FI",
+   "symbol": "0P00016YQ5",
+   "yahoo": "0P00016YQ5.F"
+  },
+  {
+   "isin": "ES0159201005",
+   "nombre": "Magallanes Iberian Equity E FI",
+   "symbol": "0P0001572T",
+   "yahoo": "0P0001572T.F"
+  },
+  {
+   "isin": "IE00B18GC888",
+   "nombre": "Vanguard Global Bond Index Fund EUR Hedged Acc",
+   "symbol": "0P00012I69",
+   "yahoo": "0P00012I69.F"
+  }
+ ]
+}
