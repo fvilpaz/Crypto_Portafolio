@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-22T09:01:39+00:00",
+ "updated": "2026-10-22T09:37:49+00:00",
  "fuente": "Twelve Data y Yahoo Finance",
  "precios": {
   "NVDA": {
@@ -7,49 +7,56 @@
    "change": 2.54077,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T09:01:39+00:00"
+   "ts": "2026-10-22T09:37:49+00:00"
   },
   "TSLA": {
    "price": 386.47,
    "change": 3.41441,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T09:01:39+00:00"
+   "ts": "2026-10-22T09:37:49+00:00"
   },
   "AMD": {
    "price": 552.71997,
    "change": 3.36238,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T09:01:39+00:00"
+   "ts": "2026-10-22T09:37:49+00:00"
   },
   "SPCX": {
    "price": 159.28,
    "change": 7.77455,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T09:01:39+00:00"
+   "ts": "2026-10-22T09:37:49+00:00"
   },
   "MSFT": {
    "price": 532.95001,
    "change": 0.20306035,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T09:01:39+00:00"
+   "ts": "2026-10-22T09:37:49+00:00"
   },
   "VUAA": {
-   "price": 132.365,
-   "change": -0.9281089779573981,
+   "price": 132.29,
+   "change": -0.9842446016241846,
    "currency": "EUR",
    "exchange": "GER",
-   "ts": "2026-10-22T09:01:39+00:00"
+   "ts": "2026-10-22T09:37:49+00:00"
   },
   "SPYL": {
-   "price": 16.94,
-   "change": -0.9588400374181405,
+   "price": 16.937,
+   "change": -0.9763797942001773,
    "currency": "EUR",
    "exchange": "GER",
-   "ts": "2026-10-22T09:01:39+00:00"
+   "ts": "2026-10-22T09:37:49+00:00"
+  },
+  "AAPL": {
+   "price": 343.98999,
+   "change": 1.32253,
+   "currency": "USD",
+   "exchange": "NASDAQ",
+   "ts": "2026-10-22T09:37:49+00:00"
   }
  },
  "errores": {}
