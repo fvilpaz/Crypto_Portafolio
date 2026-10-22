@@ -66,8 +66,8 @@ are intentionally not merged. The apps cross-link, nothing more.
   the price paid. The Bolsa card has a pencil that opens the same editor as Núcleo: target, one percentage per stock, a
   search to add more and a ★ that marks the núcleo (it goes first and inherits the highest percentage; default 25 % núcleo,
   the rest equal among the satellites). The assets table shows Crypto and Bolsa as two blocks with their own subtotal
-- **Live stock prices, no key in the browser:** a scheduled GitHub Action (`scripts/update_precios.py`, Twelve Data free
-  plan) writes `data/precios.json` every 2 hours Monday to Friday; the app only reads that file and falls back to the
+- **Live stock prices, no key in the browser:** a scheduled GitHub Action (`scripts/update_precios.py`: Yahoo Finance's public chart, no key,
+  for ~160 US stocks and ETFs plus European ETFs such as VUAA/SPYL; Twelve Data free plan only as a fallback) writes `data/precios.json` every 2 hours Monday to Friday; the app only reads that file and falls back to the
   purchase price when a stock has no recent price (older than 5 days) or is not in the file. The symbols it tracks are
   listed in `data/acciones.json`. A stock with no automatic price (e.g. European UCITS ETFs the free plan does not cover)
   has a **Price** box in its detail window where you type the current price in euros; market price wins when it exists

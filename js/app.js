@@ -839,7 +839,7 @@ const App = (() => {
     const e = document.getElementById(id); if (!e) return;
     const visibles = () => [...e.children].filter((h) => getComputedStyle(h).display !== 'none');   // cada icono lleva su letra de respaldo oculta: solo cuentan los visibles
     const n = visibles().length; if (!n) return;
-    const hueco = n > 6 ? 2 : 5, ancho = e.parentElement ? e.parentElement.clientWidth : 180;
+    const hueco = n > 14 ? 3 : n > 9 ? 5 : n > 6 ? 7 : 10, ancho = e.parentElement ? e.parentElement.clientWidth : 180;
     const tam = Math.max(6, Math.min(30, Math.floor((ancho - (n - 1) * hueco) / n)));
     e.style.setProperty('--ic', tam + 'px'); e.style.setProperty('--hueco', hueco + 'px');
     if (repetir) { clearTimeout(e._re); e._re = setTimeout(() => marcaDeslizable(id, false), 900); }   // un icono cuya imagen no carga cambia a letras: se recalcula
