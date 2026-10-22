@@ -144,7 +144,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     const campo = document.createElement('div'); campo.className = 'add-field'; campo.style.marginTop = '12px';
     const entrada = document.createElement('input'); entrada.type = 'text'; entrada.placeholder = 'Busca una empresa: Amazon, Vistra, Chevron, AAPL…'; entrada.autocomplete = 'off'; campo.append(entrada);
     const res = el('div', '', 'table-wrapper'); res.style.marginTop = '12px';
-    const cambio = (c) => c === 'nueva' ? el('span', '★ nueva', 'chip new') : c === 0 ? el('span', '=', 'chip') : el('span', (c > 0 ? '▲ +' : '▼ ') + c.toLocaleString('es-ES') + ' %', 'chip ' + (c > 0 ? 'up' : 'dn'));
+    const cambio = (c) => c === 'nueva' ? el('span', '★ nueva', 'chip new') : c === 'salio' ? el('span', '✖ vendió todo', 'chip dn') : c === 0 ? el('span', '=', 'chip') : el('span', (c > 0 ? '▲ +' : '▼ ') + c.toLocaleString('es-ES') + ' %', 'chip ' + (c > 0 ? 'up' : 'dn'));
     // 13F: emisor → {clave: [peso, acciones, cambio]}; índice por nombre normalizado para unir con los resultados de la búsqueda por símbolo
     const porNorm = new Map(); Object.entries(d.filas).forEach(([e, por]) => { const k = norm(e); if (k && !porNorm.has(k)) porNorm.set(k, [e, por]); });
     const dePorNombre = (nombreEmpresa) => { const k = norm(nombreEmpresa); if (!k) return null; if (porNorm.has(k)) return porNorm.get(k); for (const [kk, v] of porNorm) if (kk.startsWith(k + ' ') || k.startsWith(kk + ' ')) return v; return null; };
@@ -168,8 +168,9 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
         const quien = document.createElement('td');
         d.gestores.filter((g) => f.por && f.por[g.clave]).forEach((g) => {
           const v = f.por[g.clave], chip = document.createElement('span'); chip.className = 'chip'; chip.style.cssText = 'margin:0 6px 4px 0;display:inline-flex;gap:6px;align-items:center';
-          chip.title = `${g.nombre}: ${v[0].toLocaleString('es-ES')} % de su cartera · ${v[1].toLocaleString('es-ES')} acciones`;
-          chip.append(el('b', g.corto), `${v[0].toLocaleString('es-ES')} %`, cambio(v[2])); quien.append(chip);
+          const salio = v[2] === 'salio';   // ya no la tiene: v[3] y v[4] son el peso y las acciones que tenía el trimestre anterior
+          chip.title = salio ? `${g.nombre}: la vendió entera este trimestre (tenía ${v[3].toLocaleString('es-ES')} % de su cartera · ${v[4].toLocaleString('es-ES')} acciones)` : `${g.nombre}: ${v[0].toLocaleString('es-ES')} % de su cartera · ${v[1].toLocaleString('es-ES')} acciones`;
+          chip.append(el('b', g.corto), salio ? `tenía ${v[3].toLocaleString('es-ES')} %` : `${v[0].toLocaleString('es-ES')} %`, cambio(v[2])); quien.append(chip);
         });
         if (!quien.hasChildNodes()) { quien.textContent = 'Ninguno de tus inversores'; quien.style.color = 'var(--text-muted)'; }
         tr.append(emp, precio, quien); tb.append(tr);
@@ -178,6 +179,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     }
     let espera = null;
     entrada.addEventListener('input', () => {
+      remotos = [];   // los resultados de la búsqueda anterior no valen para lo nuevo que se escribe
       pintarRes();
       clearTimeout(espera); const q = entrada.value.trim();
       if (q.length < 2) { remotos = []; return; }
@@ -185,7 +187,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
         ultima = q;
         Promise.all([fetch(`https://api.twelvedata.com/symbol_search?symbol=${encodeURIComponent(q)}&outputsize=30`).then((r) => r.json()), cargaPrecios()])
           .then(([r]) => { if (ultima !== q) return; const vistos = new Set();
-            remotos = (r.data || []).filter((x) => x.country === 'United States' && /^[A-Z][A-Z0-9.]{0,9}$/.test(x.symbol) && !vistos.has(x.symbol) && vistos.add(x.symbol)).slice(0, 6).map((x) => ({ symbol: x.symbol, name: x.instrument_name })); pintarRes(); })
+            remotos = (r.data || []).filter((x) => x.country === 'United States' && /^[A-Z][A-Z0-9.]{0,9}$/.test(x.symbol) && !/\.(PR|W|WS|U|R)(\.|$)/.test(x.symbol) && !vistos.has(x.symbol) && vistos.add(x.symbol)).slice(0, 6).map((x) => ({ symbol: x.symbol, name: x.instrument_name })); pintarRes(); })
           .catch(() => {});
       }, 400);
     });

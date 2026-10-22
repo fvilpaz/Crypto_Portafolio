@@ -105,12 +105,12 @@
         {
           "clave": "berkshire",
           "peso_pct": 9.2,
-          "cambio_acciones_pct": "nueva"
+          "cambio_acciones_pct": -5.9
         },
         {
           "clave": "bridgewater",
           "peso_pct": 0.24,
-          "cambio_acciones_pct": "nueva"
+          "cambio_acciones_pct": -2.1
         }
       ]
     },
@@ -150,12 +150,12 @@
         {
           "clave": "berkshire",
           "peso_pct": 3.9,
-          "cambio_acciones_pct": "nueva"
+          "cambio_acciones_pct": 0.0
         },
         {
           "clave": "bridgewater",
           "peso_pct": 0.09,
-          "cambio_acciones_pct": "nueva"
+          "cambio_acciones_pct": 49.7
         }
       ]
     },
