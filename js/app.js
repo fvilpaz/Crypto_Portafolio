@@ -309,7 +309,8 @@ const App = (() => {
   function iconHtml(token, cssClass, size = 32) {
     const all = portfolio;
     const asset = all.find(a => a.token === token) || COINS[token];
-    const icon = asset?.icon || COINS[token]?.icon;
+    // En las acciones/ETF manda el logo del catálogo (se calcula por gestora o por símbolo) y no el que guardó la posición al crearse (p. ej. el de otra fuente que no tiene los ETF europeos).
+    const icon = (COINS[token]?.kind === 'stock' && COINS[token].icon) || asset?.icon || COINS[token]?.icon;
     if (icon) {
       return `<img src="${icon}" alt="${token}" width="${size}" height="${size}" style="border-radius:50%;object-fit:cover;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="token-icon ${cssClass}" style="display:none;width:${size}px;height:${size}px;font-size:${size * 0.38}px;">${token.substring(0, 2)}</div>`;
     }
