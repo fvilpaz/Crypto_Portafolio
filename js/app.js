@@ -268,7 +268,7 @@ const App = (() => {
   let sparklineData = {};
   let chartInstance = null;
   let chartBolsaInstance = null;   // rosca de la Bolsa en Distribución
-  const grupoVista = { dist: 'crypto', evo: 'crypto', mov: 'crypto' };   // grupo (crypto / bolsa) que muestra cada sección con selector
+  const grupoVista = { cart: 'crypto', dist: 'crypto', evo: 'crypto', mov: 'crypto' };   // grupo (crypto / bolsa) que muestra cada sección con selector
   let evolutionChart = null;
   let refreshInterval = null;
   let txFilter = '';
@@ -1751,9 +1751,17 @@ const App = (() => {
         <span>${lista.length} activo${lista.length === 1 ? '' : 's'} · ${fmtCurrency(v)} · ${total > 0 ? (v / total * 100).toFixed(1) : '0.0'}% de la cartera</span></td></tr>`;
     };
     const cryptoList = sorted.filter(a => a.kind !== 'stock'), bolsaList = sorted.filter(a => a.kind === 'stock');
+    // Con acciones hay un selector Crypto | Bolsa (como en las demás secciones): la tabla enseña solo el grupo elegido; el % de cartera sigue siendo sobre el total y cada botón dice cuánto hay en su grupo.
+    const g = pintaSelector('seg-cart', 'cart', cryptoList.length > 0, bolsaList.length > 0);
+    const segCart = document.getElementById('seg-cart');
+    if (segCart) {
+      const suma = l => fmtCurrency(l.reduce((s, a) => s + getAssetValue(a), 0));
+      segCart.querySelector('[data-g="crypto"]').textContent = `Crypto · ${suma(cryptoList)}`;
+      segCart.querySelector('[data-g="bolsa"]').textContent = `Bolsa · ${suma(bolsaList)}`;
+    }
     tbody.innerHTML = bolsaList.length
-      ? [['Crypto', 'var(--accent-green)', cryptoList], ['Bolsa', 'var(--accent-teal)', bolsaList]]
-          .filter(g => g[2].length).map(([n, col, l]) => grupoHtml(n, col, l) + l.map(rowHtml).join('')).join('')
+      ? (g === 'bolsa' ? [['Bolsa', 'var(--accent-teal)', bolsaList]] : [['Crypto', 'var(--accent-green)', cryptoList]])
+          .filter(x => x[2].length).map(([n, col, l]) => grupoHtml(n, col, l) + l.map(rowHtml).join('')).join('')
       : sorted.map(rowHtml).join('');
 
     if (hiddenCount > 0) {
@@ -3657,7 +3665,7 @@ const App = (() => {
 
     document.querySelectorAll('.seg-grupo button').forEach(b => b.addEventListener('click', () => {
       grupoVista[b.parentElement.dataset.seccion] = b.dataset.g;
-      renderAllocation(); renderEvolutionChart(); renderTransactions();
+      renderAllocation(); renderEvolutionChart(); renderTransactions(); renderAssetTable();
     }));
 
     // Render inmediato con snapshot cacheado — no espera a la API.
