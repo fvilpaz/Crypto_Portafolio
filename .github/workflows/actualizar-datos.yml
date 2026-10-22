@@ -50,6 +50,12 @@ jobs:
         run: |
           if [ -z "$SEC_USER_AGENT" ]; then echo "::warning::Falta el secreto SEC_USER_AGENT: se omiten los fundamentales"; exit 0; fi
           python scripts/update_fundamentales.py || { echo "::warning::Fallo update_fundamentales.py: se conservan los datos anteriores"; git checkout -- data/fundamentales.json; }
+      - name: Noticias de las empresas (Google Noticias)
+        env:
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+        run: |
+          if [ -z "$SEC_USER_AGENT" ]; then echo "::warning::Falta el secreto SEC_USER_AGENT: se omiten las noticias"; exit 0; fi
+          python scripts/update_noticias.py || { echo "::warning::Fallo update_noticias.py: se conservan las noticias anteriores"; git checkout -- data/noticias.json; }
       - name: Subir si hay cambios y desplegar
         run: |
           git add data/

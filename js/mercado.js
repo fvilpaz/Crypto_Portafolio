@@ -163,6 +163,8 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   // Rastreo: busca CUALQUIER empresa (nombre o símbolo) y muestra su precio si lo tenemos y, con un indicador por inversor, cuáles de tus gestores
   // la tienen en su 13F (todas sus posiciones, no solo las 10 mayores: data/13f_posiciones.json). Las empresas salen del 13F y de la búsqueda de Twelve Data (EE. UU.).
   let preciosAcc = null;
+  let noticiasAcc = null;   // titulares recientes por empresa (data/noticias.json, de Google Noticias): se cargan al abrir la primera ficha
+  const cargaNoticias = () => (noticiasAcc ? Promise.resolve(noticiasAcc) : fetch('data/noticias.json').then((r) => r.json()).then((x) => { noticiasAcc = x.noticias || {}; return noticiasAcc; }).catch(() => (noticiasAcc = {})));
   let tecAcc = {};   // análisis técnico (medias, RSI, serie de un año): data/tecnico.json
   let fundAcc = {};   // fundamentales de la SEC (data/fundamentales.json); sin el archivo, esas celdas salen como "—"
   const cargaPrecios = () => (preciosAcc ? Promise.resolve(preciosAcc) : fetch('data/precios.json').then((r) => r.json()).then((x) => { preciosAcc = x.precios || {}; return preciosAcc; }).catch(() => (preciosAcc = {}))
@@ -304,6 +306,21 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     der.firstChild.style.cssText = 'font-weight:700;font-size:16px;margin-bottom:6px';
     const poseedores = chipsPoseedores(f.por, gestores); poseedores.style.cssText += ';display:block;padding-top:10px'; der.append(el('div', 'Quién la tiene', 'nm'), poseedores);
     caja.append(izq, der); td.append(caja);
+    // noticias recientes (solo titular y enlace al medio); ocupan todo el ancho de la ficha
+    if (f.simbolo) {
+      const nt = document.createElement('div'); nt.style.cssText = 'grid-column:1/-1;border-top:1px solid var(--border);padding-top:10px;min-width:0';
+      nt.append(el('div', 'Noticias recientes', 'nm')); caja.append(nt);
+      cargaNoticias().then((todas) => {
+        const l = todas[f.simbolo];
+        if (!l || !l.length) { nt.append(el('p', 'Sin noticias recientes en la última actualización.', 'nm')); return; }
+        l.forEach(([titulo, url, fuente, fecha]) => {
+          const fila = document.createElement('div'); fila.style.cssText = 'padding:5px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:baseline';
+          const a = el('a', titulo, ''); if (/^https:\/\//.test(url)) { a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; }
+          a.style.cssText = 'color:var(--text-primary);text-decoration:none;font-weight:600;max-width:100%;min-width:0;overflow-wrap:anywhere';
+          fila.append(a, el('span', `${fuente || 'medio'} · ${new Date(fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`, 'nm')); nt.append(fila);
+        });
+      });
+    }
     return tr;
   }
   function buscador(d) {

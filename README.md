@@ -165,6 +165,8 @@ half. Each does one thing well and they link to each other.
     weight, not only on plain overlap
   - **Done (22-oct): "since when"** — `update_13f.py` reads the last six 13F of each investor and stores, for each holding, the quarter its unbroken streak starts
     (`<` = since that quarter or earlier); shown in the chip tooltips and in a sortable "Desde" column of each investor's full list.
+- **Done (22-oct): recent news** per company in its Rastreo sheet: the daily data Action (`scripts/update_noticias.py` → `data/noticias.json`) reads Google News' Spanish RSS
+    (no key) and keeps up to 3 headlines of the last 14 days with a link to the outlet (headline and link only, no article text).
 - Per-company drill-down: who holds it, since when, weight, plus recent news and
     fundamentals, to learn why the big investors went in (the goal is to learn to
     analyse on my own, copying is the toll until then)
