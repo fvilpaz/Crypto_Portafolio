@@ -47,14 +47,16 @@ are intentionally not merged. The apps cross-link, nothing more.
   as invested money)
 - **Hide coins:** dust or clutter can be hidden from the list and the chart without
   changing the total value
-- **Distribution** doughnut chart (share per asset)
-- **Evolution** chart over time
+- **Distribution** doughnut chart (share per asset) and **Evolution** chart over time. With stocks in the portfolio each
+  section gets a **Crypto | Bolsa** selector (same look as Mercado's): the doughnut, the list and the invested / current
+  value curves are those of the chosen group. Without stocks there is no selector
 - **DCA** summary (monthly plan; purchases from the 28th onwards count towards the next month)
 - **Monthly split ("Reparto del mes")**, built around a "Plan de inversión" panel: the monthly amount, a crypto / bolsa
   ratio slider (moving it rescales Núcleo / Satélites / Refugio so the four targets add up to 100 %), result cards
   ("this month to crypto / to bolsa") and Crypto / Bolsa cards where each bucket shows its weight and its target as
   coloured chips (green reaches it, yellow passes it, red is short). The three fixed templates (conservadora / moderada /
-  agresiva) split the money by the ratio and then by their own percentages, **ignoring what you already hold**;
+  agresiva) split the money by the ratio and then by their own percentages, **ignoring what you already hold**, and each
+  one also sets the share of the bolsa that goes to the núcleo (50 / 25 / 10 %; the rest to the other stocks);
   **objetivos** looks at what you hold and sends each side's money where it is missing (if crypto is ahead, it all goes
   to bolsa)
 - **Bolsa (stocks and ETFs):** the "Añadir movimiento" window has two separate searches (*Buscar crypto* /
