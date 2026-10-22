@@ -49,6 +49,35 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   // Todas las posiciones de cada inversor (data/13f_posiciones.json): las usan el buscador y el botón "Ver la lista completa" de cada tabla.
   let posAll = null;
   const cargaPos = () => (posAll ? Promise.resolve(posAll) : fetch('data/13f_posiciones.json').then((r) => r.json()).then((x) => { posAll = x; return x; }));
+  // Ficha de cada inversor (data/gestores_info.json, escrita a mano: quién es, sede, estilo) y, debajo, un resumen de lo que ha hecho este trimestre calculado
+  // con sus posiciones del 13F (data/13f_posiciones.json): compras nuevas, ventas enteras, subidas y bajadas.
+  let infoAll = null;
+  const cargaInfo = () => (infoAll ? Promise.resolve(infoAll) : fetch('data/gestores_info.json').then((r) => r.json()).then((x) => { infoAll = x; return x; }).catch(() => (infoAll = {})));
+  function rellenaFicha(d, clave, ficha, quienEl) {
+    Promise.all([cargaInfo(), cargaPos()]).then(([info, pos]) => {
+      const i = info[clave]; if (!i) return;
+      quienEl.textContent = i.persona;
+      const cab = el('div', '', ''); cab.style.cssText = 'display:flex;align-items:baseline;gap:10px;flex-wrap:wrap';
+      const grande = el('span', i.persona, ''); grande.style.cssText = 'font-size:20px;font-weight:700;color:var(--text-primary)';
+      cab.append(grande, el('span', 'en ' + i.titulo, 'nm'));
+      const datos = document.createElement('div'); datos.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin:10px 0';
+      i.datos.forEach(([k, v]) => { const c = document.createElement('span'); c.className = 'chip'; c.append(el('b', k + ': '), v); datos.append(c); });
+      const texto = el('p', i.resumen, ''); texto.style.cssText = 'margin:0 0 10px;line-height:1.5;color:var(--text-secondary)';
+      ficha.replaceChildren(cab, datos, texto);
+      // lo que ha hecho este trimestre, de sus posiciones reales
+      const filas = Object.entries(pos.filas).filter(([, por]) => por[clave]).map(([emisor, por]) => ({ emisor, peso: por[clave][0], c: por[clave][2] }));
+      const vivas = filas.filter((f) => f.c !== 'salio').sort((a, b) => b.peso - a.peso);
+      const cuenta = (test) => filas.filter((f) => test(f.c)).length;
+      const nuevas = cuenta((c) => c === 'nueva'), vendidas = cuenta((c) => c === 'salio'), suben = cuenta((c) => typeof c === 'number' && c > 0), bajan = cuenta((c) => typeof c === 'number' && c < 0);
+      const chip = (cls, txt) => { const c = el('span', txt, 'chip ' + cls); return c; };
+      const mov = document.createElement('div'); mov.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;align-items:center';
+      mov.append(el('b', 'Este trimestre:', ''), chip('new', `★ ${nuevas} ${nuevas === 1 ? 'compra nueva' : 'compras nuevas'}`), chip('up', `▲ ${suben} ${suben === 1 ? 'aumenta' : 'aumentan'}`), chip('dn', `▼ ${bajan} ${bajan === 1 ? 'reduce' : 'reducen'}`), chip('dn', `✖ ${vendidas} ${vendidas === 1 ? 'vendida entera' : 'vendidas enteras'}`));
+      const top10 = vivas.slice(0, 10).reduce((s, f) => s + f.peso, 0);
+      const pie = el('p', `Su mayor posición es ${vivas[0].emisor} (${vivas[0].peso.toLocaleString('es-ES')} % de su cartera) y las 10 mayores suman el ${top10.toLocaleString('es-ES', { maximumFractionDigits: 1 })} %. Ficha escrita a mano; las cifras salen del 13F de la SEC.`, 'nm');
+      pie.style.margin = '8px 0 0';
+      ficha.append(mov, pie);
+    });
+  }
   function seccion(d, clave) {
     const sec = document.createElement('details');
     sec.className = 'card mk-desplegable'; sec.style.cssText = 'margin-top:12px;padding:12px 16px';
@@ -61,7 +90,9 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     const chipInv = el('span', 'Inversiones', 'section-badge'); chipInv.style.cssText = 'background:var(--bg-input);color:var(--text-secondary);';
     resumen.append(chipInv, `${d.n_emisores} empresas · ${billones(d.total_usd)}`);
     const flecha = document.createElement('span'); flecha.innerHTML = '<svg class="strat-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
-    h.append(nombre, badge, resumen, flecha);
+    const quienEl = el('span', '', ''); quienEl.style.cssText = 'color:var(--text-secondary);font-size:13px';   // la persona (Warren Buffett...), en cuanto cargue su ficha
+    h.append(nombre, quienEl, badge, resumen, flecha);
+    const ficha = document.createElement('div'); ficha.style.cssText = 'margin-top:14px;padding:14px 16px;border-radius:12px;background:var(--bg-input)'; rellenaFicha(d, clave, ficha, quienEl);
     const cuantas = d.top.length < d.n_emisores ? `Las ${d.top.length} mayores de las ${d.n_emisores} empresas` : `Las ${d.n_emisores} empresas`;
     const hint = el('p', `${cuantas} en las que ha invertido (${billones(d.total_usd)} en total). Informe 13F a la SEC con cierre el ${dia(d.periodo)}, presentado el ${dia(d.presentado)}: es lo que tenían entonces, no lo que tienen hoy. Fuente: ${d.fuente}.`, 'reparto-hint');
     const tbody = document.createElement('tbody');
@@ -79,7 +110,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     tabla.innerHTML = '<thead><tr><th>Empresa en la que invierte</th><th class="text-right">Valor invertido</th><th class="text-right">% de su cartera</th><th class="text-right">Nº de acciones</th><th>Cambio frente al trimestre anterior</th></tr></thead>';
     tabla.append(tbody);
     const wrap = el('div', '', 'table-wrapper'); wrap.append(tabla); wrap.style.marginTop = '12px';
-    sec.append(h, hint, wrap);
+    sec.append(h, ficha, hint, wrap);
     if (d.n_emisores > d.top.length) {   // más empresas que las 10 mayores: página propia con todas (buscador y orden) y, aparte, la tabla original de la SEC
       const pie = document.createElement('div'); pie.style.cssText = 'display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:12px';
       const todas = el('a', `Ver la lista completa (${d.n_emisores} empresas) ↗`, ''); todas.href = 'gestor.html?g=' + encodeURIComponent(clave);   // misma pestaña: la flecha de esa página vuelve a Mercado
@@ -132,7 +163,9 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   // Rastreo: busca CUALQUIER empresa (nombre o símbolo) y muestra su precio si lo tenemos y, con un indicador por inversor, cuáles de tus gestores
   // la tienen en su 13F (todas sus posiciones, no solo las 10 mayores: data/13f_posiciones.json). Las empresas salen del 13F y de la búsqueda de Twelve Data (EE. UU.).
   let preciosAcc = null;
-  const cargaPrecios = () => (preciosAcc ? Promise.resolve(preciosAcc) : fetch('data/precios.json').then((r) => r.json()).then((x) => { preciosAcc = x.precios || {}; return preciosAcc; }).catch(() => (preciosAcc = {})));
+  let fundAcc = {};   // fundamentales de la SEC (data/fundamentales.json); sin el archivo, esas celdas salen como "—"
+  const cargaPrecios = () => (preciosAcc ? Promise.resolve(preciosAcc) : fetch('data/precios.json').then((r) => r.json()).then((x) => { preciosAcc = x.precios || {}; return preciosAcc; }).catch(() => (preciosAcc = {}))
+    .then((p) => fetch('data/fundamentales.json').then((r) => r.json()).then((f) => { fundAcc = f.empresas || {}; return p; }).catch(() => p)));
   const SUFIJOS = new Set(['INC', 'CORP', 'CORPORATION', 'CO', 'COMPANY', 'LTD', 'LIMITED', 'PLC', 'HOLDINGS', 'HLDGS', 'GROUP', 'THE', 'NV', 'SA', 'AG', 'LLC', 'LP']);
   const norm = (s) => String(s).toUpperCase().replace(/[.,&'()/-]/g, ' ').split(/\s+/).filter((w) => w && !SUFIJOS.has(w)).join(' ');
   function buscador(d) {
@@ -160,21 +193,31 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
         .sort((x, y) => Object.values(y[1]).reduce((s, v) => s + v[0], 0) - Object.values(x[1]).reduce((s, v) => s + v[0], 0))
         .slice(0, 25).forEach(([e, por]) => filas.push({ nombre: e, simbolo: null, por }));
       if (!filas.length) { res.replaceChildren(el('p', 'No encuentro ninguna empresa con ese nombre.', 'reparto-hint')); return; }
-      const t = document.createElement('table'); t.innerHTML = '<thead><tr><th>Empresa</th><th class="text-right">Precio</th><th>Quién la tiene</th></tr></thead>';
+      const t = document.createElement('table'); t.innerHTML = '<thead><tr><th title="">Empresa</th><th class="text-right" title="Último precio conocido">Precio</th><th class="text-right" title="Cambio del precio frente al cierre anterior">Variación</th><th class="text-right" title="Precio más bajo de hoy">Mín. día</th><th class="text-right" title="Precio más alto de hoy">Máx. día</th><th class="text-right" title="Precio más bajo de las últimas 52 semanas">Mín. 52 sem.</th><th class="text-right" title="Precio más alto de las últimas 52 semanas">Máx. 52 sem.</th><th class="text-right" title="Dónde está el precio entre el mínimo (0 %) y el máximo (100 %) de las últimas 52 semanas. 99 % = casi en máximos del año; 5 % = casi en mínimos">En el rango anual</th><th class="text-right" title="Acciones negociadas hoy">Volumen</th><th class="text-right" title="Valor de toda la empresa en bolsa: acciones en circulación × precio de hoy">Capitalización</th><th class="text-right" title="Precio / beneficio por acción del último ejercicio. Cuántos años de beneficio se pagan">PER</th><th class="text-right" title="Beneficio por acción del último ejercicio fiscal">BPA</th><th class="text-right" title="Ventas del último ejercicio fiscal">Ingresos</th><th class="text-right" title="Beneficio neto del último ejercicio fiscal">Beneficio</th><th title="Cuáles de tus tres inversores la tienen (o la vendieron entera) en su último 13F">Poseedores</th></tr></thead>';
       const tb = document.createElement('tbody');
       filas.slice(0, 30).forEach((f) => {
         const tr = document.createElement('tr'); if (sigo(f.nombre)) tr.className = 'sigo';
         const emp = document.createElement('td'); emp.append(el('span', f.nombre, 'tk')); if (f.simbolo) { const s = el('span', f.simbolo, 'section-badge'); s.style.cssText = 'margin-left:8px;background:var(--bg-input);color:var(--text-secondary);'; emp.append(s); }
-        const pr = f.simbolo && preciosAcc && preciosAcc[f.simbolo], precio = el('td', '', 'text-right');
-        if (pr) {
-          const mon = pr.currency === 'EUR' ? '€' : '$', n2 = (v) => v.toLocaleString('es-ES', { maximumFractionDigits: 2 });
-          precio.append(`${n2(pr.price)} ${mon} `); if (pr.change) precio.append(cambio(Math.round(pr.change * 100) / 100));
-          const datos = [];   // datos técnicos (de Yahoo): rango del día, rango de 52 semanas y volumen
-          if (pr.dia_min != null && pr.dia_max != null) datos.push(`Día ${n2(pr.dia_min)}–${n2(pr.dia_max)}`);
-          if (pr.min_52s != null && pr.max_52s > pr.min_52s) datos.push(`52 sem. ${n2(pr.min_52s)}–${n2(pr.max_52s)} (${Math.round((pr.price - pr.min_52s) / (pr.max_52s - pr.min_52s) * 100)} % del rango)`);
-          if (pr.volumen) datos.push('Vol. ' + (pr.volumen >= 1e6 ? n2(pr.volumen / 1e6) + ' M' : pr.volumen.toLocaleString('es-ES')));
-          if (datos.length) precio.append(el('div', datos.join(' · '), 'nm'));
-        } else precio.textContent = '—';
+        const pr = f.simbolo && preciosAcc && preciosAcc[f.simbolo], fu = (f.simbolo && fundAcc[f.simbolo]) || null;
+        const n2 = (v) => v.toLocaleString('es-ES', { maximumFractionDigits: 2 }), usd = pr && pr.currency !== 'EUR';
+        const mon = pr && pr.currency === 'EUR' ? '€' : '$';
+        const celda = (txt, titulo) => { const c = el('td', txt == null ? '—' : txt, 'text-right'); if (titulo) c.title = titulo; return c; };
+        const grande = (v) => (v >= 1e9 ? n2(v / 1e9) + ' mil M$' : v >= 1e6 ? n2(v / 1e6) + ' M$' : n2(v) + ' $');   // 'mil M' = miles de millones, como en el resto de Mercado
+        const sinDato = pr || !f.simbolo ? '' : 'Sin dato: este valor no está en la lista de precios automáticos (data/acciones.json)';
+        const vacio = (titulo) => celda(null, titulo || sinDato);
+        const ejercicio = fu && fu.ejercicio_fin ? `Ejercicio fiscal cerrado el ${dia(fu.ejercicio_fin)} (informe 10-K a la SEC)` : '';
+        const sinFund = usd && !fu ? 'Sin dato: la SEC solo da fundamentales de empresas de EE. UU. que presentan 10-K (no de fondos, ETF ni empresas extranjeras)' : sinDato;
+        const rango = pr && pr.min_52s != null && pr.max_52s > pr.min_52s ? Math.round((pr.price - pr.min_52s) / (pr.max_52s - pr.min_52s) * 100) : null;
+        const capi = usd && fu && fu.acciones ? celda(grande(pr.price * fu.acciones), `${fu.acciones.toLocaleString('es-ES')} acciones (informe del ${dia(fu.acciones_fecha)}) × precio de hoy`) : vacio(sinFund);
+        const per = usd && fu && fu.bpa > 0 ? celda(n2(pr.price / fu.bpa), `Precio ${n2(pr.price)} $ / beneficio por acción ${n2(fu.bpa)} $. ${ejercicio}`) : usd && fu && fu.bpa <= 0 ? celda('n/a', 'Beneficio por acción negativo: no hay PER') : vacio(sinFund);
+        tr.append(emp, pr ? celda(`${n2(pr.price)} ${mon}`) : vacio(),
+          pr ? (() => { const c = document.createElement('td'); c.className = 'text-right'; if (pr.change) c.append(cambio(Math.round(pr.change * 100) / 100)); else c.textContent = '0 %'; return c; })() : vacio(),
+          pr && pr.dia_min != null ? celda(n2(pr.dia_min)) : vacio(), pr && pr.dia_max != null ? celda(n2(pr.dia_max)) : vacio(),
+          pr && pr.min_52s != null ? celda(n2(pr.min_52s)) : vacio(), pr && pr.max_52s != null ? celda(n2(pr.max_52s)) : vacio(),
+          rango !== null ? celda(rango + ' %', rango >= 90 ? 'Cerca del máximo del año' : rango <= 10 ? 'Cerca del mínimo del año' : 'A mitad del rango del año') : vacio(),
+          pr && pr.volumen ? celda(pr.volumen >= 1e6 ? n2(pr.volumen / 1e6) + ' M' : pr.volumen.toLocaleString('es-ES')) : vacio(), capi, per,
+          fu && fu.bpa != null ? celda(n2(fu.bpa) + ' $', ejercicio) : vacio(sinFund), fu && fu.ingresos ? celda(grande(fu.ingresos), ejercicio) : vacio(sinFund),
+          fu && fu.beneficio != null ? celda(grande(fu.beneficio), ejercicio) : vacio(sinFund));
         const quien = document.createElement('td');
         d.gestores.filter((g) => f.por && f.por[g.clave]).forEach((g) => {
           const v = f.por[g.clave], chip = document.createElement('span'); chip.className = 'chip'; chip.style.cssText = 'margin:0 6px 4px 0;display:inline-flex;gap:6px;align-items:center';
@@ -183,7 +226,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
           chip.append(el('b', g.corto), salio ? `tenía ${v[3].toLocaleString('es-ES')} %` : `${v[0].toLocaleString('es-ES')} %`, cambio(v[2])); quien.append(chip);
         });
         if (!quien.hasChildNodes()) { quien.textContent = 'Ninguno de tus inversores'; quien.style.color = 'var(--text-muted)'; }
-        tr.append(emp, precio, quien); tb.append(tr);
+        tr.append(quien); tb.append(tr);
       });
       t.append(tb); res.replaceChildren(t);
     }
