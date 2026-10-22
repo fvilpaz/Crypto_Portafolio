@@ -1157,7 +1157,10 @@ const App = (() => {
     if (!box || typeof Plan === 'undefined') return;
     const p = planInput(), m = Plan.modelo(p), pr = Plan.proyeccion({ ...p, mensual: monthlySplit().totalUsd }, [12, 24]);   // la proyección usa el mes entero
     const rc = p.ratioCrypto;
-    const llega = pr.llega === 0 ? 'Ya estás' : pr.llega === null ? 'No en 20 años' : `${pr.llega} ${pr.llega === 1 ? 'mes' : 'meses'}`;
+    // "No en 20 años" no distingue por qué no llega: sin dinero al mes o sin objetivo de bolsa (ratio 100 / 0) nunca habrá reparto que alcanzar.
+    const mensualTotal = monthlySplit().totalUsd, sinObjetivoBolsa = rc >= 100 && m.lados.bolsa.valor > 0;
+    const llega = pr.llega === 0 ? 'Ya estás' : mensualTotal <= 0 ? 'Sin dinero al mes' : sinObjetivoBolsa ? 'Sin objetivo de bolsa' : pr.llega === null ? 'Más de 20 años' : `${pr.llega} ${pr.llega === 1 ? 'mes' : 'meses'}`;
+    const llegaSub = mensualTotal <= 0 ? 'Pon el dinero al mes arriba' : sinObjetivoBolsa ? 'Baja el ratio crypto para fijar un objetivo de bolsa' : `ratio ${rc} / ${100 - rc}, con ${fmtCurrency(mensualTotal)} al mes`;
     const chip = (lado, txt) => `<span class="section-badge" style="${PL_TONO[lado]}white-space:nowrap">${txt}</span>`;
     const lados = Plan.LADOS.map((l) => {
       const L = m.lados[l];
@@ -1181,7 +1184,7 @@ const App = (() => {
           <div class="pl-chips">${chip('crypto', `Crypto <b>${fmtCurrency(m.lados.crypto.valor)}</b>`)}${chip('bolsa', `Bolsa <b>${fmtCurrency(m.lados.bolsa.valor)}</b>`)}</div></div>
         <div class="card"><div class="card-label">Este mes a crypto</div><div class="card-value" style="color:${PL_COLOR.crypto}">${fmtCurrency(m.lados.crypto.rec)}</div><div class="card-sub">de los ${fmtCurrency(p.mensual)} que te faltan este mes</div></div>
         <div class="card"><div class="card-label">Este mes a bolsa</div><div class="card-value" style="color:${PL_COLOR.bolsa}">${fmtCurrency(m.lados.bolsa.rec)}</div><div class="card-sub">de los ${fmtCurrency(p.mensual)} que te faltan este mes</div></div>
-        <div class="card"><div class="card-label">Llegas al ratio en</div><div class="card-value">${llega}</div><div class="card-sub">ratio ${rc} / ${100 - rc}, con ${fmtCurrency(monthlySplit().totalUsd)} al mes</div></div>
+        <div class="card"><div class="card-label">Llegas al ratio en</div><div class="card-value">${llega}</div><div class="card-sub">${llegaSub}</div></div>
       </div>
       ${m.avisos.map(x => `<div class="warning-banner">⚠ ${x}</div>`).join('')}
       <p class="reparto-hint">Sin contar variaciones de precio: crypto pasa de ${plPct(m.lados.crypto.peso)} a ${plPct(pr.pesos[12].crypto)} en 12 meses y a ${plPct(pr.pesos[24].crypto)} en 24; bolsa, de ${plPct(m.lados.bolsa.peso)} a ${plPct(pr.pesos[12].bolsa)} y a ${plPct(pr.pesos[24].bolsa)}.</p>
