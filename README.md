@@ -159,8 +159,7 @@ half. Each does one thing well and they link to each other.
     seat, style) and a summary of the quarter computed from its positions (new buys, increases, reductions, whole positions sold); people who are not 13F filers (Elon Musk first) from the SEC's Form 4 and Schedule 13D/13G
     (`scripts/update_insiders.py` → `data/insiders.json`; add a person with one line in `PERSONAS`); Crypto tab from DefiLlama and CoinGecko
     (`scripts/update_crypto.py`, no keys); the daily Action `actualizar-datos.yml` (run on GitHub, OK; the `SEC_USER_AGENT` secret exists).
-    The two hand-written example text cards were hidden (commented out, not deleted). **Pending:** fundamentals for non-US companies (not on the SEC's
-    10-K); phases 2 and 3 below (they need a cloud account that only Nando can create)
+    The two hand-written example text cards were hidden (commented out, not deleted). **Pending:** phases 2 and 3 below (they need a cloud account that only Nando can create). Fundamentals for non-US companies are covered by Yahoo
   - Base the analysis on quarter-to-quarter changes (new buys, increases) and portfolio
     weight, not only on plain overlap
   - **Done (22-oct): "since when"** — `update_13f.py` reads the last six 13F of each investor and stores, for each holding, the quarter its unbroken streak starts
@@ -271,3 +270,13 @@ half. Each does one thing well and they link to each other.
       and an "adjust the other three" button) is kept in the prototype notes in case it is wanted back
 
 ---
+
+## 💭 Possible future (not decided, only written down so it is not lost)
+
+- **Accounts and server-side storage** (for sharing the app with other people, each with their own login): a small FastAPI backend (email + password with argon2
+  hash and a JWT, one row per user holding the same JSON the browser stores today), Postgres on Neon (SQLite only for local development, same `DATABASE_URL`) and the
+  API on Railway or Netlify Functions; the front end would only swap its saving layer (the existing sync layer can be reused). Needs a Neon/Railway account.
+- **Market chat**: a static page cannot hide an API key, so the realistic version is bring-your-own-key (each person pastes their own free Groq key, kept only in
+  their browser) with the app's own data (prices, technicals, fundamentals, 13F, news, portfolio) as context; or a cloud function as proxy.
+- **Charging for it**: first move from unofficial / free-plan data sources (Yahoo endpoints, Twelve Data free plan, Google News RSS, CoinGecko demo key) to licensed
+  ones, keep the app informational (no personalised recommendations: that is regulated advice) with a clear legal notice, and get a lawyer to review it.
