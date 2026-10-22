@@ -2289,3 +2289,10 @@ body.light #mercado .new { color: #8a6500; }
 /* Centro de operaciones: vista aparte (como Mercado) con el plan de inversión y el reparto del mes */
 #operaciones { padding-bottom: 60px; }
 #operaciones[hidden] { display: none; }
+.mk-nav[hidden] { display: none; }   /* los botones de la cabecera los acciona el selector de vista */
+.vista-nav { padding-top: 14px; padding-bottom: 0; }
+.vista-nav .seg-grupo { margin: 0; }
+@media (max-width: 480px) {   /* móvil en vertical: el selector de vista ocupa todo el ancho y sus tres botones se reparten */
+  .vista-nav .seg-grupo { display: flex; width: 100%; }
+  .vista-nav .seg-grupo button { flex: 1; padding: 8px 6px; font-size: 13px; }
+}
