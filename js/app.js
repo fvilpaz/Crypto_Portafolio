@@ -1202,7 +1202,8 @@ const App = (() => {
         <div class="card"><div class="card-label">Dinero al mes para invertir (€)</div><div class="add-field"><input type="number" min="0" step="10" data-plan="dca" value="${settings.dcaTarget || 0}"></div></div>
         <div class="card"><div class="card-label">Ratio crypto / bolsa</div><input type="range" class="pl-rango" min="0" max="100" step="1" data-plan="rc" value="${rc}">
           <div class="strat-head"><span class="strat-legend lg-core">Crypto ${rc} %</span><span class="strat-legend lg-bolsa">Bolsa ${100 - rc} %</span></div>
-          <div class="strat-bar"><span class="seg seg-core" style="width:${rc}%"></span><span class="seg seg-bolsa" style="width:${100 - rc}%"></span></div></div>
+          <div class="strat-bar"><span class="seg seg-core" style="width:${rc}%"></span><span class="seg seg-bolsa" style="width:${100 - rc}%"></span></div>
+          <div class="pl-chips" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap" title="Un toque para dejar el ratio justo en ese punto de crypto">${[25, 50, 75].map(v => `<button type="button" data-rc-set="${v}" style="cursor:pointer;border:0;font:inherit;font-size:12px;font-weight:600;padding:5px 12px;border-radius:999px;${v === rc ? 'background:var(--accent-green-bg);color:var(--accent-green)' : 'background:var(--bg-input);color:var(--text-secondary)'}">Crypto ${v} %</button>`).join('')}</div></div>
       </div>`;
   }
 
@@ -3465,6 +3466,10 @@ const App = (() => {
 
     const planBox = document.getElementById('plan-panel');
     planBox.addEventListener('change', onPlanPanelChange);
+    planBox.addEventListener('click', (e) => {   // 25 / 50 / 75 % de un toque: lo mismo que mover el deslizador del ratio, pero justo en ese punto
+      const b = e.target.closest('[data-rc-set]'); if (!b) return;
+      settings.bolsaTarget = 100 - Number(b.dataset.rcSet); fitTargetsTo100(); persist(); render();
+    });
 
     document.getElementById('sec-cartera').addEventListener('click', (e) => {
       const editBtn = e.target.closest('.card-edit');
