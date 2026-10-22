@@ -3167,6 +3167,7 @@ const App = (() => {
         const lines = String(reader.result).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
         if (lines.length < 2) throw new Error('El CSV está vacío o mal formado.');
         const header = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
+        if (header.includes('Ticker') && header.includes('Price per share')) { importRevolut(lines, header); return; }
         const idx = {};
         ['date', 'token', 'type', 'price', 'qty', 'totalUsd', 'totalEur'].forEach(f => { idx[f] = header.indexOf(f); });
         if (idx.token < 0 || idx.type < 0) throw new Error('Cabecera CSV no reconocida. Usa: date,token,type,price,qty,totalUsd');
@@ -3214,6 +3215,41 @@ const App = (() => {
       }
     };
     reader.readAsText(file);
+  }
+
+  // Extracto de transacciones de Revolut (Date, Ticker, Type, Quantity, Price per share, Total Amount, Currency, FX Rate). A diferencia del CSV de
+  // la app, este se SUMA a lo que ya tienes (no reconstruye la cartera): solo entran las compras y ventas (BUY/SELL), se ignoran ingresos, retiradas y
+  // dividendos, y un movimiento ya importado antes no se duplica.
+  function importRevolut(lines, header) {
+    const col = (n) => header.indexOf(n);
+    const cD = col('Date'), cT = col('Ticker'), cY = col('Type'), cQ = col('Quantity'), cA = col('Total Amount'), cF = col('FX Rate');
+    const money = (s) => { const m = String(s || '').match(/^([A-Z]{3})?\s*(-?[\d.]+)/); return m ? { cur: m[1] || 'USD', n: parseFloat(m[2]) } : { cur: 'USD', n: 0 }; };
+    const nuevos = []; let ignoradas = 0, repetidas = 0;
+    for (let i = 1; i < lines.length; i++) {
+      const row = parseCsvLine(lines[i]).map(x => x.trim());
+      const tipo = (row[cY] || '').toUpperCase(), tok = (row[cT] || '').toUpperCase(), qty = parseFloat(row[cQ]);
+      const esCompra = tipo.startsWith('BUY'), esVenta = tipo.startsWith('SELL');
+      if (!(esCompra || esVenta) || !/^[A-Z0-9.]{1,10}$/.test(tok) || !(qty > 0)) { ignoradas++; continue; }
+      const { cur, n } = money(row[cA]), fx = parseFloat(row[cF]);   // FX Rate = dólares por euro
+      if (!(n > 0)) { ignoradas++; continue; }
+      const totalUsd = cur === 'EUR' ? n / EUR_USD : n, totalEur = cur === 'EUR' ? n : (fx > 0 ? n / fx : n * EUR_USD);
+      const date = (row[cD] || '').slice(0, 10), rv = `${row[cD]}|${tok}|${tipo}|${qty}`;
+      if (transactions.some(t => t.rv === rv)) { repetidas++; continue; }
+      nuevos.push({ date, token: tok, type: esCompra ? 'Compra' : 'Venta', price: totalUsd / qty, qty, totalUsd, totalEur: Math.round(totalEur * 100) / 100, rv });
+    }
+    if (!nuevos.length) { alert(`No hay compras ni ventas nuevas en el extracto (${repetidas} ya importadas, ${ignoradas} filas ignoradas).`); return; }
+    if (!confirm(`Revolut: se añadirán ${nuevos.length} movimientos (compras y ventas) a tu cartera sin borrar nada. Se ignoran ${ignoradas} filas (ingresos, retiradas, dividendos). ¿Continuar?`)) return;
+    nuevos.sort((x, y) => x.date.localeCompare(y.date));
+    const stocks = Object.assign({}, settings.customStocks);
+    nuevos.forEach(tx => { if (!COINS[tx.token] && !stocks[tx.token]) stocks[tx.token] = { name: tx.token }; });
+    settings.customStocks = stocks; registerCustomStocks();
+    nuevos.forEach(tx => {
+      if (!COINS[tx.token] || COINS[tx.token].kind !== 'stock') return;   // el símbolo ya es una crypto de tu catálogo: no se mezcla
+      tx.applied = true; tx.id = uid();
+      applyMovement(tx); transactions.push(tx);
+    });
+    persist(); render(); fetchPrices();
+    alert(`Importación de Revolut completada: ${nuevos.length} movimientos.`);
   }
 
   function parseCsvLine(line) {
