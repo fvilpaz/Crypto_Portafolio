@@ -2533,6 +2533,7 @@ const App = (() => {
   // Selecciona una moneda en el modal y recalcula lo que dependa de ella (lo hace el clic en un chip y la búsqueda).
   function selectToken(token) {
     addState.token = token;
+    document.getElementById('add-price-manual').value = '';
     renderAddChips();
     renderAddPrice();
     if (parseNum(document.getElementById('add-amount').value) > 0) onAmountInput();
@@ -2668,8 +2669,16 @@ const App = (() => {
     return usd * EUR_USD;
   }
 
+  // Acción sin ningún precio conocido: no se pueden calcular las unidades con el importe, así que se pide el precio por unidad (una vez; queda guardado).
+  const addSinPrecio = () => COINS[addState.token]?.kind === 'stock' && addState.type !== 'Recompensa' && !(addPriceEur() > 0);
   function renderAddPrice() {
     const pe = addPriceEur();
+    const pf = document.getElementById('add-price-field');
+    if (pf) pf.hidden = !addSinPrecio();
+    if (addSinPrecio()) {
+      document.getElementById('add-price-live').textContent = `Sin precio de ${addState.token} en vivo. Pon el precio por unidad (una vez, queda guardado) y con el importe se calculan las unidades.`;
+      return;
+    }
     document.getElementById('add-price-live').textContent = pe > 0
       ? `Precio ${addState.token} en vivo: ${pe.toLocaleString('es-ES', { maximumFractionDigits: pe < 1 ? 6 : 2 })} €/ud`
       : `Sin precio de ${addState.token} en vivo. Pon importe y cantidad, o solo el importe (se guarda como 1 unidad al precio que pagaste)`;
@@ -2702,7 +2711,7 @@ const App = (() => {
 
   // Metes € → calcula la cantidad. Metes cantidad → calcula los €. (Precio en vivo.)
   function onAmountInput() {
-    const pe = addPriceEur();
+    const pe = addPriceEur() || (addSinPrecio() ? parseNum(document.getElementById('add-price-manual').value) : 0);
     const amount = parseNum(document.getElementById('add-amount').value);
     if (pe > 0 && amount > 0) document.getElementById('add-qty').value = fmtInput(amount / pe, 8);
     updateEffective();
@@ -2797,6 +2806,11 @@ const App = (() => {
     const isReward = type === 'Recompensa';
     // Compra sin precio conocido (p. ej. una acción sin cotización en vivo) y solo importe: no se puede calcular la cantidad, así que se guarda
     // como 1 unidad al precio pagado. Así se abre una posición de 1 € sin tener que inventar cuántas unidades son.
+    const precioManual = addSinPrecio() ? parseNum(document.getElementById('add-price-manual').value) : 0;   // € por unidad
+    if (precioManual > 0) {
+      if (!(qty > 0) && amountEur > 0) qty = amountEur / precioManual;
+      settings.manualPrices = Object.assign({}, settings.manualPrices, { [token]: { usd: precioManual / EUR_USD, ts: Date.now() } });
+    }
     if (!(qty > 0) && type === 'Compra' && amountEur > 0 && !(addPriceEur() > 0)) qty = 1;
 
     if (!date || !(qty > 0)) {
@@ -3445,6 +3459,7 @@ const App = (() => {
     });
     document.getElementById('add-qty').addEventListener('input', onQtyInput);
     document.getElementById('add-amount').addEventListener('input', onAmountInput);
+    document.getElementById('add-price-manual').addEventListener('input', onAmountInput);
     document.getElementById('add-form').addEventListener('submit', submitAdd);
 
     document.querySelectorAll('.seg-grupo button').forEach(b => b.addEventListener('click', () => {
