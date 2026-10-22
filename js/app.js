@@ -59,9 +59,10 @@ const App = (() => {
 
   // Plantillas de reparto del dinero nuevo: % que va a Refugio / Núcleo / Satélites.
   const STRATEGIES = {
-    conservadora: { refugio: 50, core: 35, satelites: 15 },
-    moderada:     { refugio: 30, core: 50, satelites: 20 },
-    agresiva:     { refugio: 15, core: 60, satelites: 25 },
+    // bolsaNucleo: % del dinero de bolsa que va al núcleo (el ETF); el resto, a las demás acciones.
+    conservadora: { refugio: 50, core: 35, satelites: 15, bolsaNucleo: 50 },
+    moderada:     { refugio: 30, core: 50, satelites: 20, bolsaNucleo: 25 },
+    agresiva:     { refugio: 15, core: 60, satelites: 25, bolsaNucleo: 10 },
     // Sin porcentajes fijos: reparte hacia los objetivos de cubo (ver computeReparto).
     objetivos:    { byTargets: true },
   };
@@ -1118,10 +1119,16 @@ const App = (() => {
     return peso;
   }
 
-  // Bolsa de una plantilla: el dinero se reparte con el reparto de la Bolsa (el del editor del lápiz de la tarjeta: % del núcleo y de cada acción),
-  // igual para todas las plantillas. Si los % guardados no suman 100, se reescalan.
+  // Bolsa de una plantilla: el dinero se reparte con el reparto de la Bolsa (el del editor del lápiz de la tarjeta: % del núcleo y de cada acción).
+  // Si los % guardados no suman 100, se reescalan. Las plantillas con bolsaNucleo fijan el % del núcleo y el resto va a las demás acciones
+  // en la proporción que tengas guardada (partes iguales si no hay); "Objetivos" usa el reparto del editor tal cual.
   function bolsaPorPlantilla(strat, usd) {
     const l = bolsaLista().map(x => x[0]), pb = plBolsaActual(), suma = l.reduce((s, t) => s + pb[t], 0);
+    const nuc = bolsaNucleo(), sats = l.filter(t => t !== nuc), sumaSats = sats.reduce((s, t) => s + pb[t], 0);
+    if (strat.bolsaNucleo != null && l.includes(nuc)) {
+      const n = sats.length ? strat.bolsaNucleo / 100 : 1;
+      return Object.fromEntries(l.map(t => [t, t === nuc ? usd * n : usd * (1 - n) * (sumaSats > 0 ? pb[t] / sumaSats : 1 / sats.length)]));
+    }
     return Object.fromEntries(l.map(t => [t, suma > 0 ? usd * pb[t] / suma : 0]));
   }
 
