@@ -247,6 +247,8 @@ const App = (() => {
   });
   let sparklineData = {};
   let chartInstance = null;
+  let chartBolsaInstance = null;   // rosca de la Bolsa en Distribución
+  const grupoVista = { dist: 'crypto', evo: 'crypto' };   // grupo (crypto / bolsa) que muestra cada sección con selector
   let evolutionChart = null;
   let refreshInterval = null;
   let txFilter = '';
@@ -1681,28 +1683,27 @@ const App = (() => {
     setTimeout(drawSparklines, 50);
   }
 
-  function renderAllocation() {
-    const segments = portfolio.filter(a => !a.hidden).map(a => ({
-      token: a.token, value: getAssetValue(a), color: a.color,
-    }));
+  // Todas las acciones llevan el mismo color turquesa: en una rosca no se distinguirían, así que la de la Bolsa usa esta paleta.
+  const PALETA_BOLSA = ['#2dd4bf', '#38bdf8', '#a78bfa', '#f472b6', '#fbbf24', '#34d399', '#fb923c', '#94a3b8'];
 
-    segments.sort((a, b) => b.value - a.value);
-
+  // Una rosca con su lista para un grupo de la cartera (Crypto o Bolsa). Devuelve la gráfica nueva (o null si el grupo está vacío).
+  function dibujaDistribucion(lista, canvasId, listId, anterior, paleta) {
+    const segments = lista.map((a, i) => ({ token: a.token, value: getAssetValue(a), color: paleta ? paleta[i % paleta.length] : a.color }));
+    segments.sort((x, y) => y.value - x.value);
+    if (paleta) segments.forEach((s, i) => { s.color = paleta[i % paleta.length]; });   // el color sigue el orden por valor
     const total = segments.reduce((sum, s) => sum + s.value, 0);
 
-    const ctx = document.getElementById('allocation-chart').getContext('2d');
-    if (chartInstance) chartInstance.destroy();
-    if (segments.length === 0) {
-      chartInstance = null;
-      return;
-    }
+    if (anterior) anterior.destroy();
+    const lis = document.getElementById(listId);
+    if (segments.length === 0) { if (lis) lis.innerHTML = ''; return null; }
+    const ctx = document.getElementById(canvasId).getContext('2d');
 
     // Borde de los segmentos = fondo de la tarjeta; hover = texto principal.
     const csA = getComputedStyle(document.body);
     const segBorder = csA.getPropertyValue('--bg-secondary').trim() || '#1e2329';
     const segHover = csA.getPropertyValue('--text-primary').trim() || '#eaecef';
 
-    chartInstance = new Chart(ctx, {
+    const grafica = new Chart(ctx, {
       type: 'doughnut',
       data: {
         labels: segments.map(s => s.token),
@@ -1739,7 +1740,7 @@ const App = (() => {
       },
     });
 
-    document.getElementById('allocation-list').innerHTML = segments.map(s => {
+    lis.innerHTML = segments.map(s => {
       const pct = total > 0 ? (s.value / total) * 100 : 0;
       return `
         <div class="allocation-item">
@@ -1754,6 +1755,41 @@ const App = (() => {
         </div>
       `;
     }).join('');
+    return grafica;
+  }
+
+  // Selector Crypto / Bolsa de una sección (Distribución, Evolución): solo se ve si hay de las dos cosas; devuelve el grupo que toca mostrar.
+  function pintaSelector(id, seccion, hayCrypto, hayBolsa) {
+    let g = grupoVista[seccion];
+    if (g === 'bolsa' && !hayBolsa) g = 'crypto';
+    if (g === 'crypto' && !hayCrypto && hayBolsa) g = 'bolsa';
+    const seg = document.getElementById(id);
+    if (seg) {
+      seg.hidden = !(hayCrypto && hayBolsa);
+      seg.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.g === g));
+    }
+    return g;
+  }
+
+  // Distribución: Crypto y Bolsa son dos carteras; con acciones hay un selector y se dibuja solo la elegida. El % es dentro de su grupo.
+  function renderAllocation() {
+    const visibles = portfolio.filter(a => !a.hidden);
+    const crypto = visibles.filter(a => a.kind !== 'stock'), bolsa = visibles.filter(a => a.kind === 'stock');
+    const hayBolsa = bolsa.length > 0, hayCrypto = crypto.length > 0;
+    const g = pintaSelector('seg-dist', 'dist', hayCrypto, hayBolsa);
+    document.getElementById('allocation-crypto').hidden = g === 'bolsa';   // primero se muestra el bloque y luego se dibuja: una gráfica creada en un bloque oculto sale con otro tamaño
+    document.getElementById('allocation-bolsa').hidden = g !== 'bolsa';
+    chartInstance = dibujaDistribucion(g === 'crypto' ? crypto : [], 'allocation-chart', 'allocation-list', chartInstance);
+    chartBolsaInstance = dibujaDistribucion(g === 'bolsa' ? bolsa : [], 'allocation-chart-bolsa', 'allocation-list-bolsa', chartBolsaInstance, PALETA_BOLSA);
+
+    const totalVisible = visibles.reduce((s, a) => s + getAssetValue(a), 0);
+    const titulo = (id, nombre, color, lista) => {
+      const e = document.getElementById(id), v = lista.reduce((s, a) => s + getAssetValue(a), 0);
+      e.hidden = !(hayBolsa && hayCrypto);   // con un solo grupo no hace falta título (como antes)
+      e.innerHTML = `<span class="asset-group-name" style="color:${color}">${nombre}</span> ${lista.length} activo${lista.length === 1 ? '' : 's'} · ${fmtCurrency(v)} · ${totalVisible > 0 ? (v / totalVisible * 100).toFixed(1) : '0.0'}% de la cartera`;
+    };
+    titulo('allocation-title-crypto', 'Crypto', 'var(--accent-green)', crypto);
+    titulo('allocation-title-bolsa', 'Bolsa', 'var(--accent-teal)', bolsa);
   }
 
   function renderEvolutionChart() {
@@ -1769,9 +1805,14 @@ const App = (() => {
     // Las dos series van ya en la moneda elegida; el tooltip y el eje solo ponen el símbolo.
     const inEur = currency === 'EUR';
     const money = (v) => inEur ? fmt(v) + ' €' : '$' + fmt(v);
+    // Crypto y Bolsa son dos carteras: con acciones hay un selector y la gráfica es del grupo elegido; sin acciones, todo como antes.
+    const esBolsaTx = (tx) => COINS[tx.token]?.kind === 'stock';
+    const hayBolsa = portfolio.some(a => a.kind === 'stock'), hayCrypto = portfolio.some(a => a.kind !== 'stock');
+    const grupo = pintaSelector('seg-evo', 'evo', hayCrypto, hayBolsa);
+    const delGrupo = (tx) => !hayBolsa || (grupo === 'bolsa') === esBolsaTx(tx);
     const monthlyInvest = {};
     transactions.forEach(tx => {
-      if (tx.type === 'Compra' && tx.totalUsd > 0) {
+      if (tx.type === 'Compra' && tx.totalUsd > 0 && delGrupo(tx)) {
         const month = dcaMonthKey(tx.date);
         monthlyInvest[month] = (monthlyInvest[month] || 0) + (inEur ? tx.totalEur : tx.totalUsd);
       }
@@ -1792,7 +1833,9 @@ const App = (() => {
 
     if (evolutionChart) evolutionChart.destroy();
 
-    const totalNow = getTotalPortfolioValue();   // ya incluye airdrops/staking; no re-sumar
+    const todo = getTotalPortfolioValue();   // ya incluye airdrops/staking; no re-sumar
+    const bolsaNow = portfolio.filter(a => a.kind === 'stock').reduce((s, a) => s + getAssetValue(a), 0);
+    const totalNow = !hayBolsa ? todo : grupo === 'bolsa' ? bolsaNow : todo - bolsaNow;
     const currentVal = inEur ? totalNow * EUR_USD : totalNow;
 
     evolutionChart = new Chart(ctx, {
@@ -3346,6 +3389,11 @@ const App = (() => {
     document.getElementById('add-qty').addEventListener('input', onQtyInput);
     document.getElementById('add-amount').addEventListener('input', onAmountInput);
     document.getElementById('add-form').addEventListener('submit', submitAdd);
+
+    document.querySelectorAll('.seg-grupo button').forEach(b => b.addEventListener('click', () => {
+      grupoVista[b.parentElement.dataset.seccion] = b.dataset.g;
+      renderAllocation(); renderEvolutionChart();
+    }));
 
     // Render inmediato con snapshot cacheado — no espera a la API.
     // El usuario ve sus movimientos y cartera al instante; los precios

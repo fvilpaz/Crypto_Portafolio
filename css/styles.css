@@ -2275,3 +2275,13 @@ body.light #mercado .new { color: #8a6500; }
 .mk-links a:hover { text-decoration: underline; }
 .mk-links a span { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; color: var(--text-muted); }
 .mk-desplegable[open] > summary .strat-chevron { transform: rotate(180deg); }   /* la flecha de los desplegables de Mercado */
+
+/* Distribución con Crypto y Bolsa por separado */
+.allocation-group-title { padding: 6px 4px 12px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+#allocation-bolsa { margin-top: 28px; }
+
+/* Selector Crypto / Bolsa de Distribución y Evolución (mismo aspecto que el de Mercado) */
+.seg-grupo { display: inline-flex; background: var(--bg-secondary); border-radius: 999px; padding: 4px; margin: 4px 0 16px; }
+.seg-grupo[hidden] { display: none; }
+.seg-grupo button { border: 0; background: none; color: var(--text-secondary); padding: 8px 20px; border-radius: 999px; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+.seg-grupo button.on { background: var(--accent-yellow); color: #111; }
