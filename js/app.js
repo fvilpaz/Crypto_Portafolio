@@ -3117,7 +3117,15 @@ const App = (() => {
     ahora.addEventListener('click', () => { exportState(); caja.remove(); });
     const luego = document.createElement('button'); luego.type = 'button'; luego.className = 'link-btn'; luego.textContent = 'Mañana';
     luego.addEventListener('click', () => { try { localStorage.setItem(AVISO_HASTA_KEY, String(Date.now() + 86400000)); } catch (e) { /* sin almacenamiento */ } caja.remove(); });
-    caja.append(txt, ahora, luego); main.prepend(caja);
+    caja.append(txt, ahora);
+    // En móvil (y donde el navegador lo permite) se puede compartir la copia como archivo: a Drive, WhatsApp, correo o Archivos. Pide un toque, como todo lo que sale del navegador.
+    const copia = () => new File([JSON.stringify(buildState(), null, 2)], `mi-cartera-${new Date().toISOString().slice(0, 10)}.json`, { type: 'application/json' });
+    if (navigator.canShare && navigator.share) { try { if (navigator.canShare({ files: [copia()] })) {
+      const comp = document.createElement('button'); comp.type = 'button'; comp.className = 'link-btn'; comp.textContent = 'Compartir copia';
+      comp.addEventListener('click', async () => { try { await navigator.share({ files: [copia()], title: 'Mi Cartera: copia de seguridad' }); try { localStorage.setItem(EXPORT_KEY, String(Date.now())); } catch (e) { /* sin almacenamiento */ } caja.remove(); } catch (e) { /* cancelado */ } });
+      caja.append(comp);
+    } } catch (e) { /* este navegador no comparte archivos */ } }
+    caja.append(luego); main.prepend(caja);
   }
 
   const SYNC_KEY = 'miCartera.sync';
@@ -3552,6 +3560,7 @@ const App = (() => {
     if (syncBtn) syncBtn.addEventListener('click', openSyncModal);
     updateSyncStatus(syncEnabled() ? 'ok' : '');
     avisoCopiaSemanal();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});   // pide al navegador que no borre los datos de esta web cuando le falte espacio
     if (syncEnabled()) syncPull();   // al arrancar, baja lo último de la nube
 
     const searchInput = document.getElementById('tx-search');
