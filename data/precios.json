@@ -1,111 +1,1147 @@
 {
- "updated": "2026-10-22T10:09:52+00:00",
- "fuente": "Twelve Data y Yahoo Finance",
+ "updated": "2026-10-22T10:40:57+00:00",
+ "fuente": "Yahoo Finance (respaldo: Twelve Data)",
  "precios": {
   "NVDA": {
    "price": 221.97,
-   "change": 2.54077,
+   "change": 2.540767773825481,
    "currency": "USD",
-   "exchange": "NASDAQ",
-   "ts": "2026-10-22T10:09:52+00:00"
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
   },
   "TSLA": {
    "price": 386.47,
-   "change": 3.41441,
+   "change": 3.414412244788756,
    "currency": "USD",
-   "exchange": "NASDAQ",
-   "ts": "2026-10-22T10:09:52+00:00"
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
   },
   "AMD": {
-   "price": 552.71997,
-   "change": 3.36238,
+   "price": 552.72,
+   "change": 3.3623817182182103,
    "currency": "USD",
-   "exchange": "NASDAQ",
-   "ts": "2026-10-22T10:09:52+00:00"
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
   },
   "SPCX": {
-   "price": 159.28,
-   "change": 7.77455,
+   "price": 159.31,
+   "change": 7.794844035455717,
    "currency": "USD",
-   "exchange": "NASDAQ",
-   "ts": "2026-10-22T10:09:52+00:00"
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
   },
   "MSFT": {
-   "price": 532.95001,
-   "change": 0.20306035,
+   "price": 532.95,
+   "change": 0.2030571380224666,
    "currency": "USD",
-   "exchange": "NASDAQ",
-   "ts": "2026-10-22T10:09:52+00:00"
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
   },
   "VUAA": {
-   "price": 132.41,
-   "change": -0.8944276037573418,
+   "price": 132.52,
+   "change": -0.8120953557127164,
    "currency": "EUR",
    "exchange": "GER",
-   "ts": "2026-10-22T10:09:52+00:00"
+   "ts": "2026-10-22T10:40:57+00:00"
   },
   "SPYL": {
-   "price": 16.928,
-   "change": -1.0289990645462987,
+   "price": 16.965,
+   "change": -0.8126753975678191,
    "currency": "EUR",
    "exchange": "GER",
-   "ts": "2026-10-22T10:09:52+00:00"
+   "ts": "2026-10-22T10:40:57+00:00"
   },
   "AAPL": {
-   "price": 343.98999,
-   "change": 1.32253,
+   "price": 343.99,
+   "change": 1.3225331369661308,
    "currency": "USD",
-   "exchange": "NASDAQ",
-   "ts": "2026-10-22T10:09:52+00:00"
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
   },
   "AMZN": {
    "price": 262.37,
-   "change": -0.099002308,
+   "change": -0.09899859117389331,
    "currency": "USD",
-   "exchange": "NASDAQ",
-   "ts": "2026-10-22T10:09:52+00:00"
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
   },
   "AXP": {
-   "price": 323.60999,
-   "change": 1.65546,
+   "price": 323.61,
+   "change": 1.655462712822775,
    "currency": "USD",
-   "exchange": "NYSE",
-   "ts": "2026-10-22T10:09:52+00:00"
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
   },
   "GOOG": {
-   "price": 330.95001,
-   "change": -1.62009,
+   "price": 330.95,
+   "change": -1.6200951248513618,
    "currency": "USD",
-   "exchange": "NASDAQ",
-   "ts": "2026-10-22T10:09:52+00:00"
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
   },
   "GOOGL": {
-   "price": 334.76001,
-   "change": -1.62219,
+   "price": 334.76,
+   "change": -1.620747924472854,
    "currency": "USD",
-   "exchange": "NASDAQ",
-   "ts": "2026-10-22T10:09:52+00:00"
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
   },
   "CVX": {
    "price": 226.78,
-   "change": 0.4740561,
+   "change": 0.47405963404367757,
    "currency": "USD",
-   "exchange": "NYSE",
-   "ts": "2026-10-22T10:09:52+00:00"
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
   },
   "OXY": {
    "price": 62.7,
-   "change": -0.34964624,
+   "change": -0.34965034965034336,
    "currency": "USD",
-   "exchange": "NYSE",
-   "ts": "2026-10-22T10:09:52+00:00"
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
   },
   "VST": {
    "price": 156.14,
-   "change": 3.87173,
+   "change": 3.8717402873869045,
    "currency": "USD",
-   "exchange": "NYSE",
-   "ts": "2026-10-22T10:09:52+00:00"
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "META": {
+   "price": 697.52,
+   "change": 0.47101188332732136,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "BRK.B": {
+   "price": 538.99,
+   "change": -0.15375495535550066,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "AVGO": {
+   "price": 337.8,
+   "change": 1.0258097317343173,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "LLY": {
+   "price": 1270.75,
+   "change": -1.0057180250222064,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "JPM": {
+   "price": 335.19,
+   "change": -0.020879317544586495,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "V": {
+   "price": 407.85,
+   "change": 0.3148289347467914,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "UNH": {
+   "price": 417.0,
+   "change": -0.5390449840194655,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "XOM": {
+   "price": 178.09,
+   "change": 0.12931519172381112,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "WMT": {
+   "price": 117.8,
+   "change": -0.042426813746287984,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "MA": {
+   "price": 622.62,
+   "change": 0.35459849779182484,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "PG": {
+   "price": 156.84,
+   "change": -1.556615616369561,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "JNJ": {
+   "price": 257.78,
+   "change": -0.6091918568784882,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "COST": {
+   "price": 998.31,
+   "change": 0.3720051075295716,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "HD": {
+   "price": 314.14,
+   "change": -0.307829012091021,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "ORCL": {
+   "price": 129.13,
+   "change": -1.5327131310050257,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "MRK": {
+   "price": 149.88,
+   "change": 1.065407956844222,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "ABBV": {
+   "price": 284.8,
+   "change": -1.4805590148055825,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "BAC": {
+   "price": 50.78,
+   "change": 0.2764612954186507,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "KO": {
+   "price": 92.68,
+   "change": -0.8664028238314136,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "NFLX": {
+   "price": 65.04,
+   "change": -5.313728344737212,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "CRM": {
+   "price": 241.78,
+   "change": -0.2681186321824902,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "PEP": {
+   "price": 134.7,
+   "change": 0.5073869571705636,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "ADBE": {
+   "price": 255.06,
+   "change": -0.6504888404160081,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "TMO": {
+   "price": 694.02,
+   "change": 0.967455664343797,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "WFC": {
+   "price": 82.42,
+   "change": 0.2676399026763976,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "MCD": {
+   "price": 246.25,
+   "change": -0.10952458218400629,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "CSCO": {
+   "price": 107.26,
+   "change": 0.515415612407466,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "ACN": {
+   "price": 240.26,
+   "change": 0.4767480762796872,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "LIN": {
+   "price": 500.57,
+   "change": -0.2630058379326172,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "ABT": {
+   "price": 100.51,
+   "change": -1.893606637384082,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "DIS": {
+   "price": 111.83,
+   "change": 0.14327930509536735,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "TXN": {
+   "price": 284.65,
+   "change": 2.4731802145582904,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "GE": {
+   "price": 295.88,
+   "change": -1.3305765831860494,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "INTU": {
+   "price": 335.61,
+   "change": 0.0954397685585695,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "QCOM": {
+   "price": 177.96,
+   "change": 1.2805190370496877,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "CAT": {
+   "price": 740.21,
+   "change": 2.0641442832717516,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "VZ": {
+   "price": 43.56,
+   "change": -2.2002694207453932,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "AMGN": {
+   "price": 438.34,
+   "change": -0.13669294208775717,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "IBM": {
+   "price": 251.46,
+   "change": 3.9434523809523947,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "DHR": {
+   "price": 233.86,
+   "change": 4.290046378879775,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "PFE": {
+   "price": 29.85,
+   "change": -0.863500498173353,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "NOW": {
+   "price": 153.12,
+   "change": 2.394008292095773,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "UBER": {
+   "price": 67.62,
+   "change": -1.9147084421235805,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "ISRG": {
+   "price": 428.12,
+   "change": -2.25570776255708,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "SPGI": {
+   "price": 443.16,
+   "change": 1.1503697617091246,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "BKNG": {
+   "price": 158.38,
+   "change": -3.3796974133723734,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "PM": {
+   "price": 197.46,
+   "change": -1.2206103051525696,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "LOW": {
+   "price": 196.56,
+   "change": -0.36496350364962904,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "NEE": {
+   "price": 78.28,
+   "change": -0.7354805985290369,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "RTX": {
+   "price": 191.6,
+   "change": -0.8999689665873611,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "UNP": {
+   "price": 287.87,
+   "change": 0.09040019470811789,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "HON": {
+   "price": 214.73,
+   "change": 0.6609788111757053,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "T": {
+   "price": 21.91,
+   "change": -6.447480785653292,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "GS": {
+   "price": 904.72,
+   "change": 2.2502006080401538,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "MS": {
+   "price": 187.01,
+   "change": 3.664079822616406,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "AMAT": {
+   "price": 408.94,
+   "change": 0.9778260654847104,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "ELV": {
+   "price": 434.13,
+   "change": -1.3744377300195398,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "BLK": {
+   "price": 1149.6,
+   "change": 1.853492575397797,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "SYK": {
+   "price": 297.6,
+   "change": -2.233902759526929,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "C": {
+   "price": 123.85,
+   "change": 1.0937882621826711,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "TJX": {
+   "price": 145.52,
+   "change": -1.0000680318388966,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "VRTX": {
+   "price": 524.52,
+   "change": 1.9178082191780854,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "PGR": {
+   "price": 221.35,
+   "change": -0.2613436669220093,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "BA": {
+   "price": 192.28,
+   "change": 0.9502808841287402,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "SCHW": {
+   "price": 91.64,
+   "change": 0.8251732863901351,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "MDT": {
+   "price": 93.03,
+   "change": -1.6907957307407795,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "COP": {
+   "price": 145.67,
+   "change": -0.19184652278178005,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "LMT": {
+   "price": 551.51,
+   "change": 0.5102877658508032,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "ADI": {
+   "price": 405.96,
+   "change": 2.244049867774822,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "CB": {
+   "price": 354.95,
+   "change": -0.7826694619147534,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "PLD": {
+   "price": 127.6,
+   "change": 0.10198478073271122,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "DE": {
+   "price": 636.54,
+   "change": 0.6864916165770119,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "BX": {
+   "price": 109.57,
+   "change": -0.6978430306325945,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "ADP": {
+   "price": 294.5,
+   "change": 0.5977796754910392,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "MU": {
+   "price": 913.67,
+   "change": 1.9641322664523786,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "ABNB": {
+   "price": 173.69,
+   "change": -1.8367808296597676,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "PANW": {
+   "price": 347.25,
+   "change": 2.0483131538732824,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "GILD": {
+   "price": 153.57,
+   "change": -1.8784742188997505,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "SBUX": {
+   "price": 99.08,
+   "change": -0.2918385830733672,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "KLAC": {
+   "price": 163.43,
+   "change": 1.0448868554470137,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "REGN": {
+   "price": 805.67,
+   "change": -0.22415415861694044,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "CI": {
+   "price": 304.37,
+   "change": -0.7273320287018992,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "MO": {
+   "price": 73.83,
+   "change": -1.0852090032154371,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "SO": {
+   "price": 90.39,
+   "change": -0.35277257193252476,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "DUK": {
+   "price": 120.67,
+   "change": -0.5439709882139598,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "BMY": {
+   "price": 61.12,
+   "change": -0.907911802853445,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "ICE": {
+   "price": 157.69,
+   "change": -0.5549599545941808,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "ZTS": {
+   "price": 79.62,
+   "change": -0.5247376311844132,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "CME": {
+   "price": 295.79,
+   "change": 0.16254105854864864,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "MCK": {
+   "price": 1015.5,
+   "change": -1.4192521259658974,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "PYPL": {
+   "price": 57.2,
+   "change": 0.10500525026251317,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "SHEL": {
+   "price": 105.36,
+   "change": -0.17055144968732838,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "BP": {
+   "price": 49.85,
+   "change": 0.9313626240129658,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "TTE": {
+   "price": 90.34,
+   "change": 0.2886323268206148,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "PBR": {
+   "price": 25.66,
+   "change": -0.15564202334630295,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "VLO": {
+   "price": 436.75,
+   "change": 0.768307876886154,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "PSX": {
+   "price": 290.07,
+   "change": -0.32986290073188096,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "MPC": {
+   "price": 467.98,
+   "change": -1.4861906365779776,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "EOG": {
+   "price": 157.88,
+   "change": -0.018998163510863808,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "SLB": {
+   "price": 51.1,
+   "change": 2.2408963585434316,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "CEG": {
+   "price": 270.74,
+   "change": 4.597434708700376,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "NRG": {
+   "price": 99.8,
+   "change": 2.0032706459525595,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "ETN": {
+   "price": 393.94,
+   "change": 3.131053981883869,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "KHC": {
+   "price": 23.5,
+   "change": -1.3848090642047728,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "KDP": {
+   "price": 34.47,
+   "change": -0.46202714409472323,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "MDLZ": {
+   "price": 62.74,
+   "change": -1.9534302234724188,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "CL": {
+   "price": 93.4,
+   "change": -1.2058387983922114,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "TGT": {
+   "price": 152.38,
+   "change": -1.0519480519480595,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "NKE": {
+   "price": 37.53,
+   "change": -0.9239704329461529,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "F": {
+   "price": 11.9,
+   "change": -2.0576131687242816,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "GM": {
+   "price": 76.11,
+   "change": -1.2712414061486599,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "COIN": {
+   "price": 177.08,
+   "change": 3.6464735147790472,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "MSTR": {
+   "price": 153.48,
+   "change": 7.539237668161425,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "HOOD": {
+   "price": 101.93,
+   "change": 3.7878016495265454,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "PLTR": {
+   "price": 201.72,
+   "change": 4.735202492211843,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "SOFI": {
+   "price": 14.9,
+   "change": 1.4986376021798309,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "SNOW": {
+   "price": 322.73,
+   "change": 0.9761897312349443,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "SHOP": {
+   "price": 174.29,
+   "change": 0.46691261240487947,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "RIVN": {
+   "price": 12.46,
+   "change": 0.24135156878519748,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "NIO": {
+   "price": 3.36,
+   "change": -2.0408163265306256,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "BABA": {
+   "price": 104.41,
+   "change": -3.867047233219778,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "TSM": {
+   "price": 431.89,
+   "change": 1.60205137856404,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "ASML": {
+   "price": 1676.69,
+   "change": 2.811434598121232,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "NVO": {
+   "price": 39.06,
+   "change": -0.7369758576874164,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "SONY": {
+   "price": 25.1,
+   "change": -0.4363347877826218,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "TM": {
+   "price": 194.86,
+   "change": -0.8497430417747864,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "PDD": {
+   "price": 78.72,
+   "change": -3.564865858140387,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "MELI": {
+   "price": 1854.88,
+   "change": -1.3099228518222872,
+   "currency": "USD",
+   "exchange": "NMS",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "SPOT": {
+   "price": 525.34,
+   "change": -0.1406630170316281,
+   "currency": "USD",
+   "exchange": "NYQ",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "SPY": {
+   "price": 773.09,
+   "change": 0.525323451010995,
+   "currency": "USD",
+   "exchange": "PCX",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "VOO": {
+   "price": 710.72,
+   "change": 0.5546123372948575,
+   "currency": "USD",
+   "exchange": "PCX",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "IVV": {
+   "price": 776.65,
+   "change": 0.5567424095293427,
+   "currency": "USD",
+   "exchange": "PCX",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "QQQ": {
+   "price": 725.2,
+   "change": 1.0548611401418606,
+   "currency": "USD",
+   "exchange": "NGM",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "VTI": {
+   "price": 379.15,
+   "change": 0.5462886843989434,
+   "currency": "USD",
+   "exchange": "PCX",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "VT": {
+   "price": 158.59,
+   "change": 0.5006337135614602,
+   "currency": "USD",
+   "exchange": "PCX",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "VXUS": {
+   "price": 84.0,
+   "change": 0.31048483401003857,
+   "currency": "USD",
+   "exchange": "NGM",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "VUG": {
+   "price": 89.42,
+   "change": 0.845832863426188,
+   "currency": "USD",
+   "exchange": "PCX",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "VYM": {
+   "price": 161.45,
+   "change": 0.1861619609059728,
+   "currency": "USD",
+   "exchange": "PCX",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "SCHD": {
+   "price": 34.66,
+   "change": -0.0864802536754139,
+   "currency": "USD",
+   "exchange": "PCX",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "DIA": {
+   "price": 527.7,
+   "change": 0.6369669692577684,
+   "currency": "USD",
+   "exchange": "PCX",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "IWM": {
+   "price": 276.48,
+   "change": 0.25382551309016677,
+   "currency": "USD",
+   "exchange": "PCX",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "EEM": {
+   "price": 63.57,
+   "change": 0.39481996209729253,
+   "currency": "USD",
+   "exchange": "PCX",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "GLD": {
+   "price": 378.95,
+   "change": 0.344234079173833,
+   "currency": "USD",
+   "exchange": "PCX",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "SLV": {
+   "price": 52.26,
+   "change": 0.26861089792786785,
+   "currency": "USD",
+   "exchange": "PCX",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "VUSA": {
+   "price": 129.765,
+   "change": -0.8291937332823851,
+   "currency": "EUR",
+   "exchange": "GER",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "VWCE": {
+   "price": 169.6,
+   "change": -1.003969180480968,
+   "currency": "EUR",
+   "exchange": "GER",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "EUNL": {
+   "price": 130.115,
+   "change": -0.8458754048390027,
+   "currency": "EUR",
+   "exchange": "GER",
+   "ts": "2026-10-22T10:40:57+00:00"
+  },
+  "CSPX": {
+   "price": 738.9,
+   "change": -0.8214544575984584,
+   "currency": "EUR",
+   "exchange": "GER",
+   "ts": "2026-10-22T10:40:57+00:00"
   }
  },
  "errores": {}
