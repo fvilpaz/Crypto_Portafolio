@@ -2687,7 +2687,7 @@ const App = (() => {
     box.replaceChildren(...(list || []).map(c => {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'coin-chip';
-      const sym = document.createElement('span'); sym.textContent = c.symbol.toUpperCase();
+      const sym = document.createElement('span'); sym.textContent = c.kind === 'stock' && /^[0-9]/.test(c.symbol) ? c.name : c.symbol.toUpperCase();   // los fondos no tienen ticker: el chip lleva su nombre
       if (c.kind === 'stock') {   // acción/ETF: sin imagen y con el borde turquesa de la Bolsa
         b.title = `${c.name} · ${c.exchange} (bolsa)`; b.style.borderColor = 'var(--accent-teal)';
         b.append(sym);
