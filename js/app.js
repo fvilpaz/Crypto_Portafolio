@@ -2168,7 +2168,8 @@ const App = (() => {
   function setupSortable(tableId) {
     const table = document.getElementById(tableId);
     if (!table) return;
-    table.querySelectorAll('thead th[data-sort]').forEach((th, idx) => {
+    table.querySelectorAll('thead th[data-sort]').forEach((th) => {
+      const idx = th.cellIndex;   // columna real de la cabecera (la primera, Activo, no se ordena: contar solo las que tienen data-sort la desplazaba)
       th.addEventListener('click', () => {
         const tbody = table.querySelector('tbody');
         const rows = Array.from(tbody.querySelectorAll('tr'));
