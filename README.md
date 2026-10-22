@@ -150,7 +150,7 @@ half. Each does one thing well and they link to each other.
     general search over ALL 13F positions (`data/13f_posiciones.json`, ~1,200 companies) plus Twelve Data's symbol search, showing the price when
     known and one indicator per manager that holds it, or that **sold it entirely** this quarter ("tenía X % · vendió todo"). Rastreo is a table with
     one column per figure: price, change, day low/high, 52-week low/high, where the price sits in the 52-week range, volume (all from Yahoo's chart, in the
-    price Action), and market cap, P/E, EPS, revenue and net income computed from the SEC's XBRL company facts (`scripts/update_fundamentales.py` →
+    price Action), and market cap, P/E, EPS, revenue, net income, margin and dividend from **Yahoo Finance's company summary** (cookie + crumb, no key; last-12-months figures, companies of any country, revenue in each company's own currency), with the SEC's XBRL company facts as a fallback for US companies (`scripts/update_fundamentales.py` →
     `data/fundamentales.json`, US companies that file a 10-K only; market cap = shares × today's price, P/E = price / last fiscal year's EPS; funds, ETFs and
     foreign companies show "—" with a tooltip saying why); technical analysis columns (50- and 200-day moving averages, 14-day RSI, trend label
     — price vs both averages — and a one-year mini chart; computed by the price Action from a year of Yahoo closes: descriptive readings, not recommendations);

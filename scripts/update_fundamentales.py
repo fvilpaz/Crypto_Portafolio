@@ -6,18 +6,42 @@ La SEC exige un contacto en el User-Agent (va por variable de entorno, como en u
 accion) NO se guardan: la app las calcula con el precio del momento. Solo hay datos de quien presenta 10-K a la SEC: los ETF y las empresas extranjeras (SHEL, TSM...)
 no salen y la app muestra "sin datos". Si una empresa tiene varias clases de acciones (Alphabet), las acciones se toman de la media ponderada del ejercicio (aproximado).
 """
-import json, os, sys, time, urllib.error, urllib.request
+import http.cookiejar, json, os, sys, time, urllib.error, urllib.parse, urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 DATOS = RAIZ / "data"
-UA = os.environ.get("SEC_USER_AGENT")
-if not UA:
-    sys.exit('Falta SEC_USER_AGENT, p. ej.: SEC_USER_AGENT="Crypto_Portafolio tu@correo.com"')
+UA = os.environ.get("SEC_USER_AGENT")   # opcional: solo para el respaldo de la SEC (empresas americanas que Yahoo no tenga)
+
+
+def sesion_yahoo():
+    """Yahoo pide una cookie y un 'crumb' para su resumen de empresa: se consiguen sin clave abriendo fc.yahoo.com y pidiendo el crumb con esa cookie."""
+    op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+    op.addheaders = [("User-Agent", "Mozilla/5.0")]
+    try:
+        op.open("https://fc.yahoo.com", timeout=20)   # responde 404 pero deja la cookie
+    except Exception:
+        pass
+    return op, op.open("https://query1.finance.yahoo.com/v1/test/getcrumb", timeout=20).read().decode()
+
+
+def resumen_yahoo(op, crumb, ticker):
+    """Capitalizacion, PER y BPA de los ultimos 12 meses, ingresos, beneficio, margen y dividendo de una empresa (o None si Yahoo no los da: fondos, ETF...)."""
+    url = ("https://query1.finance.yahoo.com/v10/finance/quoteSummary/" + urllib.parse.quote(ticker)
+           + "?modules=price,summaryDetail,defaultKeyStatistics,financialData&crumb=" + urllib.parse.quote(crumb))
+    r = json.loads(op.open(url, timeout=30).read())["quoteSummary"]["result"][0]
+    raw = lambda m, k: (r.get(m, {}).get(k) or {}).get("raw")
+    e = {"cap": raw("price", "marketCap"), "per": raw("summaryDetail", "trailingPE"), "bpa": raw("defaultKeyStatistics", "trailingEps"), "ingresos": raw("financialData", "totalRevenue"),
+         "beneficio": raw("defaultKeyStatistics", "netIncomeToCommon"), "margen": raw("financialData", "profitMargins"), "dividendo": raw("summaryDetail", "dividendYield"),
+         "moneda": r.get("price", {}).get("currency"), "moneda_fin": r.get("financialData", {}).get("financialCurrency")}
+    e = {k: v for k, v in e.items() if v is not None}
+    return e if any(k in e for k in ("cap", "per", "bpa", "ingresos")) else None
 
 
 def get(url):
+    if not UA:
+        raise RuntimeError("sin SEC_USER_AGENT")
     time.sleep(0.25)   # la SEC pide no pasar de 10 peticiones por segundo
     with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": UA}), timeout=60) as r:
         return json.loads(r.read())
@@ -74,11 +98,41 @@ def main():
     except (OSError, ValueError):
         pass
     simbolos = [(x if isinstance(x, str) else x["symbol"]).upper() for x in lista if isinstance(x, str) or not x.get("yahoo")]   # sin los europeos con sufijo
-    tickers = get("https://www.sec.gov/files/company_tickers.json")
-    cik_de = {v["ticker"].upper(): str(v["cik_str"]).zfill(10) for v in tickers.values()}
     hoy = datetime.now(timezone.utc).date()
     empresas, sin_datos = {}, []
+    # 1) Yahoo para TODAS las empresas de la lista (americanas y de fuera): el ticker de Yahoo es el 'yahoo' de la entrada o el simbolo con - en vez de .
+    yahoo_de = {}
+    for x in lista:
+        s = (x if isinstance(x, str) else x["symbol"]).upper()
+        if not s.startswith("0P"):   # los fondos (0P...) no tienen estos datos
+            yahoo_de.setdefault(s, (x.get("yahoo") if isinstance(x, dict) else None) or s.replace(".", "-"))
+    try:
+        op, crumb = sesion_yahoo()
+        for s, t in yahoo_de.items():
+            time.sleep(0.35)
+            try:
+                e = resumen_yahoo(op, crumb, t)
+            except urllib.error.HTTPError as ex:
+                if ex.code == 401:   # el crumb caduco: se pide otro una vez
+                    op, crumb = sesion_yahoo()
+                continue
+            except Exception:
+                continue
+            if e:
+                e["fuente"] = "Yahoo"
+                empresas[s] = e
+        print(f"Yahoo: {len(empresas)} de {len(yahoo_de)} empresas con datos")
+    except Exception as ex:
+        print(f"AVISO Yahoo: {str(ex)[:100]}; se sigue con la SEC", file=sys.stderr)
+    # 2) la SEC rellena las americanas que Yahoo no tenga (necesita SEC_USER_AGENT)
+    try:
+        tickers = get("https://www.sec.gov/files/company_tickers.json")
+    except Exception:
+        tickers = {}
+    cik_de = {v["ticker"].upper(): str(v["cik_str"]).zfill(10) for v in tickers.values()}
     for sim in simbolos:
+        if sim in empresas:
+            continue   # ya viene de Yahoo
         cik = cik_de.get(sim.replace(".", "-"))
         if not cik:
             sin_datos.append(sim)   # ETF o empresa que no presenta 10-K
@@ -100,7 +154,7 @@ def main():
             sin_datos.append(sim)
             continue
         vigente = lambda x: x and (datetime.fromisoformat(ref) - datetime.fromisoformat(x[0])).days <= 400
-        e = {"cik": cik, "ejercicio_fin": ref}
+        e = {"cik": cik, "ejercicio_fin": ref, "fuente": "SEC"}
         for clave, x in (("ingresos", ingresos), ("beneficio", beneficio), ("bpa", bpa)):
             if vigente(x):
                 e[clave] = x[1]
@@ -112,9 +166,10 @@ def main():
         print("ERROR: ninguna empresa; se conserva el archivo anterior.", file=sys.stderr)
         return 1
     (DATOS / "fundamentales.json").write_text(json.dumps({"actualizado": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                                                          "fuente": "SEC EDGAR, datos XBRL de los 10-K y 10-Q", "empresas": empresas, "sin_datos": sin_datos},
+                                                          "fuente": "Yahoo Finance (resumen de empresa) y, para las americanas que falten, SEC EDGAR (XBRL de los 10-K)", "empresas": empresas, "sin_datos": sin_datos},
                                                          ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    print(f"{len(empresas)} empresas con datos; {len(sin_datos)} sin datos (ETF, extranjeras o sin 10-K)")
+    sin_datos += [s for s in yahoo_de if s not in empresas and s not in sin_datos]
+    print(f"{len(empresas)} empresas con datos; {len(sin_datos)} sin datos (ETF, fondos o sin informacion)")
     return 0
 
 
