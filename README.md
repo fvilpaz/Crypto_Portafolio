@@ -142,15 +142,19 @@ half. Each does one thing well and they link to each other.
   it shows what they held, not what they hold today
   - **Status (2026-10-22), published in `master` and checked on the live site.** Done: the "Mercado" view (now one of three views of the
     **Cartera | Operaciones | Mercado** selector under the header); real 13F tables for Berkshire, Bridgewater and the Gates Foundation Trust
-    (`scripts/update_13f.py`, one JSON per manager in `data/`) with a link under each one to the SEC's full table (`tabla_url`); "Dónde
+    (`scripts/update_13f.py`, one JSON per manager in `data/`); under each table, "Ver la lista completa" opens `gestor.html?g=<manager>`: a clean page
+    with ALL of that manager's positions (search, sort by any column, option to include what it sold entirely; its arrow goes back to Mercado), and a small
+    link to the SEC's own table (`tabla_url`); year-over-year changes compare by CUSIP, not by issuer name (a renamed issuer, e.g. BANK AMERICA CORP →
+    BANK OF AMER CORP, no longer shows as a sale plus a new buy); the legend of the overlap tables is a flex row of chips; "Dónde
     coinciden" and "Seguimiento de tus empresas" computed from the full positions; teal highlight for the stocks I follow; **Rastreo**: a
-    general search over ALL 13F positions (`data/13f_posiciones.json`, ~1,000 companies) plus Twelve Data's symbol search, showing the price when
-    known and one indicator per manager that holds it; people who are not 13F filers (Elon Musk first) from the SEC's Form 4 and Schedule 13D/13G
+    general search over ALL 13F positions (`data/13f_posiciones.json`, ~1,200 companies) plus Twelve Data's symbol search, showing the price when
+    known and one indicator per manager that holds it, or that **sold it entirely** this quarter ("tenía X % · vendió todo"); people who are not 13F filers (Elon Musk first) from the SEC's Form 4 and Schedule 13D/13G
     (`scripts/update_insiders.py` → `data/insiders.json`; add a person with one line in `PERSONAS`); Crypto tab from DefiLlama and CoinGecko
     (`scripts/update_crypto.py`, no keys); the daily Action `actualizar-datos.yml` (run on GitHub, OK; the `SEC_USER_AGENT` secret exists).
     The two hand-written example text cards were hidden (commented out, not deleted). **Pending:** the watch list of "Seguimiento" is still a
-    fixed list in `scripts/update_13f.py` (could come from the portfolio); a clean page with every position of each manager (sortable, with
-    weight) instead of the SEC's technical table; phases 2 and 3 below
+    fixed list in `scripts/update_13f.py` (could come from the portfolio); **a technical / fundamental card in Rastreo** (what is free and stable:
+    day range, 52-week range and volume from Yahoo's chart; market cap, P/E, EPS and revenue are not on Yahoo without a key, but can be computed
+    from the SEC's XBRL company facts: shares outstanding × price, EPS, revenue, for US companies); phases 2 and 3 below
   - Base the analysis on quarter-to-quarter changes (new buys, increases) and portfolio
     weight, not only on plain overlap
   - Per-company drill-down: who holds it, since when, weight, plus recent news and
@@ -202,7 +206,9 @@ half. Each does one thing well and they link to each other.
     that shares a stock's symbol (TSLA by Backpack) moves to the Bolsa with its quantity and cost; **import of Revolut's transactions
     statement** (adds BUY/SELL rows without rebuilding the portfolio, no duplicates); the **Crypto | Bolsa** selector in Distribución,
     Evolución and Últimos movimientos; ETF logos by issuer (SPDR, iShares, Amundi, Invesco, Vanguard...); the summary cards' icon row slides
-    when it does not fit; warning when the four targets stop adding up to 100 %. **Centro de operaciones**: the monthly split lives in its own
+    when it does not fit (30 px each, 12 px apart); warning when the four targets stop adding up to 100 %; names with `&` keep it
+    ("Vanguard S&P 500"); the offline cache (`sw.js`, v7) includes `js/modelo.js` and the other scripts; sorting the assets table by a header uses the
+    real column; the header no longer shows the "Seguimiento de cartera · DCA" subtitle. **Centro de operaciones**: the monthly split lives in its own
     view with the "Plan de inversión" panel (monthly contribution with "Ahorro y gastos" as a separate account, ratio, "weight of the bolsa in N
     months" slider, what each bucket receives) and the templates, each with its own núcleo share for the bolsa (50 / 25 / 10 %)
   - **Monthly plan (decided with Nando):** the "Dinero al mes" box is the single amount to invest (crypto + bolsa); the
