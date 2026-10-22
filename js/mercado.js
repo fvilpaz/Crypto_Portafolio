@@ -166,9 +166,10 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   let noticiasAcc = null;   // titulares recientes por empresa (data/noticias.json, de Google Noticias): se cargan al abrir la primera ficha
   const cargaNoticias = () => (noticiasAcc ? Promise.resolve(noticiasAcc) : fetch('data/noticias.json').then((r) => r.json()).then((x) => { noticiasAcc = x.noticias || {}; return noticiasAcc; }).catch(() => (noticiasAcc = {})));
   let tecAcc = {};   // análisis técnico (medias, RSI, serie de un año): data/tecnico.json
-  let fundAcc = {};   // fundamentales de la SEC (data/fundamentales.json); sin el archivo, esas celdas salen como "—"
+  let tickerDeEmisor = {};   // nombre del emisor en el 13F -> ticker (data/acciones_13f.json): así las empresas del 13F también llevan precio, técnico y fundamentales
+  let fundAcc = {};   // fundamentales (data/fundamentales.json); sin el archivo, esas celdas salen como "—"
   const cargaPrecios = () => (preciosAcc ? Promise.resolve(preciosAcc) : fetch('data/precios.json').then((r) => r.json()).then((x) => { preciosAcc = x.precios || {}; return preciosAcc; }).catch(() => (preciosAcc = {}))
-    .then((p) => Promise.all([fetch('data/fundamentales.json').then((r) => r.json()).then((f) => { fundAcc = f.empresas || {}; }).catch(() => {}), fetch('data/tecnico.json').then((r) => r.json()).then((t) => { tecAcc = t.simbolos || {}; }).catch(() => {})]).then(() => p)));
+    .then((p) => Promise.all([fetch('data/fundamentales.json').then((r) => r.json()).then((f) => { fundAcc = f.empresas || {}; }).catch(() => {}), fetch('data/tecnico.json').then((r) => r.json()).then((t) => { tecAcc = t.simbolos || {}; }).catch(() => {}), fetch('data/acciones_13f.json').then((r) => r.json()).then((a) => { Object.entries(a.origen || {}).forEach(([tk, em]) => { tickerDeEmisor[em] = tk; }); }).catch(() => {})]).then(() => p)));
   const SUFIJOS = new Set(['INC', 'CORP', 'CORPORATION', 'CO', 'COMPANY', 'LTD', 'LIMITED', 'PLC', 'HOLDINGS', 'HLDGS', 'GROUP', 'THE', 'NV', 'SA', 'AG', 'LLC', 'LP']);
   const norm = (s) => String(s).toUpperCase().replace(/[.,&'()/-]/g, ' ').split(/\s+/).filter((w) => w && !SUFIJOS.has(w)).join(' ');
   // Análisis técnico de Rastreo: RSI, tendencia (precio frente a las medias de 50 y 200 días) y la mini gráfica del último año (los calcula la Action con un año de cierres de Yahoo).
@@ -206,6 +207,13 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   const trimestre = (iso) => { const [a, mes] = iso.split('-'); return 'T' + Math.ceil(+mes / 3) + ' ' + a; };
   const desdeTexto = (d) => (d && d.startsWith('<') ? `la tiene desde ${trimestre(d.slice(1))} o antes` : d ? `la tiene desde ${trimestre(d)}` : '');
   const n2g = (v) => v.toLocaleString('es-ES', { maximumFractionDigits: 2 });
+  // Fundamentales: Yahoo da capitalización, PER y BPA de los últimos 12 meses de empresas de cualquier país (en la moneda de cada una); si no hay, se calcula con los datos de la SEC.
+  const simMon = (c) => (c === 'USD' || !c ? '$' : c === 'EUR' ? '€' : c === 'GBP' ? '£' : c);
+  const grandeMon = (v, c) => { const s = simMon(c), sep = s.length > 1 ? ' ' : ''; return v >= 1e9 ? `${n2g(v / 1e9)} mil M${sep}${s}` : v >= 1e6 ? `${n2g(v / 1e6)} M${sep}${s}` : `${n2g(v)}${sep}${s}`; };
+  const capDe = (pr, fu) => (fu && fu.cap ? { txt: grandeMon(fu.cap, fu.moneda || (pr && pr.currency)), tip: 'Valor de toda la empresa en bolsa (Yahoo Finance)' }
+    : pr && pr.currency !== 'EUR' && fu && fu.acciones ? { txt: grandeUsd(pr.price * fu.acciones), tip: `${fu.acciones.toLocaleString('es-ES')} acciones × precio de hoy` } : null);
+  const perDe = (pr, fu) => (fu && fu.per != null ? { v: fu.per, tip: 'PER de los últimos 12 meses (Yahoo Finance)' } : pr && fu && fu.bpa > 0 ? { v: pr.price / fu.bpa, tip: 'Precio / beneficio por acción del último ejercicio' } : null);
+  const finMon = (fu) => fu.moneda_fin || fu.moneda || 'USD';
   const grandeUsd = (v) => (v >= 1e9 ? n2g(v / 1e9) + ' mil M$' : v >= 1e6 ? n2g(v / 1e6) + ' M$' : n2g(v) + ' $');   // 'mil M' = miles de millones, como en el resto de Mercado
   const cambioChip = (c) => c === 'nueva' ? el('span', '★ nueva', 'chip new') : c === 'salio' ? el('span', '✖ vendió todo', 'chip dn') : c === 0 ? el('span', '=', 'chip') : el('span', (c > 0 ? '▲ +' : '▼ ') + c.toLocaleString('es-ES') + ' %', 'chip ' + (c > 0 ? 'up' : 'dn'));
   // Celda con un chip por inversor que tiene la empresa (o que la vendió entera): lo usan el Rastreo y el Seguimiento.
@@ -271,7 +279,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
         const rango = p && p.min_52s != null && p.max_52s > p.min_52s ? Math.round((p.price - p.min_52s) / (p.max_52s - p.min_52s) * 100) : null;
         const cv = document.createElement('td'); cv.className = 'text-right'; if (p) { if (p.change) cv.append(cambioChip(Math.round(p.change * 100) / 100)); else cv.textContent = '0 %'; } else cv.textContent = '—';
         tr.append(emp, num(p ? `${n2g(p.price)} ${mon}` : null, p ? '' : 'Sin dato: no está en la lista de precios automáticos'), cv, num(rango !== null ? rango + ' %' : null, 'Dónde está el precio entre el mínimo (0 %) y el máximo (100 %) de las últimas 52 semanas'),
-          usd && fu && fu.acciones ? num(grandeUsd(p.price * fu.acciones)) : num(null), usd && fu && fu.bpa > 0 ? num(n2g(p.price / fu.bpa)) : num(null), chipsPoseedores(poseedoresDe(pos, x.n), pos.gestores));
+          capDe(p, fu) ? num(capDe(p, fu).txt, capDe(p, fu).tip) : num(null), perDe(p, fu) ? num(n2g(perDe(p, fu).v), perDe(p, fu).tip) : num(null), chipsPoseedores(poseedoresDe(pos, x.n), pos.gestores));
         return tr;
       }));
     });
@@ -301,8 +309,9 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     der.append(el('div', f.nombre, ''), kv('Precio', pr ? `${n2g(pr.price)} ${mon}` : null),
       kv('Rango de 52 semanas', pr && pr.min_52s != null ? `${n2g(pr.min_52s)} – ${n2g(pr.max_52s)}` : null),
       kv('Media 50 d / 200 d', tec.sma50 != null ? `${n2g(tec.sma50)} / ${n2g(tec.sma200)}` : null), kv('RSI 14', tec.rsi14 != null ? String(Math.round(tec.rsi14)) : null),
-      kv('Capitalización', usd && fu && fu.acciones ? grandeUsd(pr.price * fu.acciones) : null), kv('PER', usd && fu && fu.bpa > 0 ? n2g(pr.price / fu.bpa) : null),
-      kv('Ingresos', fu && fu.ingresos ? grandeUsd(fu.ingresos) : null), kv('Beneficio', fu && fu.beneficio != null ? grandeUsd(fu.beneficio) : null));
+      kv('Capitalización', capDe(pr, fu) ? capDe(pr, fu).txt : null), kv('PER', perDe(pr, fu) ? n2g(perDe(pr, fu).v) : null),
+      kv('Ingresos', fu && fu.ingresos ? grandeMon(fu.ingresos, finMon(fu)) : null), kv('Beneficio', fu && fu.beneficio != null ? grandeMon(fu.beneficio, finMon(fu)) : null),
+      kv('Margen neto', fu && fu.margen != null ? n2g(fu.margen * 100) + ' %' : null, 'Beneficio neto sobre ingresos'), kv('Dividendo', fu && fu.dividendo != null ? n2g(fu.dividendo * 100) + ' %' : null, 'Rentabilidad por dividendo anual'));
     der.firstChild.style.cssText = 'font-weight:700;font-size:16px;margin-bottom:6px';
     const poseedores = chipsPoseedores(f.por, gestores); poseedores.style.cssText += ';display:block;padding-top:10px;white-space:normal'; der.append(el('div', 'Quién la tiene', 'nm'), poseedores);
     caja.append(izq, der); td.append(caja);
@@ -346,7 +355,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
       remotos.forEach((r) => { const m = dePorNombre(r.name); if (m) usados.add(m[0]); filas.push({ nombre: r.name, simbolo: r.symbol, por: m ? m[1] : null }); });
       Object.entries(d.filas).filter(([e]) => e.includes(q) && !usados.has(e))
         .sort((x, y) => Object.values(y[1]).reduce((s, v) => s + v[0], 0) - Object.values(x[1]).reduce((s, v) => s + v[0], 0))
-        .slice(0, 25).forEach(([e, por]) => filas.push({ nombre: e, simbolo: null, por }));
+        .slice(0, 25).forEach(([e, por]) => filas.push({ nombre: e, simbolo: tickerDeEmisor[e] || null, por }));
       if (!filas.length) { res.replaceChildren(el('p', 'No encuentro ninguna empresa con ese nombre.', 'reparto-hint')); return; }
       res.querySelectorAll('canvas').forEach((cv) => { const g = typeof Chart !== 'undefined' && Chart.getChart(cv); if (g) g.destroy(); });
       const t = document.createElement('table'); t.innerHTML = '<thead><tr><th title="">Empresa</th><th class="text-right" title="Último precio conocido">Precio</th><th class="text-right" title="Cambio del precio frente al cierre anterior">Variación</th><th class="text-right" title="Precio más bajo de hoy">Mín. día</th><th class="text-right" title="Precio más alto de hoy">Máx. día</th><th class="text-right" title="Precio más bajo de las últimas 52 semanas">Mín. 52 sem.</th><th class="text-right" title="Precio más alto de las últimas 52 semanas">Máx. 52 sem.</th><th class="text-right" title="Dónde está el precio entre el mínimo (0 %) y el máximo (100 %) de las últimas 52 semanas. 99 % = casi en máximos del año; 5 % = casi en mínimos">En el rango anual</th><th class="text-right" title="Media del precio de cierre de los últimos 50 días de mercado">Media 50 d</th><th class="text-right" title="Media del precio de cierre de los últimos 200 días de mercado">Media 200 d</th><th class="text-right" title="RSI de 14 días (0-100). Por encima de 70 suele leerse como una subida muy rápida (sobrecompra) y por debajo de 30 como una bajada muy rápida (sobreventa). Es un indicador técnico, no una recomendación">RSI 14</th><th title="Alcista: el precio está por encima de la media de 50 días y esta por encima de la de 200. Bajista: al revés. Mixta: cualquier otro caso. Es una lectura técnica, no una recomendación">Tendencia</th><th title="Evolución del precio en el último año (un punto por semana)">Último año</th><th class="text-right" title="Acciones negociadas hoy">Volumen</th><th class="text-right" title="Valor de toda la empresa en bolsa: acciones en circulación × precio de hoy">Capitalización</th><th class="text-right" title="Precio / beneficio por acción del último ejercicio. Cuántos años de beneficio se pagan">PER</th><th class="text-right" title="Beneficio por acción del último ejercicio fiscal">BPA</th><th class="text-right" title="Ventas del último ejercicio fiscal">Ingresos</th><th class="text-right" title="Beneficio neto del último ejercicio fiscal">Beneficio</th><th title="Cuáles de tus tres inversores la tienen (o la vendieron entera) en su último 13F">Poseedores</th></tr></thead>';
@@ -363,10 +372,11 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
         const sinDato = pr || !f.simbolo ? '' : 'Sin dato: este valor no está en la lista de precios automáticos (data/acciones.json)';
         const vacio = (titulo) => celda(null, titulo || sinDato);
         const ejercicio = fu && fu.ejercicio_fin ? `Ejercicio fiscal cerrado el ${dia(fu.ejercicio_fin)} (informe 10-K a la SEC)` : '';
-        const sinFund = usd && !fu ? 'Sin dato: la SEC solo da fundamentales de empresas de EE. UU. que presentan 10-K (no de fondos, ETF ni empresas extranjeras)' : sinDato;
+        const sinFund = pr && !fu ? 'Sin dato: Yahoo no da fundamentales de este valor (fondos y ETF no los tienen)' : sinDato;
         const rango = pr && pr.min_52s != null && pr.max_52s > pr.min_52s ? Math.round((pr.price - pr.min_52s) / (pr.max_52s - pr.min_52s) * 100) : null;
-        const capi = usd && fu && fu.acciones ? celda(grande(pr.price * fu.acciones), `${fu.acciones.toLocaleString('es-ES')} acciones (informe del ${dia(fu.acciones_fecha)}) × precio de hoy`) : vacio(sinFund);
-        const per = usd && fu && fu.bpa > 0 ? celda(n2(pr.price / fu.bpa), `Precio ${n2(pr.price)} $ / beneficio por acción ${n2(fu.bpa)} $. ${ejercicio}`) : usd && fu && fu.bpa <= 0 ? celda('n/a', 'Beneficio por acción negativo: no hay PER') : vacio(sinFund);
+        const cp = capDe(pr, fu), pe = perDe(pr, fu);
+        const capi = cp ? celda(cp.txt, cp.tip) : vacio(sinFund);
+        const per = pe ? celda(n2(pe.v), pe.tip) : fu && fu.bpa != null && fu.bpa <= 0 ? celda('n/a', 'Beneficio por acción negativo: no hay PER') : vacio(sinFund);
         tr.append(emp, pr ? celda(`${n2(pr.price)} ${mon}`) : vacio(),
           pr ? (() => { const c = document.createElement('td'); c.className = 'text-right'; if (pr.change) c.append(cambio(Math.round(pr.change * 100) / 100)); else c.textContent = '0 %'; return c; })() : vacio(),
           pr && pr.dia_min != null ? celda(n2(pr.dia_min)) : vacio(), pr && pr.dia_max != null ? celda(n2(pr.dia_max)) : vacio(),
@@ -376,8 +386,9 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
           tec.sma200 != null && pr ? celda(n2(tec.sma200), pr.price > tec.sma200 ? 'El precio está por encima de su media de 200 días' : 'El precio está por debajo de su media de 200 días') : vacio(),
           rsiCelda(pr, f.simbolo), tendenciaCelda(pr, f.simbolo), serieCelda(pr, f.simbolo),
           pr && pr.volumen ? celda(pr.volumen >= 1e6 ? n2(pr.volumen / 1e6) + ' M' : pr.volumen.toLocaleString('es-ES')) : vacio(), capi, per,
-          fu && fu.bpa != null ? celda(n2(fu.bpa) + ' $', ejercicio) : vacio(sinFund), fu && fu.ingresos ? celda(grande(fu.ingresos), ejercicio) : vacio(sinFund),
-          fu && fu.beneficio != null ? celda(grande(fu.beneficio), ejercicio) : vacio(sinFund));
+          fu && fu.bpa != null ? celda(n2(fu.bpa) + ' ' + simMon(fu.moneda || (pr && pr.currency)), fu.fuente === 'Yahoo' ? 'Beneficio por acción de los últimos 12 meses (Yahoo Finance)' : ejercicio) : vacio(sinFund),
+          fu && fu.ingresos ? celda(grandeMon(fu.ingresos, finMon(fu)), fu.fuente === 'Yahoo' ? 'Ingresos de los últimos 12 meses (Yahoo Finance)' : ejercicio) : vacio(sinFund),
+          fu && fu.beneficio != null ? celda(grandeMon(fu.beneficio, finMon(fu)), fu.fuente === 'Yahoo' ? 'Beneficio neto de los últimos 12 meses (Yahoo Finance)' : ejercicio) : vacio(sinFund));
         const quien = chipsPoseedores(f.por, d.gestores);
         tr.append(quien); tb.append(tr);
         const nombreEl = emp.querySelector('.tk'); nombreEl.style.cursor = 'pointer'; nombreEl.title = 'Ver la ficha y el gráfico';

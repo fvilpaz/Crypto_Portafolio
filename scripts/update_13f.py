@@ -156,7 +156,7 @@ def acciones_de_los_inversores(todos):
             else:
                 sin_ticker.append(emisor)
     (DATOS / "acciones_13f.json").write_text(json.dumps({"_nota": "Generado por scripts/update_13f.py: tickers de las mayores posiciones de cada inversor. No editar a mano.",
-                                                         "simbolos": sorted(simbolos), "sin_ticker": sorted(set(sin_ticker))}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+                                                         "simbolos": sorted(simbolos), "origen": {tk: simbolos[tk] for tk in sorted(simbolos)}, "sin_ticker": sorted(set(sin_ticker))}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print(f"acciones_13f.json: {len(simbolos)} simbolos; {len(set(sin_ticker))} posiciones grandes sin ticker (nombre distinto en la SEC)")
 
 
