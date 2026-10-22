@@ -148,7 +148,8 @@ half. Each does one thing well and they link to each other.
     "Inversores y gestoras" and "Empresas y fondos". **Pending:** create the repo secret `SEC_USER_AGENT` (without it the Action
     skips the 13F) and run the Action once to check it; phases 2 and 3 below. **Done (22-oct):** people who are not 13F filers
     (Elon Musk first) come from the SEC's Form 4 and Schedule 13D/13G filings (`scripts/update_insiders.py` → `data/insiders.json`,
-    shown in Mercado under the 13F managers; add a person with one line in `PERSONAS`); the two hand-written example text cards
+    shown in Mercado under the 13F managers; a **"¿Quién tiene esta empresa?"** search covers ALL positions of each 13F (not just
+    the top 10; `data/13f_posiciones.json`); add a person with one line in `PERSONAS`); the two hand-written example text cards
     were hidden (commented out, not deleted)
   - Base the analysis on quarter-to-quarter changes (new buys, increases) and portfolio
     weight, not only on plain overlap

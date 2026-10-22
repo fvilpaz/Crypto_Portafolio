@@ -119,6 +119,45 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
       tabla('<th>Fecha</th><th>Empresa</th><th>Qué hizo</th><th class="text-right">Acciones</th><th class="text-right">Precio</th><th class="text-right">Tiene después</th>', p.operaciones.map(filaOp)));
     return sec;
   }
+  // Buscador "¿Quién tiene esta empresa?": sobre TODAS las posiciones de cada inversor (no solo las 10 mayores). Lo genera scripts/update_13f.py.
+  function buscador(d) {
+    const caja = document.getElementById('b13f-buscar');
+    const sec = document.createElement('details'); sec.className = 'card mk-desplegable'; sec.open = true; sec.style.cssText = 'margin-top:12px;padding:12px 16px';
+    const h = document.createElement('summary'); h.style.cssText = 'cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap';
+    const nombre = el('span', '¿Quién tiene esta empresa?', ''); nombre.style.cssText = 'font-weight:700;font-size:15px;color:var(--text-primary)';
+    const n = Object.keys(d.filas).length;
+    const resumen = el('span', `${n.toLocaleString('es-ES')} empresas · ${d.gestores.length} inversores`, ''); resumen.style.cssText = 'margin-left:auto;color:var(--text-muted);font-size:12px';
+    const flecha = document.createElement('span'); flecha.innerHTML = '<svg class="strat-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+    h.append(nombre, resumen, flecha);
+    const campo = document.createElement('div'); campo.className = 'add-field'; campo.style.marginTop = '12px';
+    const entrada = document.createElement('input'); entrada.type = 'text'; entrada.placeholder = 'Empresa, p. ej. Vistra, Apple, Chevron'; entrada.autocomplete = 'off'; campo.append(entrada);
+    const nota = el('p', `Busca entre todas las posiciones de sus 13F, no solo las 10 mayores. Peso = % de la cartera de cada inversor; el cambio es en nº de acciones frente al trimestre anterior. Informes con cierre el ${dia(d.periodo)}.`, 'reparto-hint');
+    const res = el('div', '', 'table-wrapper'); res.style.marginTop = '12px';
+    const cambio = (c) => c === 'nueva' ? el('span', '★ nueva', 'chip new') : c === 0 ? el('span', '=', 'chip') : el('span', (c > 0 ? '▲ +' : '▼ ') + c.toLocaleString('es-ES') + ' %', 'chip ' + (c > 0 ? 'up' : 'dn'));
+    function pintarRes() {
+      const q = entrada.value.trim().toUpperCase();
+      if (q.length < 2) { res.replaceChildren(el('p', 'Escribe al menos 2 letras.', 'reparto-hint')); return; }
+      const hallados = Object.entries(d.filas).filter(([e]) => e.includes(q))
+        .sort((x, y) => Object.values(y[1]).reduce((s, v) => s + v[0], 0) - Object.values(x[1]).reduce((s, v) => s + v[0], 0)).slice(0, 25);
+      if (!hallados.length) { res.replaceChildren(el('p', 'Ningún inversor de la lista tiene una empresa con ese nombre.', 'reparto-hint')); return; }
+      const t = document.createElement('table');
+      t.innerHTML = `<thead><tr><th>Empresa</th>${d.gestores.map((g) => `<th>${g.nombre}</th>`).join('')}</tr></thead>`;
+      const tb = document.createElement('tbody');
+      hallados.forEach(([emisor, por]) => {
+        const tr = document.createElement('tr'); if (sigo(emisor)) tr.className = 'sigo';
+        tr.append(el('td', emisor, 'tk'));
+        d.gestores.forEach((g) => {
+          const f = por[g.clave], td = document.createElement('td');
+          if (f) td.append(`${f[0].toLocaleString('es-ES')} % · ${f[1].toLocaleString('es-ES')} acc. `, cambio(f[2])); else td.textContent = '—';
+          tr.append(td);
+        });
+        tb.append(tr);
+      });
+      t.append(tb); res.replaceChildren(t);
+    }
+    entrada.addEventListener('input', pintarRes); pintarRes();
+    sec.append(h, campo, nota, res); caja.replaceChildren(sec);
+  }
   function pintarPersonas(d) { document.getElementById('b13f-insiders').replaceChildren(...d.personas.map(seccionPersona)); }
   const MOVIMIENTOS = [   // [simbolo, singular, plural, clase del chip, test sobre cambio_acciones_pct]
     ['★', 'nueva', 'nuevas', 'new', (c) => c === 'nueva'], ['▲', 'sube', 'suben', 'up', (c) => c > 0], ['▼', 'baja', 'bajan', 'dn', (c) => c !== 'nueva' && c < 0],
@@ -167,6 +206,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
       .then((ix) => { indice = ix; return Promise.all([json('data/13f_coinciden.json'), ...ix.map((g) => json('data/13f_' + encodeURIComponent(g.clave) + '.json'))]); })
       .then(([c, ...ds]) => { coin = c; datos = ds; pintar(); pintarCoinciden(); })
       .catch(() => { cont.textContent = 'No se pudieron cargar los datos de los gestores.'; });
+    json('data/13f_posiciones.json').then(buscador).catch(() => {});   // aparte: si falta, la pestaña sigue igual
     json('data/insiders.json').then(pintarPersonas).catch(() => {});   // aparte: si falta, la pestaña sigue igual
   });
   fx.onChange(pintar);

@@ -120,6 +120,13 @@ for g in GESTORES:
         fallos += 1
         print(f"FALLO {g['nombre']}: {e}", file=sys.stderr)
 (DATOS / "13f_indice.json").write_text(json.dumps(hechos, ensure_ascii=False, indent=2), encoding="utf-8")
+if todos:   # TODAS las posiciones de cada gestor (no solo las 10 mayores), para el buscador "quien tiene esta empresa" de la app
+    filas = defaultdict(dict)
+    for clave, t in todos.items():
+        for emisor, (valor, acciones) in t["ahora"].items():
+            filas[emisor][clave] = [round(valor / t["total"] * 100, 3), acciones, cambio_acciones(t["antes"].get(emisor), acciones)]
+    (DATOS / "13f_posiciones.json").write_text(json.dumps({"periodo": max(t["periodo"] for t in todos.values()), "gestores": hechos, "filas": filas},
+                                                        ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 if len(todos) >= 2:
     (DATOS / "13f_coinciden.json").write_text(json.dumps(coincidencias(todos), ensure_ascii=False, indent=2), encoding="utf-8")
 sys.exit(1 if fallos else 0)
