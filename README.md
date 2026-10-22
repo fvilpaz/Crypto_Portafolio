@@ -195,7 +195,8 @@ half. Each does one thing well and they link to each other.
   are resolved; saved in `settings.customCoins`, so they travel with the export and the sync). A new coin counts in the
   total and the distribution; to count in the Satélites card and in the monthly split, add it with the pencil of the Satélites
   card. Núcleo (BTC, ETH) and Refugio (USDC) are still fixed lists
-- Per-coin manual price override for coins CoinGecko does not price
+- **Done (22-oct):** per-coin manual price override for coins CoinGecko does not price (the same "Precio" box of the detail window and "Precio por unidad" field of
+  the add window that stocks use; market price wins when it exists)
 - Stocks/ETFs (e.g. an S&P 500 ETF for DCA or extra pay): symbol search with
   Twelve Data (CORS open; price needs a free key), price in EUR/USD with the
   existing rate, and its own "Bolsa" total kept apart from the crypto cards

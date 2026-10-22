@@ -2305,10 +2305,10 @@ const App = (() => {
         </div>
       </div>
 
-      ${asset.kind === 'stock' ? `
+      ${asset.kind === 'stock' || !liveTokens.has(token) ? `
       <div class="modal-section">
         <div class="modal-section-label">Precio</div>
-        <div class="modal-tag-hint">${liveTokens.has(token) ? 'Esta acción tiene precio de mercado automático.' : settings.manualPrices?.[token] ? `Sin precio automático: usa el que pusiste el ${new Date(settings.manualPrices[token].ts).toLocaleDateString('es-ES')}.` : 'Sin precio automático: vale lo que pagaste. Pon el precio actual por unidad para que la cartera lo use.'}</div>
+        <div class="modal-tag-hint">${liveTokens.has(token) ? 'Tiene precio de mercado automático.' : settings.manualPrices?.[token] ? `Sin precio automático: usa el que pusiste el ${new Date(settings.manualPrices[token].ts).toLocaleDateString('es-ES')}.` : 'Sin precio automático: vale lo que pagaste. Pon el precio actual por unidad para que la cartera lo use.'}</div>
         <div class="add-field" style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="text" inputmode="decimal" id="manual-price" placeholder="Precio por unidad en €" value="${settings.manualPrices?.[token] ? (settings.manualPrices[token].usd * EUR_USD).toFixed(2).replace('.', ',') : ''}">
           <button type="button" class="hide-btn" id="manual-price-save" style="margin:0;width:auto;padding:0 16px">Guardar</button>
           ${settings.manualPrices?.[token] ? '<button type="button" class="hide-btn" id="manual-price-del" style="margin:0;width:auto;padding:0 16px">Quitar</button>' : ''}</div>
@@ -2779,7 +2779,7 @@ const App = (() => {
   }
 
   // Acción sin ningún precio conocido: no se pueden calcular las unidades con el importe, así que se pide el precio por unidad (una vez; queda guardado).
-  const addSinPrecio = () => COINS[addState.token]?.kind === 'stock' && addState.type !== 'Recompensa' && !(addPriceEur() > 0);
+  const addSinPrecio = () => !!COINS[addState.token] && addState.type !== 'Recompensa' && !(addPriceEur() > 0);   // acciones y monedas que ninguna fuente valora
   function renderAddPrice() {
     const pe = addPriceEur();
     const pf = document.getElementById('add-price-field');
@@ -2921,8 +2921,7 @@ const App = (() => {
       settings.manualPrices = Object.assign({}, settings.manualPrices, { [token]: { usd: precioManual / EUR_USD, ts: Date.now() } });
     }
     if (!(qty > 0) && type === 'Compra' && amountEur > 0 && !(addPriceEur() > 0)) {
-      if (COINS[token]?.kind === 'stock') { errEl.textContent = 'Esta acción no tiene precio automático: pon el precio por unidad (€) o la cantidad.'; return; }
-      qty = 1;
+      errEl.textContent = 'Este activo no tiene precio automático: pon el precio por unidad (€) o la cantidad.'; return;
     }
 
     if (!date || !(qty > 0)) {
