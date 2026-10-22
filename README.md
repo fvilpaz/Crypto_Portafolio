@@ -71,6 +71,10 @@ are intentionally not merged. The apps cross-link, nothing more.
   purchase price when a stock has no recent price (older than 5 days) or is not in the file. The symbols it tracks are
   listed in `data/acciones.json`. A stock with no automatic price (e.g. European UCITS ETFs the free plan does not cover)
   has a **Price** box in its detail window where you type the current price in euros; market price wins when it exists
+- **Import from Revolut:** *Importar → CSV* also accepts Revolut's transactions statement (`Date, Ticker, Type, Quantity,
+  Price per share, Total Amount, Currency, FX Rate`). Unlike the app's own CSV it **adds** to what you have (nothing is
+  rebuilt): only BUY / SELL rows are imported, top-ups, withdrawals and dividends are ignored, and a movement imported
+  before is not duplicated
 - **Satellites** are the coins of your own satellite split (`settings.satSplit`, edited with the card's pencil); a coin
   you add there shows up in the card and in the monthly split
 - **Staking** breakdown (per-asset APR)
