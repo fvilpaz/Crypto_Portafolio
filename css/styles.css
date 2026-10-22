@@ -2312,3 +2312,4 @@ body.light #mercado .new { color: #8a6500; }
 
 /* Insignia de SPDR (SPYL, SPY): círculo verde con las letras, como en Revolut */
 .token-icon.spdr { background: #0b5a3c; color: #3ee0a1; font-weight: 800; letter-spacing: -.02em; }
+.token-icon.bbva { background: #0b2f6b; color: #7fb2ff; font-weight: 800; letter-spacing: -.02em; }   /* insignia de BBVA (fondo Megatendencia Tecnología) */
