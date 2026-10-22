@@ -1,0 +1,23 @@
+{
+ "_nota": "Inversores que sigue Mercado (scripts/update_13f.py). Para anadir uno: una entrada con una clave sin espacios, una sigla de 2 letras, el nombre y el CIK de la SEC (se busca en https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany). Opcional: su ficha en data/gestores_info.json con la misma clave.",
+ "gestores": [
+  {
+   "clave": "berkshire",
+   "corto": "BK",
+   "nombre": "Berkshire Hathaway",
+   "cik": "0001067983"
+  },
+  {
+   "clave": "bridgewater",
+   "corto": "BR",
+   "nombre": "Bridgewater Associates",
+   "cik": "0001350694"
+  },
+  {
+   "clave": "gates",
+   "corto": "GF",
+   "nombre": "Gates Foundation Trust",
+   "cik": "0001166559"
+  }
+ ]
+}
