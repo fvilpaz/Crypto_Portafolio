@@ -3103,8 +3103,12 @@ const App = (() => {
   function avisoCopiaSemanal() {
     document.getElementById('aviso-copia')?.remove();
     if (!portfolio.length && !transactions.length) return;
-    let ultima = 0, hasta = 0;
-    try { ultima = Number(localStorage.getItem(EXPORT_KEY)) || 0; hasta = Number(localStorage.getItem(AVISO_HASTA_KEY)) || 0; } catch (e) { /* sin almacenamiento */ }
+    // Con la nube activa y subiendo en la última semana ya hay una copia continua: no se molesta. Y quien lo apaga a mano ('No avisar más') no lo vuelve a ver.
+    const cfg = syncEnabled() ? getSync() : null;
+    if (cfg && cfg.lastSync && Date.now() - cfg.lastSync < 7 * 86400000) return;
+    let ultima = 0, hasta = 0, apagado = false;
+    try { ultima = Number(localStorage.getItem(EXPORT_KEY)) || 0; hasta = Number(localStorage.getItem(AVISO_HASTA_KEY)) || 0; apagado = localStorage.getItem('miCartera.avisoCopiaApagado') === '1'; } catch (e) { /* sin almacenamiento */ }
+    if (apagado) return;
     const dias = ultima ? Math.floor((Date.now() - ultima) / 86400000) : null;
     if ((dias !== null && dias < 7) || Date.now() < hasta) return;
     const main = document.querySelector('main.container:not(#mercado):not(#operaciones)'); if (!main) return;
@@ -3125,7 +3129,9 @@ const App = (() => {
       comp.addEventListener('click', async () => { try { await navigator.share({ files: [copia()], title: 'Mi Cartera: copia de seguridad' }); try { localStorage.setItem(EXPORT_KEY, String(Date.now())); } catch (e) { /* sin almacenamiento */ } caja.remove(); } catch (e) { /* cancelado */ } });
       caja.append(comp);
     } } catch (e) { /* este navegador no comparte archivos */ } }
-    caja.append(luego); main.prepend(caja);
+    const nunca = document.createElement('button'); nunca.type = 'button'; nunca.className = 'link-btn'; nunca.textContent = 'No avisar más'; nunca.title = 'Ya tengo mis propias copias';
+    nunca.addEventListener('click', () => { try { localStorage.setItem('miCartera.avisoCopiaApagado', '1'); } catch (e) { /* sin almacenamiento */ } caja.remove(); });
+    caja.append(luego, nunca); main.prepend(caja);
   }
 
   const SYNC_KEY = 'miCartera.sync';
