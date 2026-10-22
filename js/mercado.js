@@ -84,6 +84,42 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     cont.replaceChildren(...datos.map(seccion));
   }
   const pct = (n) => n.toLocaleString('es-ES') + ' %';
+  // Personas que no presentan 13F (p. ej. Elon Musk): lo que declaran a la SEC en los Schedule 13D/13G (pasar del 5 % de una empresa) y en los Form 4
+  // (operaciones de directivos y grandes accionistas). Los genera scripts/update_insiders.py.
+  const CODIGOS = { P: 'Compra en mercado', S: 'Venta en mercado', A: 'Concesión de acciones', M: 'Ejercicio de opciones', X: 'Ejercicio de opciones', F: 'Retención para impuestos',
+    G: 'Donación', C: 'Conversión de otro valor', D: 'Devolución a la empresa', J: 'Otra operación' };
+  function seccionPersona(p) {
+    const sec = document.createElement('details');
+    sec.className = 'card mk-desplegable'; sec.style.cssText = 'margin-top:12px;padding:12px 16px';
+    const badge = el('span', 'Form 4 · 13D/G · SEC', 'section-badge');
+    badge.style.cssText = 'background:var(--accent-green-bg);color:var(--accent-green);';
+    const h = document.createElement('summary');
+    h.style.cssText = 'cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap';
+    const nombre = el('span', p.nombre, ''); nombre.style.cssText = 'font-weight:700;font-size:15px;color:var(--text-primary)';
+    const resumen = el('span', `${p.participaciones.length} empresas con más del 5 %${p.operaciones.length ? ' · última operación ' + dia(p.operaciones[0].fecha) : ''}`, '');
+    resumen.style.cssText = 'margin-left:auto;color:var(--text-muted);font-size:12px';
+    const flecha = document.createElement('span'); flecha.innerHTML = '<svg class="strat-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+    h.append(nombre, badge, resumen, flecha);
+    const num = (txt) => el('td', txt, 'text-right');
+    const tabla = (cabecera, filas) => {
+      const t = document.createElement('table'); t.innerHTML = `<thead><tr>${cabecera}</tr></thead>`;
+      const tb = document.createElement('tbody'); tb.append(...filas); t.append(tb);
+      const w = el('div', '', 'table-wrapper'); w.append(t); w.style.marginTop = '12px'; return w;
+    };
+    const filaPart = (x) => { const tr = document.createElement('tr'); if (sigo(x.emisor)) tr.className = 'sigo';
+      tr.append(el('td', x.emisor, 'tk'), num(x.acciones === null ? '—' : x.acciones.toLocaleString('es-ES')), num(x.pct === null ? '—' : pct(x.pct)), el('td', x.formulario), el('td', dia(x.presentado))); return tr; };
+    const filaOp = (x) => { const tr = document.createElement('tr'); if (sigo(x.emisor)) tr.className = 'sigo';
+      const que = el('td', ''); que.append(el('span', (x.tipo === 'A' ? '▲ ' : '▼ ') + (CODIGOS[x.codigo] || 'Código ' + x.codigo), 'chip ' + (x.tipo === 'A' ? 'up' : 'dn')));
+      tr.append(el('td', dia(x.fecha)), el('td', x.simbolo || x.emisor, 'tk'), que, num(x.acciones.toLocaleString('es-ES')), num(x.precio > 0 ? '$' + x.precio.toLocaleString('es-ES') : '—'), num(x.tras.toLocaleString('es-ES'))); return tr; };
+    sec.append(h,
+      el('p', 'Lo que declara a la SEC: los Schedule 13D/13G (quien pasa del 5 % de una empresa) y los Form 4 (sus operaciones, que se presentan en 2 días). Acciones y % son de la fecha de cada informe.', 'reparto-hint'),
+      tabla('<th>Empresa</th><th class="text-right">Nº de acciones</th><th class="text-right">% de la empresa</th><th>Informe</th><th>Presentado</th>', p.participaciones.map(filaPart)));
+    if (p.operaciones.length) sec.append(
+      el('p', 'Últimas operaciones (Form 4). "Retención para impuestos" y "Ejercicio de opciones" no son compras ni ventas en el mercado; "Conversión" es cambiar un tipo de acción por otro.', 'reparto-hint'),
+      tabla('<th>Fecha</th><th>Empresa</th><th>Qué hizo</th><th class="text-right">Acciones</th><th class="text-right">Precio</th><th class="text-right">Tiene después</th>', p.operaciones.map(filaOp)));
+    return sec;
+  }
+  function pintarPersonas(d) { document.getElementById('b13f-insiders').replaceChildren(...d.personas.map(seccionPersona)); }
   const MOVIMIENTOS = [   // [simbolo, singular, plural, clase del chip, test sobre cambio_acciones_pct]
     ['★', 'nueva', 'nuevas', 'new', (c) => c === 'nueva'], ['▲', 'sube', 'suben', 'up', (c) => c > 0], ['▼', 'baja', 'bajan', 'dn', (c) => c !== 'nueva' && c < 0],
   ];
@@ -131,6 +167,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
       .then((ix) => { indice = ix; return Promise.all([json('data/13f_coinciden.json'), ...ix.map((g) => json('data/13f_' + encodeURIComponent(g.clave) + '.json'))]); })
       .then(([c, ...ds]) => { coin = c; datos = ds; pintar(); pintarCoinciden(); })
       .catch(() => { cont.textContent = 'No se pudieron cargar los datos de los gestores.'; });
+    json('data/insiders.json').then(pintarPersonas).catch(() => {});   // aparte: si falta, la pestaña sigue igual
   });
   fx.onChange(pintar);
 })();

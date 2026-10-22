@@ -38,6 +38,12 @@ jobs:
         run: |
           if [ -z "$SEC_USER_AGENT" ]; then echo "::warning::Falta el secreto SEC_USER_AGENT: se omiten los 13F"; exit 0; fi
           python scripts/update_13f.py || { echo "::warning::Fallo update_13f.py: se conservan los datos anteriores"; git checkout -- data/13f_*.json; }
+      - name: Insiders (Form 4 y 13D/G de la SEC)
+        env:
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+        run: |
+          if [ -z "$SEC_USER_AGENT" ]; then echo "::warning::Falta el secreto SEC_USER_AGENT: se omiten los insiders"; exit 0; fi
+          python scripts/update_insiders.py || { echo "::warning::Fallo update_insiders.py: se conservan los datos anteriores"; git checkout -- data/insiders.json; }
       - name: Subir si hay cambios y desplegar
         run: |
           git add data/
