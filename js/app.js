@@ -1161,6 +1161,10 @@ const App = (() => {
     const mensualTotal = monthlySplit().totalUsd, sinObjetivoBolsa = rc >= 100 && m.lados.bolsa.valor > 0;
     const llega = pr.llega === 0 ? 'Ya estás' : mensualTotal <= 0 ? 'Sin dinero al mes' : sinObjetivoBolsa ? 'Sin objetivo de bolsa' : pr.llega === null ? 'Más de 20 años' : `${pr.llega} ${pr.llega === 1 ? 'mes' : 'meses'}`;
     const llegaSub = mensualTotal <= 0 ? 'Pon el dinero al mes arriba' : sinObjetivoBolsa ? 'Baja el ratio crypto para fijar un objetivo de bolsa' : `ratio ${rc} / ${100 - rc}, con ${fmtCurrency(mensualTotal)} al mes`;
+    // Los cuatro objetivos (Núcleo, Satélites, Refugio y Bolsa) deben sumar 100 %: si al editar uno ya no suman, se dice cuánto suman cada uno y el total.
+    const objs = [['Núcleo', settings.coreTarget ?? DEFAULT_CORE_TARGET], ['Satélites', settings.satTarget ?? DEFAULT_SAT_TARGET], ['Refugio', settings.defenseTarget || 0], ['Bolsa', settings.bolsaTarget || 0]];
+    const sumaObjs = objs.reduce((s, [, v]) => s + v, 0);
+    const avisoObjs = Math.abs(sumaObjs - 100) > 0.05 ? `Tus objetivos suman ${+sumaObjs.toFixed(1)} % y deberían sumar 100 %: ${objs.map(([n, v]) => `${n} ${v} %`).join(' · ')}. Corrige uno de ellos o mueve el ratio de arriba para que se reajusten.` : '';
     const chip = (lado, txt) => `<span class="section-badge" style="${PL_TONO[lado]}white-space:nowrap">${txt}</span>`;
     const lados = Plan.LADOS.map((l) => {
       const L = m.lados[l];
@@ -1186,7 +1190,7 @@ const App = (() => {
         <div class="card"><div class="card-label">Este mes a bolsa</div><div class="card-value" style="color:${PL_COLOR.bolsa}">${fmtCurrency(m.lados.bolsa.rec)}</div><div class="card-sub">de los ${fmtCurrency(p.mensual)} que te faltan este mes</div></div>
         <div class="card"><div class="card-label">Llegas al ratio en</div><div class="card-value">${llega}</div><div class="card-sub">${llegaSub}</div></div>
       </div>
-      ${m.avisos.map(x => `<div class="warning-banner">⚠ ${x}</div>`).join('')}
+      ${[avisoObjs, ...m.avisos.filter(x => !(avisoObjs && x.startsWith('Dentro de')))].filter(Boolean).map(x => `<div class="warning-banner">⚠ ${x}</div>`).join('')}
       <p class="reparto-hint">Sin contar variaciones de precio: crypto pasa de ${plPct(m.lados.crypto.peso)} a ${plPct(pr.pesos[12].crypto)} en 12 meses y a ${plPct(pr.pesos[24].crypto)} en 24; bolsa, de ${plPct(m.lados.bolsa.peso)} a ${plPct(pr.pesos[12].bolsa)} y a ${plPct(pr.pesos[24].bolsa)}.</p>
       <div class="cards-grid">${lados}</div>`;
   }
