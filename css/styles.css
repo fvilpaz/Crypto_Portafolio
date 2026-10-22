@@ -2285,3 +2285,7 @@ body.light #mercado .new { color: #8a6500; }
 .seg-grupo[hidden] { display: none; }
 .seg-grupo button { border: 0; background: none; color: var(--text-secondary); padding: 8px 20px; border-radius: 999px; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
 .seg-grupo button.on { background: var(--accent-yellow); color: #111; }
+
+/* Centro de operaciones: vista aparte (como Mercado) con el plan de inversión y el reparto del mes */
+#operaciones { padding-bottom: 60px; }
+#operaciones[hidden] { display: none; }

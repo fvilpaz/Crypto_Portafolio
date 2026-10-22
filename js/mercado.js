@@ -232,3 +232,25 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   });
   fx.onChange(pintar);
 })();
+
+/* Centro de operaciones: vista aparte que se abre con su botón de la cabecera, igual que Mercado. Solo una vista abierta a la vez. */
+(function () {
+  const btn = document.getElementById('op-btn'), vista = document.getElementById('operaciones'), mk = document.getElementById('mercado');
+  const cartera = document.querySelector('main.container:not(#mercado):not(#operaciones)');
+  const mkBtn = document.getElementById('mk-btn');
+  const svg = (d) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const g = (d, w) => `<span class="currency-switch__glyph">${svg(d)}</span><span class="currency-switch__code">${w}</span>`;
+  const ICONO = '<path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/>';
+  function mostrar(on) {
+    if (on && !mk.hidden) mkBtn.click();   // cierra Mercado (su botón alterna) antes de abrir esta vista
+    cartera.style.display = on ? 'none' : '';
+    vista.hidden = !on;
+    btn.classList.toggle('active', on);
+    btn.innerHTML = on ? g('<path d="M21 12V7a2 2 0 00-2-2H5a2 2 0 000 4h14a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2V7"/><circle cx="17" cy="14" r="1"/>', 'Cartera') : g(ICONO, 'Operaciones');
+    btn.title = on ? 'Volver a mi cartera' : 'Centro de operaciones: aportación, ratio, proyección y plantillas';
+    window.scrollTo(0, 0);
+  }
+  btn.addEventListener('click', () => mostrar(vista.hidden));
+  // Si se abre Mercado con esta vista abierta, esta se cierra (Mercado ya oculta la cartera).
+  mkBtn.addEventListener('click', () => { if (!vista.hidden) { vista.hidden = true; btn.classList.remove('active'); btn.innerHTML = g(ICONO, 'Operaciones'); btn.title = 'Centro de operaciones: aportación, ratio, proyección y plantillas'; } }, true);
+})();
