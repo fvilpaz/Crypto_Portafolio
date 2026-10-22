@@ -19,6 +19,7 @@ GESTORES = [
 # Empresas que sigo en bolsa: (nombre, texto que lleva el emisor en el 13F, en mayusculas). Se busca por nombre:
 # un fondo como ISHARES TR o VANGUARD INDEX FDS no dice que indice sigue, asi que el S&P 500 puede quedar infracontado.
 SEGUIDAS = [("S&P 500", "S&P 500"), ("SpaceX", "SPACE EXPLORATION"), ("Tesla", "TESLA"), ("Nvidia", "NVIDIA"), ("Microsoft", "MICROSOFT")]
+CUSIPS = {}   # accesion -> {emisor: {cusip}}: el nombre del emisor cambia de un trimestre a otro (BANK AMERICA CORP -> BANK OF AMER CORP); el CUSIP no
 TABLAS = {}   # accesion -> URL de la tabla completa del 13F, para enlazarla desde la app
 DATOS = Path(__file__).resolve().parent.parent / "data"
 UA = os.environ.get("SEC_USER_AGENT")
@@ -47,9 +48,21 @@ def posiciones(cik, acc):
         if "putCall" in d or d["sshPrnamtType"].text != "SH":
             raise RuntimeError(f"{acc}: fila con opciones o bonos ({d['nameOfIssuer'].text}); hay que tratarlas antes de sumar")
         emisor = d["nameOfIssuer"].text.strip().upper()
+        CUSIPS.setdefault(acc, defaultdict(set))[emisor].add(d["cusip"].text.strip().upper())
         suma[emisor][0] += int(d["value"].text)
         suma[emisor][1] += int(d["sshPrnamt"].text)
     return suma
+
+
+def mismos_emisores(antes, cusips_ant, cusips_hoy, ahora):
+    """Pasa al nombre actual a los emisores del trimestre anterior que cambiaron de nombre (mismo CUSIP), para no contarlos como venta + compra nueva."""
+    de_cusip = {c: e for e, cs in cusips_hoy.items() if e in ahora for c in cs}
+    nuevo = defaultdict(lambda: [0, 0])
+    for emisor, (valor, acciones) in antes.items():
+        destino = next((de_cusip[c] for c in sorted(cusips_ant.get(emisor, ())) if c in de_cusip), emisor)
+        nuevo[destino][0] += valor
+        nuevo[destino][1] += acciones
+    return nuevo
 
 
 def cambio_acciones(prev, acciones):
@@ -63,6 +76,7 @@ def procesar(gestor):
                       for i, f in enumerate(sub["form"]) if f == "13F-HR"][:2]
     (acc, periodo, presentado), (acc_ant, periodo_ant, _) = presentaciones
     ahora, antes = posiciones(gestor["cik"], acc), posiciones(gestor["cik"], acc_ant)
+    antes = mismos_emisores(antes, CUSIPS[acc_ant], CUSIPS[acc], ahora)
     total = sum(v for v, _ in ahora.values())
 
     top = []
@@ -127,6 +141,10 @@ if todos:   # TODAS las posiciones de cada gestor (no solo las 10 mayores), para
     for clave, t in todos.items():
         for emisor, (valor, acciones) in t["ahora"].items():
             filas[emisor][clave] = [round(valor / t["total"] * 100, 3), acciones, cambio_acciones(t["antes"].get(emisor), acciones)]
+        total_ant = sum(v for v, _ in t["antes"].values())   # lo que tenia el trimestre anterior y ya no tiene: salida total
+        for emisor, (valor, acciones) in t["antes"].items():
+            if emisor not in t["ahora"]:
+                filas[emisor][clave] = [0, 0, "salio", round(valor / total_ant * 100, 3), acciones]
     (DATOS / "13f_posiciones.json").write_text(json.dumps({"periodo": max(t["periodo"] for t in todos.values()), "gestores": hechos, "filas": filas},
                                                         ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 if len(todos) >= 2:
