@@ -179,11 +179,13 @@ const App = (() => {
     EUNL: 'ishares.com', SWDA: 'ishares.com', EMIM: 'ishares.com', CNDX: 'ishares.com', IVV: 'ishares.com', EQQQ: 'invesco.com', QQQ: 'invesco.com' };
   // SPDR (SPYL, SPY...) se ve como en Revolut: un círculo verde con las letras SPDR, no el logo de State Street.
   const esSpdr = (nombre, tok) => /spdr|state street/i.test(nombre || '') || tok === 'SPYL' || tok === 'SPY';
+  const esBbva = (nombre, tok) => /bbva/i.test(nombre || '') || tok === '0P00000V7Q';   // fondo BBVA Megatendencia Tecnología A (símbolo de Yahoo)
+  const insignia = (nombre, tok) => (esSpdr(nombre, tok) ? { letras: 'SPDR', cls: 'spdr' } : esBbva(nombre, tok) ? { letras: 'BBVA', cls: 'bbva' } : null);
   const logoGestora = (nombre, tok) => { const g = GESTORAS.find(([re]) => re.test(nombre || '')); const dom = g ? g[1] : GESTORA_DE_ETF[tok]; return dom ? `https://www.google.com/s2/favicons?domain=${dom}&sz=64` : null; };
   function registerCustomStocks() {
     Object.entries(settings.customStocks || {}).forEach(([tok, m]) => {
       if (!/^[A-Z0-9.]{1,10}$/.test(tok) || COINS[tok]) return;
-      COINS[tok] = { name: limpiaNombre(m?.name || tok), kind: 'stock', color: '#2dd4bf', cssClass: esSpdr(m?.name, tok) ? 'spdr' : 'stk', letras: esSpdr(m?.name, tok) ? 'SPDR' : '',
+      COINS[tok] = { name: limpiaNombre(m?.name || tok), kind: 'stock', color: '#2dd4bf', cssClass: insignia(m?.name, tok)?.cls || 'stk', letras: insignia(m?.name, tok)?.letras || '',
         // logo público; si no carga, iconHtml vuelve a las letras. Los Vanguard (también los UCITS europeos, que la otra fuente no tiene) llevan el logo de la gestora.
         icon: logoGestora(m?.name, tok) || `https://financialmodelingprep.com/image-stock/${tok}.png` };
     });
@@ -2620,6 +2622,7 @@ const App = (() => {
     ['VUAA', 'Vanguard S&P 500 UCITS ETF (Acc)', 'sp500 s&p vanguard ucits acc', UCITS], ['VUSA', 'Vanguard S&P 500 UCITS ETF (Dist)', 'sp500 s&p vanguard ucits dist', UCITS],
     ['CSPX', 'iShares Core S&P 500 UCITS ETF (Acc)', 'sp500 s&p ishares ucits acc', UCITS], ['SXR8', 'iShares Core S&P 500 UCITS ETF (Acc, Xetra)', 'sp500 s&p ishares ucits acc xetra', UCITS],
     ['SPYL', 'SPDR S&P 500 UCITS ETF', 'sp500 s&p spdr ucits', UCITS],
+    ['0P00000V7Q', 'BBVA Megatendencia Tecnología A FI', 'bbva megatendencia mega tendencia tecnologia fondo inversion fi ES0147711032 tecnologico', 'Fondo (España)'],
     ['VWCE', 'Vanguard FTSE All-World UCITS ETF (Acc)', 'vanguard global world mundo allworld ucits acc', UCITS], ['VWRL', 'Vanguard FTSE All-World UCITS ETF (Dist)', 'vanguard global world mundo allworld ucits dist', UCITS],
     ['IWDA', 'iShares Core MSCI World UCITS ETF (Acc)', 'global world mundo msci ishares ucits acc', UCITS], ['EUNL', 'iShares Core MSCI World UCITS ETF (Acc, Xetra)', 'global world mundo msci ishares ucits acc xetra', UCITS],
     ['SWDA', 'iShares Core MSCI World UCITS ETF (Acc, Londres)', 'global world mundo msci ishares ucits acc londres', UCITS],
