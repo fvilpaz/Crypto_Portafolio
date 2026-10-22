@@ -254,3 +254,19 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   // Si se abre Mercado con esta vista abierta, esta se cierra (Mercado ya oculta la cartera).
   mkBtn.addEventListener('click', () => { if (!vista.hidden) { vista.hidden = true; btn.classList.remove('active'); btn.innerHTML = g(ICONO, 'Operaciones'); btn.title = 'Centro de operaciones: aportación, ratio, proyección y plantillas'; } }, true);
 })();
+
+/* Selector de vista Cartera | Operaciones | Mercado: acciona los botones de la cabecera (que siguen ahí, ocultos) y se mantiene en sincronía. */
+(function () {
+  const seg = document.getElementById('seg-vista'), mk = document.getElementById('mercado'), op = document.getElementById('operaciones');
+  const mkBtn = document.getElementById('mk-btn'), opBtn = document.getElementById('op-btn');
+  const actual = () => (!mk.hidden ? 'mercado' : !op.hidden ? 'operaciones' : 'cartera');
+  const sync = () => seg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.g === actual()));
+  seg.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b || b.dataset.g === actual()) return;
+    const quiere = b.dataset.g;
+    if (quiere === 'operaciones') opBtn.click();                        // abre Operaciones (cierra Mercado si estaba abierto)
+    else if (quiere === 'mercado') mkBtn.click();                       // abre Mercado (cierra Operaciones si estaba abierta)
+    else (!mk.hidden ? mkBtn : opBtn).click();                          // Cartera: cierra la vista que esté abierta
+    sync();
+  });
+})();

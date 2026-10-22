@@ -51,7 +51,7 @@ are intentionally not merged. The apps cross-link, nothing more.
   section gets a **Crypto | Bolsa** selector (same look as Mercado's): the doughnut, the list and the invested / current
   value curves are those of the chosen group. Without stocks there is no selector
 - **DCA** summary (monthly plan; purchases from the 28th onwards count towards the next month)
-- **Centro de operaciones** (header button "Operaciones", a separate view like Mercado) holds the **monthly split ("Reparto del mes")**, built around a "Plan de inversión" panel: the monthly amount, a crypto / bolsa
+- **Centro de operaciones** (a separate view like Mercado; a **Cartera | Operaciones | Mercado** selector under the header switches between the three) holds the **monthly split ("Reparto del mes")**, built around a "Plan de inversión" panel: the monthly amount, a crypto / bolsa
   ratio slider (moving it rescales Núcleo / Satélites / Refugio so the four targets add up to 100 %), result cards
   ("this month to crypto / to bolsa") and Crypto / Bolsa cards where each bucket shows its weight and its target as
   coloured chips (green reaches it, yellow passes it, red is short). The three fixed templates (conservadora / moderada /
