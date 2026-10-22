@@ -2214,6 +2214,23 @@ const App = (() => {
     });
   }
 
+  // Quita una moneda de la cartera con copia de seguridad y un aviso con Deshacer durante unos segundos.
+  function quitarMoneda(token) {
+    const activo = portfolio.find(a => a.token === token), movs = transactions.filter(t => t.token === token);
+    if (!activo) return;
+    const copia = { fecha: new Date().toISOString(), activo: clone(activo), movimientos: clone(movs) };
+    try { const p = JSON.parse(localStorage.getItem('miCartera.papelera') || '[]'); p.unshift(copia); localStorage.setItem('miCartera.papelera', JSON.stringify(p.slice(0, 10))); } catch (e) { /* sin almacenamiento: queda solo el Deshacer */ }
+    portfolio = portfolio.filter(a => a.token !== token);
+    transactions = transactions.filter(t => t.token !== token);
+    persist(); closeModal(); render();
+    const aviso = document.createElement('div');
+    aviso.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9999;background:var(--bg-secondary);color:var(--text-primary);border:1px solid var(--border);border-radius:12px;padding:12px 16px;box-shadow:0 8px 30px rgba(0,0,0,.4);display:flex;gap:14px;align-items:center';
+    aviso.append(`${token} quitada de tu cartera.`);
+    const deshacer = document.createElement('button'); deshacer.type = 'button'; deshacer.className = 'link-btn'; deshacer.textContent = 'Deshacer';
+    deshacer.addEventListener('click', () => { portfolio.push(copia.activo); transactions.push(...copia.movimientos); persist(); render(); aviso.remove(); });
+    aviso.append(deshacer); document.body.append(aviso); setTimeout(() => aviso.remove(), 12000);
+  }
+
   // ── TOKEN DETAIL MODAL ──
   function openTokenModal(token) {
     const asset = portfolio.find(a => a.token === token);
@@ -2303,6 +2320,7 @@ const App = (() => {
         <div class="modal-tag-hint" id="tag-hint">${asset.tag === 'staking' ? `APR ${fmtApr(asset.apr)} · se desvía al chart de staking` : asset.tag === 'airdrop' ? 'Se desvía al chart de airdrops' : 'Cuenta dentro del portfolio general'}</div>
         <button type="button" id="hide-btn" class="hide-btn">${asset.hidden ? 'Mostrar en la cartera' : 'Ocultar de la cartera'}</button>
         <div class="modal-tag-hint">Ocultar solo esconde la moneda de la lista y del gráfico. No cambia el valor total de la cartera.</div>
+        <div id="quitar-zona" style="margin-top:14px"><button type="button" id="quitar-btn" class="hide-btn" style="color:var(--accent-red)">Quitar de mi cartera</button></div>
       </div>
 
       <div class="modal-section">
@@ -2412,6 +2430,16 @@ const App = (() => {
     if (mpSave) mpSave.addEventListener('click', () => { const eur = parseNum(document.getElementById('manual-price').value); if (eur > 0) guardaPrecio(eur / EUR_USD); });
     const mpDel = document.getElementById('manual-price-del');
     if (mpDel) mpDel.addEventListener('click', () => guardaPrecio(0));
+
+    // Quitar la moneda: se borran la posición y sus movimientos, pero antes se guarda una copia (miCartera.papelera, las últimas 10) y se ofrece Deshacer.
+    const quitarBtn = document.getElementById('quitar-btn');
+    if (quitarBtn) quitarBtn.addEventListener('click', () => {
+      const zona = document.getElementById('quitar-zona'), propios = transactions.filter(t => t.token === token).length;
+      zona.innerHTML = `<div class="modal-tag-hint" style="color:var(--text-primary)">¿Quitar ${token} de tu cartera? Se borran la posición y sus ${propios} movimiento${propios === 1 ? '' : 's'}. Se guarda una copia por si te arrepientes.</div>
+        <div style="display:flex;gap:10px;margin-top:8px"><button type="button" id="quitar-si" class="hide-btn" style="color:var(--accent-red)">Sí, quitar</button><button type="button" id="quitar-no" class="hide-btn">Cancelar</button></div>`;
+      document.getElementById('quitar-no').addEventListener('click', () => { zona.innerHTML = '<button type="button" id="quitar-btn2" class="hide-btn" style="color:var(--accent-red)">Quitar de mi cartera</button>'; document.getElementById('quitar-btn2').addEventListener('click', () => quitarBtn.click()); });
+      document.getElementById('quitar-si').addEventListener('click', () => quitarMoneda(token));
+    });
 
     const hideBtn = document.getElementById('hide-btn');
     if (hideBtn) hideBtn.addEventListener('click', () => {
