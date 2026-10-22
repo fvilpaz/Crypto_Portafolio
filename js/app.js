@@ -692,10 +692,14 @@ const App = (() => {
   }
 
   // ── CÁLCULOS ──
+  // Precio de una posición: el de mercado si hay; si no, el que pusiste a mano (acciones sin precio en vivo, settings.manualPrices); si no, el de compra.
+  function precioUsd(asset) {
+    return prices[asset.token]?.price || settings.manualPrices?.[asset.token]?.usd || asset.avgPrice;
+  }
+
   function getAssetValue(asset) {
     if (!asset) return 0;
-    const p = prices[asset.token]?.price || asset.avgPrice;
-    return asset.qty * p;
+    return asset.qty * precioUsd(asset);
   }
 
   function getAssetPnl(asset) {
@@ -911,7 +915,7 @@ const App = (() => {
     const bolsaNeed = bolsaFrac > 0 && bolsaFrac < 1 ? Math.max((bolsaFrac * total - bolsaVal) / (1 - bolsaFrac), 0) : 0;   // lo que hay que comprar para llegar
     bolsaLabel.textContent = bolsaTarget > 0 ? (bolsaNeed > 0 ? `Objetivo ${bolsaTarget}% · Faltan ${fmtCurrency(bolsaNeed)}` : `Objetivo ${bolsaTarget}% · Cubierto`) : 'Sin objetivo';
     bolsaLabel.style.color = bolsaTarget > 0 ? barColor(bolsaRatio, 'var(--accent-teal)') : '';
-    document.getElementById('card-bolsa-sub').textContent = stocks.length ? `${stocks.length} ${stocks.length === 1 ? 'posición' : 'posiciones'} · ${stocks.every(a => liveTokens.has(a.token)) ? 'a precio de mercado' : stocks.some(a => liveTokens.has(a.token)) ? 'algunas a precio de compra' : 'a precio de compra'}` : 'Sin posiciones todavía';
+    document.getElementById('card-bolsa-sub').textContent = stocks.length ? `${stocks.length} ${stocks.length === 1 ? 'posición' : 'posiciones'} · ${stocks.every(a => liveTokens.has(a.token)) ? 'a precio de mercado' : stocks.every(a => liveTokens.has(a.token) || settings.manualPrices?.[a.token]) ? 'con precios de mercado y puestos por ti' : stocks.some(a => liveTokens.has(a.token) || settings.manualPrices?.[a.token]) ? 'algunas a precio de compra' : 'a precio de compra'}` : 'Sin posiciones todavía';
     // listeners de edición de cubos — se registran en init(), no aquí
   }
 
@@ -1633,7 +1637,7 @@ const App = (() => {
     const sorted = [...visible].sort((a, b) => getAssetValue(b) - getAssetValue(a));
 
     const rowHtml = (asset, i) => {
-      const p = prices[asset.token]?.price || asset.avgPrice;
+      const p = precioUsd(asset);
       const change = prices[asset.token]?.change24h || 0;
       const value = getAssetValue(asset);
       const pnl = getAssetPnl(asset);
@@ -2136,7 +2140,7 @@ const App = (() => {
     const asset = portfolio.find(a => a.token === token);
     if (!asset) return;
 
-    const p = prices[asset.token]?.price || asset.avgPrice;
+    const p = precioUsd(asset);
     const change = prices[asset.token]?.change24h || 0;
     const value = getAssetValue(asset);
     const pnl = getAssetPnl(asset);
@@ -2200,6 +2204,15 @@ const App = (() => {
           </div>
         </div>
       </div>
+
+      ${asset.kind === 'stock' ? `
+      <div class="modal-section">
+        <div class="modal-section-label">Precio</div>
+        <div class="modal-tag-hint">${liveTokens.has(token) ? 'Esta acción tiene precio de mercado automático.' : settings.manualPrices?.[token] ? `Sin precio automático: usa el que pusiste el ${new Date(settings.manualPrices[token].ts).toLocaleDateString('es-ES')}.` : 'Sin precio automático: vale lo que pagaste. Pon el precio actual por unidad para que la cartera lo use.'}</div>
+        <div class="add-field" style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="text" inputmode="decimal" id="manual-price" placeholder="Precio por unidad en €" value="${settings.manualPrices?.[token] ? (settings.manualPrices[token].usd * EUR_USD).toFixed(2).replace('.', ',') : ''}">
+          <button type="button" class="hide-btn" id="manual-price-save" style="margin:0;width:auto;padding:0 16px">Guardar</button>
+          ${settings.manualPrices?.[token] ? '<button type="button" class="hide-btn" id="manual-price-del" style="margin:0;width:auto;padding:0 16px">Quitar</button>' : ''}</div>
+      </div>` : ''}
 
       <div class="modal-section">
         <div class="modal-section-label">Categoría</div>
@@ -2309,6 +2322,17 @@ const App = (() => {
         render();
       });
     });
+
+    const guardaPrecio = (usd) => {
+      const m = Object.assign({}, settings.manualPrices);
+      if (usd > 0) m[token] = { usd, ts: Date.now() }; else delete m[token];
+      settings.manualPrices = m;
+      persist(); closeModal(); render();
+    };
+    const mpSave = document.getElementById('manual-price-save');
+    if (mpSave) mpSave.addEventListener('click', () => { const eur = parseNum(document.getElementById('manual-price').value); if (eur > 0) guardaPrecio(eur / EUR_USD); });
+    const mpDel = document.getElementById('manual-price-del');
+    if (mpDel) mpDel.addEventListener('click', () => guardaPrecio(0));
 
     const hideBtn = document.getElementById('hide-btn');
     if (hideBtn) hideBtn.addEventListener('click', () => {
