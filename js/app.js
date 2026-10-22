@@ -1182,14 +1182,15 @@ const App = (() => {
   }
 
   // Plan del mes: de lo que aportas en total al mes (settings.presupuestoMes), lo que se invierte (dcaTarget) se reparte por el ratio y el resto es
-  // "Ahorro y gastos": cuenta aparte, no es inversión. Con presupuesto 0 no se muestra el reparto.
+  // "Fondo restante" (antes "Ahorro y gastos"): lo que queda de la aportación tras invertir; no es inversión salvo que subas el dinero al mes. Con presupuesto 0 no se muestra el reparto.
   let planMeses = 12;   // meses de la proyección del peso de la bolsa (deslizador; no se guarda)
   function planMesHtml(rc) {
     const inv = settings.dcaTarget || 0, pres = settings.presupuestoMes || 0, e = (eur) => fmtCurrency(eur / EUR_USD);
-    const partes = [['Crypto', inv * rc / 100, 'core'], ['Bolsa', inv * (100 - rc) / 100, 'bolsa'], ['Ahorro y gastos', Math.max(pres - inv, 0), 'refugio']];
+    const partes = [['Crypto', inv * rc / 100, 'core'], ['Bolsa', inv * (100 - rc) / 100, 'bolsa'], ['Fondo restante', Math.max(pres - inv, 0), 'refugio']];
     const base = Math.max(pres, inv) || 1;
     const detalle = pres > 0 ? `<div class="strat-bar" style="margin-top:10px">${partes.map(([, v, c]) => `<span class="seg seg-${c}" style="width:${v / base * 100}%"></span>`).join('')}</div>
       <div class="strat-head" style="flex-wrap:wrap;gap:4px 12px">${partes.map(([n, v, c]) => `<span class="strat-legend lg-${c}">${n} ${e(v)} · ${(v / base * 100).toFixed(0)} %</span>`).join('')}</div>
+      <div class="card-sub">Fondo restante: lo que queda de tu aportación después de invertir. Es para ahorro, gastos y colchón, y si quieres invertir más, sube "Dinero al mes para invertir".</div>
       ${inv > pres ? '<div class="card-sub" style="color:var(--accent-red)">Inviertes más de lo que aportas al mes</div>' : ''}` : '<div class="card-sub">Pon lo que aportas en total al mes para ver cuánto queda para ahorro y gastos</div>';
     return `<div class="card"><div class="card-label">Aportación total del mes (€)</div><div class="add-field"><input type="number" min="0" step="10" data-plan="presupuesto" value="${pres}"></div>${detalle}</div>`;
   }
