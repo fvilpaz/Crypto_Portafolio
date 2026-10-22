@@ -19,6 +19,7 @@ GESTORES = [
 # Empresas que sigo en bolsa: (nombre, texto que lleva el emisor en el 13F, en mayusculas). Se busca por nombre:
 # un fondo como ISHARES TR o VANGUARD INDEX FDS no dice que indice sigue, asi que el S&P 500 puede quedar infracontado.
 SEGUIDAS = [("S&P 500", "S&P 500"), ("SpaceX", "SPACE EXPLORATION"), ("Tesla", "TESLA"), ("Nvidia", "NVIDIA"), ("Microsoft", "MICROSOFT")]
+TABLAS = {}   # accesion -> URL de la tabla completa del 13F, para enlazarla desde la app
 DATOS = Path(__file__).resolve().parent.parent / "data"
 UA = os.environ.get("SEC_USER_AGENT")
 if not UA:
@@ -37,6 +38,7 @@ def posiciones(cik, acc):
     base = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{acc.replace('-', '')}"
     items = json.loads(get(base + "/index.json"))["directory"]["item"]
     tabla = [i["name"] for i in items if i["name"].endswith(".xml") and "primary_doc" not in i["name"]]
+    TABLAS[acc] = f"{base}/xslForm13F_X02/{tabla[0]}" if len(tabla) == 1 else None   # versión HTML de la tabla completa (todas las posiciones)
     if len(tabla) != 1:
         raise RuntimeError(f"{acc}: esperaba 1 XML de posiciones y hay {tabla}")
     suma = defaultdict(lambda: [0, 0])
@@ -72,7 +74,7 @@ def procesar(gestor):
     (DATOS / f"13f_{gestor['clave']}.json").write_text(json.dumps({
         "gestor": gestor["nombre"], "cik": gestor["cik"], "periodo": periodo, "presentado": presentado,
         "periodo_anterior": periodo_ant, "accesion": acc, "fuente": "SEC EDGAR, formulario 13F-HR",
-        "total_usd": total, "n_emisores": len(ahora), "top": top,
+        "total_usd": total, "n_emisores": len(ahora), "tabla_url": TABLAS.get(acc), "top": top,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"{gestor['nombre']}: periodo {periodo}, {len(ahora)} emisores, total {total/1e6:,.0f} M$")
     return {"ahora": ahora, "antes": antes, "total": total, "periodo": periodo}

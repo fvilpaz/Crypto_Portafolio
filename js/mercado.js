@@ -49,30 +49,6 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   // Todas las posiciones de cada inversor (data/13f_posiciones.json): las usan el buscador y el botón "Ver la lista completa" de cada tabla.
   let posAll = null;
   const cargaPos = () => (posAll ? Promise.resolve(posAll) : fetch('data/13f_posiciones.json').then((r) => r.json()).then((x) => { posAll = x; return x; }));
-  function listaCompleta(d, clave, hueco, boton) {
-    if (hueco.hasChildNodes()) { hueco.replaceChildren(); boton.textContent = `Ver la lista completa (${d.n_emisores} empresas)`; return; }
-    boton.textContent = 'Cargando…';
-    cargaPos().then((x) => {
-      const filas = Object.entries(x.filas).filter(([, por]) => por[clave]).sort((p, q) => q[1][clave][0] - p[1][clave][0]);
-      const tbody = document.createElement('tbody');
-      filas.forEach(([emisor, por]) => {
-        const f = por[clave], c = f[2], tr = document.createElement('tr'), cel = document.createElement('td');
-        if (sigo(emisor)) tr.className = 'sigo';
-        if (c === 'nueva') cel.append(el('span', '★ Compra nueva', 'chip new'));
-        else if (c === 0) cel.textContent = 'Sin cambios';
-        else cel.append(el('span', (c > 0 ? '▲ +' : '▼ ') + c.toLocaleString('es-ES') + ' % acciones', 'chip ' + (c > 0 ? 'up' : 'dn')));
-        const num = (txt) => el('td', txt, 'text-right');
-        tr.append(el('td', emisor, 'tk'), num(billones(d.total_usd * f[0] / 100)), num(f[0].toLocaleString('es-ES') + ' %'), num(f[1].toLocaleString('es-ES')), cel);
-        tbody.append(tr);
-      });
-      const tabla = document.createElement('table');
-      tabla.innerHTML = '<thead><tr><th>Empresa en la que invierte</th><th class="text-right">Valor invertido</th><th class="text-right">% de su cartera</th><th class="text-right">Nº de acciones</th><th>Cambio frente al trimestre anterior</th></tr></thead>';
-      tabla.append(tbody);
-      const wrap = el('div', '', 'table-wrapper'); wrap.style.cssText = 'margin-top:12px;max-height:520px;overflow:auto'; wrap.append(tabla);
-      hueco.replaceChildren(wrap);
-      boton.textContent = 'Ocultar la lista completa';
-    }).catch(() => { boton.textContent = 'No se pudo cargar la lista'; });
-  }
   function seccion(d, clave) {
     const sec = document.createElement('details');
     sec.className = 'card mk-desplegable'; sec.style.cssText = 'margin-top:12px;padding:12px 16px';
@@ -104,14 +80,10 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     tabla.append(tbody);
     const wrap = el('div', '', 'table-wrapper'); wrap.append(tabla); wrap.style.marginTop = '12px';
     sec.append(h, hint, wrap);
-    if (d.n_emisores > d.top.length) {   // más empresas que las 10 mayores: botón para ver todas (y enlace al informe original)
-      const pie = document.createElement('div'); pie.style.cssText = 'display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:12px';
-      const boton = el('button', `Ver la lista completa (${d.n_emisores} empresas)`, 'add-submit'); boton.type = 'button';
-      const hueco = document.createElement('div');
-      boton.addEventListener('click', () => listaCompleta(d, clave, hueco, boton));
-      const enlace = el('a', 'Informe original en la SEC', ''); enlace.href = `https://www.sec.gov/Archives/edgar/data/${parseInt(d.cik, 10)}/${d.accesion.replace(/-/g, '')}/`; enlace.target = '_blank'; enlace.rel = 'noopener';
-      enlace.style.cssText = 'font-size:12px;color:var(--text-muted)';
-      pie.append(boton, enlace); sec.append(pie, hueco);
+    if (d.n_emisores > d.top.length && d.tabla_url) {   // más empresas que las 10 mayores: enlace a la página de la SEC con todas
+      const enlace = el('a', `Ver la lista completa en la SEC (${d.n_emisores} empresas) ↗`, ''); enlace.href = d.tabla_url; enlace.target = '_blank'; enlace.rel = 'noopener';
+      enlace.style.cssText = 'display:inline-block;margin-top:12px;font-weight:600;color:var(--accent-blue)';
+      sec.append(enlace);
     }
     return sec;
   }
@@ -155,44 +127,70 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
       tabla('<th>Fecha</th><th>Empresa</th><th>Qué hizo</th><th class="text-right">Acciones</th><th class="text-right">Precio</th><th class="text-right">Tiene después</th>', p.operaciones.map(filaOp)));
     return sec;
   }
-  // Buscador "¿Quién tiene esta empresa?": sobre TODAS las posiciones de cada inversor (no solo las 10 mayores). Lo genera scripts/update_13f.py.
+  // Rastreo: busca CUALQUIER empresa (nombre o símbolo) y muestra su precio si lo tenemos y, con un indicador por inversor, cuáles de tus gestores
+  // la tienen en su 13F (todas sus posiciones, no solo las 10 mayores: data/13f_posiciones.json). Las empresas salen del 13F y de la búsqueda de Twelve Data (EE. UU.).
+  let preciosAcc = null;
+  const cargaPrecios = () => (preciosAcc ? Promise.resolve(preciosAcc) : fetch('data/precios.json').then((r) => r.json()).then((x) => { preciosAcc = x.precios || {}; return preciosAcc; }).catch(() => (preciosAcc = {})));
+  const SUFIJOS = new Set(['INC', 'CORP', 'CORPORATION', 'CO', 'COMPANY', 'LTD', 'LIMITED', 'PLC', 'HOLDINGS', 'HLDGS', 'GROUP', 'THE', 'NV', 'SA', 'AG', 'LLC', 'LP']);
+  const norm = (s) => String(s).toUpperCase().replace(/[.,&'()/-]/g, ' ').split(/\s+/).filter((w) => w && !SUFIJOS.has(w)).join(' ');
   function buscador(d) {
     const caja = document.getElementById('b13f-buscar');
     const sec = document.createElement('details'); sec.className = 'card mk-desplegable'; sec.open = true; sec.style.cssText = 'margin-top:12px;padding:12px 16px';
     const h = document.createElement('summary'); h.style.cssText = 'cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap';
-    const nombre = el('span', '¿Quién tiene esta empresa?', ''); nombre.style.cssText = 'font-weight:700;font-size:15px;color:var(--text-primary)';
-    const n = Object.keys(d.filas).length;
-    const resumen = el('span', `${n.toLocaleString('es-ES')} empresas · ${d.gestores.length} inversores`, ''); resumen.style.cssText = 'margin-left:auto;color:var(--text-muted);font-size:12px';
+    const nombre = el('span', 'Rastreo', ''); nombre.style.cssText = 'font-weight:700;font-size:15px;color:var(--text-primary)';
+    const resumen = el('span', 'cualquier empresa · quién la tiene de tus inversores', ''); resumen.style.cssText = 'margin-left:auto;color:var(--text-muted);font-size:12px';
     const flecha = document.createElement('span'); flecha.innerHTML = '<svg class="strat-chevron" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
     h.append(nombre, resumen, flecha);
     const campo = document.createElement('div'); campo.className = 'add-field'; campo.style.marginTop = '12px';
-    const entrada = document.createElement('input'); entrada.type = 'text'; entrada.placeholder = 'Empresa, p. ej. Vistra, Apple, Chevron'; entrada.autocomplete = 'off'; campo.append(entrada);
-    const nota = el('p', `Busca entre todas las posiciones de sus 13F, no solo las 10 mayores. Peso = % de la cartera de cada inversor; el cambio es en nº de acciones frente al trimestre anterior. Informes con cierre el ${dia(d.periodo)}.`, 'reparto-hint');
+    const entrada = document.createElement('input'); entrada.type = 'text'; entrada.placeholder = 'Busca una empresa: Amazon, Vistra, Chevron, AAPL…'; entrada.autocomplete = 'off'; campo.append(entrada);
     const res = el('div', '', 'table-wrapper'); res.style.marginTop = '12px';
     const cambio = (c) => c === 'nueva' ? el('span', '★ nueva', 'chip new') : c === 0 ? el('span', '=', 'chip') : el('span', (c > 0 ? '▲ +' : '▼ ') + c.toLocaleString('es-ES') + ' %', 'chip ' + (c > 0 ? 'up' : 'dn'));
+    // 13F: emisor → {clave: [peso, acciones, cambio]}; índice por nombre normalizado para unir con los resultados de la búsqueda por símbolo
+    const porNorm = new Map(); Object.entries(d.filas).forEach(([e, por]) => { const k = norm(e); if (k && !porNorm.has(k)) porNorm.set(k, [e, por]); });
+    const dePorNombre = (nombreEmpresa) => { const k = norm(nombreEmpresa); if (!k) return null; if (porNorm.has(k)) return porNorm.get(k); for (const [kk, v] of porNorm) if (kk.startsWith(k + ' ') || k.startsWith(kk + ' ')) return v; return null; };
+    let remotos = [], ultima = '';
     function pintarRes() {
       const q = entrada.value.trim().toUpperCase();
-      if (q.length < 2) { res.replaceChildren(el('p', 'Escribe al menos 2 letras.', 'reparto-hint')); return; }
-      const hallados = Object.entries(d.filas).filter(([e]) => e.includes(q))
-        .sort((x, y) => Object.values(y[1]).reduce((s, v) => s + v[0], 0) - Object.values(x[1]).reduce((s, v) => s + v[0], 0)).slice(0, 25);
-      if (!hallados.length) { res.replaceChildren(el('p', 'Ningún inversor de la lista tiene una empresa con ese nombre.', 'reparto-hint')); return; }
-      const t = document.createElement('table');
-      t.innerHTML = `<thead><tr><th>Empresa</th>${d.gestores.map((g) => `<th>${g.nombre}</th>`).join('')}</tr></thead>`;
+      if (q.length < 2) { res.replaceChildren(); return; }
+      const filas = [], usados = new Set();
+      remotos.forEach((r) => { const m = dePorNombre(r.name); if (m) usados.add(m[0]); filas.push({ nombre: r.name, simbolo: r.symbol, por: m ? m[1] : null }); });
+      Object.entries(d.filas).filter(([e]) => e.includes(q) && !usados.has(e))
+        .sort((x, y) => Object.values(y[1]).reduce((s, v) => s + v[0], 0) - Object.values(x[1]).reduce((s, v) => s + v[0], 0))
+        .slice(0, 25).forEach(([e, por]) => filas.push({ nombre: e, simbolo: null, por }));
+      if (!filas.length) { res.replaceChildren(el('p', 'No encuentro ninguna empresa con ese nombre.', 'reparto-hint')); return; }
+      const t = document.createElement('table'); t.innerHTML = '<thead><tr><th>Empresa</th><th class="text-right">Precio</th><th>Quién la tiene</th></tr></thead>';
       const tb = document.createElement('tbody');
-      hallados.forEach(([emisor, por]) => {
-        const tr = document.createElement('tr'); if (sigo(emisor)) tr.className = 'sigo';
-        tr.append(el('td', emisor, 'tk'));
-        d.gestores.forEach((g) => {
-          const f = por[g.clave], td = document.createElement('td');
-          if (f) td.append(`${f[0].toLocaleString('es-ES')} % · ${f[1].toLocaleString('es-ES')} acc. `, cambio(f[2])); else td.textContent = '—';
-          tr.append(td);
+      filas.slice(0, 30).forEach((f) => {
+        const tr = document.createElement('tr'); if (sigo(f.nombre)) tr.className = 'sigo';
+        const emp = document.createElement('td'); emp.append(el('span', f.nombre, 'tk')); if (f.simbolo) { const s = el('span', f.simbolo, 'section-badge'); s.style.cssText = 'margin-left:8px;background:var(--bg-input);color:var(--text-secondary);'; emp.append(s); }
+        const pr = f.simbolo && preciosAcc && preciosAcc[f.simbolo], precio = el('td', '', 'text-right');
+        if (pr) { precio.append(`${pr.price.toLocaleString('es-ES', { maximumFractionDigits: 2 })} ${pr.currency === 'EUR' ? '€' : '$'} `); if (pr.change) precio.append(cambio(Math.round(pr.change * 100) / 100)); } else precio.textContent = '—';
+        const quien = document.createElement('td');
+        d.gestores.filter((g) => f.por && f.por[g.clave]).forEach((g) => {
+          const v = f.por[g.clave], chip = document.createElement('span'); chip.className = 'chip'; chip.style.cssText = 'margin:0 6px 4px 0;display:inline-flex;gap:6px;align-items:center';
+          chip.title = `${g.nombre}: ${v[0].toLocaleString('es-ES')} % de su cartera · ${v[1].toLocaleString('es-ES')} acciones`;
+          chip.append(el('b', g.corto), `${v[0].toLocaleString('es-ES')} %`, cambio(v[2])); quien.append(chip);
         });
-        tb.append(tr);
+        if (!quien.hasChildNodes()) { quien.textContent = 'Ninguno de tus inversores'; quien.style.color = 'var(--text-muted)'; }
+        tr.append(emp, precio, quien); tb.append(tr);
       });
       t.append(tb); res.replaceChildren(t);
     }
-    entrada.addEventListener('input', pintarRes); pintarRes();
-    sec.append(h, campo, nota, res); caja.replaceChildren(sec);
+    let espera = null;
+    entrada.addEventListener('input', () => {
+      pintarRes();
+      clearTimeout(espera); const q = entrada.value.trim();
+      if (q.length < 2) { remotos = []; return; }
+      espera = setTimeout(() => {   // búsqueda por nombre o símbolo (Twelve Data, solo EE. UU. y símbolos que empiezan por letra); si falla, quedan los resultados del 13F
+        ultima = q;
+        Promise.all([fetch(`https://api.twelvedata.com/symbol_search?symbol=${encodeURIComponent(q)}&outputsize=30`).then((r) => r.json()), cargaPrecios()])
+          .then(([r]) => { if (ultima !== q) return; const vistos = new Set();
+            remotos = (r.data || []).filter((x) => x.country === 'United States' && /^[A-Z][A-Z0-9.]{0,9}$/.test(x.symbol) && !vistos.has(x.symbol) && vistos.add(x.symbol)).slice(0, 6).map((x) => ({ symbol: x.symbol, name: x.instrument_name })); pintarRes(); })
+          .catch(() => {});
+      }, 400);
+    });
+    cargaPrecios().then(pintarRes);
+    sec.append(h, campo, res); caja.replaceChildren(sec);
   }
   function pintarPersonas(d) { document.getElementById('b13f-insiders').replaceChildren(...d.personas.map(seccionPersona)); }
   const MOVIMIENTOS = [   // [simbolo, singular, plural, clase del chip, test sobre cambio_acciones_pct]
