@@ -599,12 +599,15 @@ const App = (() => {
   // Precios de acciones/ETF: los baja la Action 'Actualizar precios de acciones' (Twelve Data, clave en un secreto de GitHub) a data/precios.json;
   // aquí solo se lee ese archivo. Sin precio reciente (más de 5 días) o en otra moneda, la acción sigue valiendo a precio de compra.
   async function fetchStockPrices() {
-    if (!portfolio.some(a => a.kind === 'stock')) return;
+    // También las acciones añadidas con el buscador que aún no están en cartera: así una primera compra con solo el importe ya sabe el precio.
+    const toks = [...new Set([...portfolio.filter(a => a.kind === 'stock').map(a => a.token), ...Object.keys(settings.customStocks || {})])];
+    if (!toks.length) return;
     try {
       const res = await fetch('data/precios.json', { cache: 'no-cache' });
       if (!res.ok) return;
       const d = await res.json();
-      portfolio.filter(a => a.kind === 'stock').forEach(a => {
+      toks.forEach(tok => {
+        const a = { token: tok };
         const p = d.precios?.[a.token];
         if (!p || !(p.price > 0) || Date.now() - Date.parse(p.ts || d.updated) > 5 * 86400000) return;
         const usd = p.currency === 'USD' ? p.price : p.currency === 'EUR' ? p.price / EUR_USD : null;   // EUR_USD = € por $
@@ -2615,7 +2618,7 @@ const App = (() => {
     } catch (e) { /* sin precio en vivo: se escribe el importe a mano */ }
   }
 
-  function chooseStock(c) {
+  async function chooseStock(c) {
     const token = c.symbol, err = document.getElementById('add-error');
     if (COINS[token] && COINS[token].kind !== 'stock') {
       // Una crypto añadida por búsqueda con el símbolo de una acción (p. ej. TSLA de Backpack) se pasa a acción: sale del catálogo crypto y,
@@ -2641,6 +2644,8 @@ const App = (() => {
     document.getElementById('add-coin-search').value = '';
     renderCoinResults(null);
     selectToken(token);
+    await fetchStockPrices();   // aún no está en cartera: se pide su precio para que el importe se convierta en unidades
+    if (addState.token === token) renderAddPrice();
   }
 
   // Parseo robusto: acepta coma decimal (0,044) y punto (0.044).
@@ -2650,7 +2655,7 @@ const App = (() => {
   // Precio en vivo de la moneda seleccionada, en €.
   function addPriceEur() {
     const t = addState.token;
-    const usd = prices[t]?.price || portfolio.find(a => a.token === t)?.avgPrice || (t === 'USDC' ? 1 : 0);
+    const usd = prices[t]?.price || settings.manualPrices?.[t]?.usd || portfolio.find(a => a.token === t)?.avgPrice || (t === 'USDC' ? 1 : 0);
     return usd * EUR_USD;
   }
 
