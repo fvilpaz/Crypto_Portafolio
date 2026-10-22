@@ -42,7 +42,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   const fx = window.mkFx, view = document.getElementById('mercado'), cont = document.getElementById('b13f');
   let datos = null, indice = null, coin = null;
   // Las empresas que sigo en bolsa las define scripts/update_13f.py (SEGUIDAS) y llegan en coin.seguidas.
-  const sigo = (emisor) => !!coin && coin.seguidas.some((s) => emisor.toUpperCase().includes(s.patron));
+  const sigo = (emisor) => listaSeguimiento().some((x) => { const a = norm(x.n), b = norm(emisor); return !!a && !!b && (a === b || b.startsWith(a + ' ') || a.startsWith(b + ' ')); });
   const el = (tag, txt, cls) => { const e = document.createElement(tag); e.textContent = txt; if (cls) e.className = cls; return e; };
   const billones = (usd) => (fx.toCur(usd) / 1e9).toLocaleString('es-ES', { maximumFractionDigits: 1 }) + ' mil M' + (fx.cur() === 'EUR' ? '€' : '$');
   const dia = (iso) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -168,6 +168,77 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     .then((p) => fetch('data/fundamentales.json').then((r) => r.json()).then((f) => { fundAcc = f.empresas || {}; return p; }).catch(() => p)));
   const SUFIJOS = new Set(['INC', 'CORP', 'CORPORATION', 'CO', 'COMPANY', 'LTD', 'LIMITED', 'PLC', 'HOLDINGS', 'HLDGS', 'GROUP', 'THE', 'NV', 'SA', 'AG', 'LLC', 'LP']);
   const norm = (s) => String(s).toUpperCase().replace(/[.,&'()/-]/g, ' ').split(/\s+/).filter((w) => w && !SUFIJOS.has(w)).join(' ');
+  const n2g = (v) => v.toLocaleString('es-ES', { maximumFractionDigits: 2 });
+  const grandeUsd = (v) => (v >= 1e9 ? n2g(v / 1e9) + ' mil M$' : v >= 1e6 ? n2g(v / 1e6) + ' M$' : n2g(v) + ' $');   // 'mil M' = miles de millones, como en el resto de Mercado
+  const cambioChip = (c) => c === 'nueva' ? el('span', '★ nueva', 'chip new') : c === 'salio' ? el('span', '✖ vendió todo', 'chip dn') : c === 0 ? el('span', '=', 'chip') : el('span', (c > 0 ? '▲ +' : '▼ ') + c.toLocaleString('es-ES') + ' %', 'chip ' + (c > 0 ? 'up' : 'dn'));
+  // Celda con un chip por inversor que tiene la empresa (o que la vendió entera): lo usan el Rastreo y el Seguimiento.
+  function chipsPoseedores(por, gestores) {
+    const td = document.createElement('td');
+    gestores.filter((g) => por && por[g.clave]).forEach((g) => {
+      const v = por[g.clave], chip = document.createElement('span'); chip.className = 'chip'; chip.style.cssText = 'margin:0 6px 4px 0;display:inline-flex;gap:6px;align-items:center';
+      const salio = v[2] === 'salio';   // ya no la tiene: v[3] y v[4] son el peso y las acciones que tenía el trimestre anterior
+      chip.title = salio ? `${g.nombre}: la vendió entera este trimestre (tenía ${v[3].toLocaleString('es-ES')} % de su cartera · ${v[4].toLocaleString('es-ES')} acciones)` : `${g.nombre}: ${v[0].toLocaleString('es-ES')} % de su cartera · ${v[1].toLocaleString('es-ES')} acciones`;
+      chip.append(el('b', g.corto), salio ? `tenía ${v[3].toLocaleString('es-ES')} %` : `${v[0].toLocaleString('es-ES')} %`, cambioChip(v[2])); td.append(chip);
+    });
+    if (!td.hasChildNodes()) { td.textContent = 'Ninguno de tus inversores'; td.style.color = 'var(--text-muted)'; }
+    return td;
+  }
+  // Seguimiento (watchlist): las acciones de tu cartera se siguen solas y el resto se marca con la estrella del Rastreo (se guarda en este navegador).
+  const SEG_KEY = 'miCartera.seguimiento';
+  const leeSeg = () => { try { const a = JSON.parse(localStorage.getItem(SEG_KEY) || '[]'); return Array.isArray(a) ? a.filter((x) => x && /^[A-Z0-9.]{1,10}$/.test(x.s)) : []; } catch (e) { return []; } };
+  const guardaSeg = (a) => { try { localStorage.setItem(SEG_KEY, JSON.stringify(a)); } catch (e) { /* sin almacenamiento: no se guarda */ } };
+  const carteraAcc = () => { try { const s = JSON.parse(localStorage.getItem('miCartera.v1') || '{}'); return (s.portfolio || []).filter((a) => a.kind === 'stock' && /^[A-Z0-9.]{1,10}$/.test(a.token)).map((a) => ({ s: a.token, n: String(a.name || a.token).replace(/&amp;/g, '&') })); } catch (e) { return []; } };
+  function listaSeguimiento() {
+    const mapa = new Map();
+    carteraAcc().forEach((x) => mapa.set(x.s, { s: x.s, n: x.n, auto: true }));
+    leeSeg().forEach((x) => { if (!mapa.has(x.s)) mapa.set(x.s, { s: x.s, n: String(x.n || x.s), auto: false }); });
+    return [...mapa.values()];
+  }
+  function botonEstrella(simbolo, nombre) {
+    const b = document.createElement('button'); b.type = 'button'; b.style.cssText = 'border:0;background:none;cursor:pointer;font-size:17px;line-height:1;margin-right:8px;color:var(--accent-yellow);padding:0';
+    const auto = carteraAcc().some((x) => x.s === simbolo);
+    const pon = () => { const sigue = auto || leeSeg().some((x) => x.s === simbolo); b.textContent = sigue ? '★' : '☆'; b.title = auto ? 'Está en tu cartera: se sigue sola' : sigue ? 'Dejar de seguir' : 'Seguir esta empresa'; };
+    pon();
+    b.addEventListener('click', (ev) => {
+      ev.stopPropagation(); if (auto) return;
+      const l = leeSeg(), i = l.findIndex((x) => x.s === simbolo);
+      if (i >= 0) l.splice(i, 1); else l.push({ s: simbolo, n: nombre });
+      guardaSeg(l); pon(); pintarSeguimiento();
+    });
+    return b;
+  }
+  let idxNombres = null;   // nombre normalizado de emisor -> {inversor: [peso, acciones, cambio]} (del 13F)
+  function poseedoresDe(pos, nombre) {
+    if (!idxNombres) { idxNombres = new Map(); Object.entries(pos.filas).forEach(([e, por]) => { const k = norm(e); if (k && !idxNombres.has(k)) idxNombres.set(k, por); }); }
+    const k = norm(nombre); if (!k) return null;
+    if (idxNombres.has(k)) return idxNombres.get(k);
+    for (const [kk, v] of idxNombres) if (kk.startsWith(k + ' ') || k.startsWith(kk + ' ')) return v;
+    return null;
+  }
+  function pintarSeguimiento() {
+    const tb = document.getElementById('b13f-seguidas'); if (!tb) return;
+    Promise.all([cargaPrecios(), cargaPos()]).then(([pr, pos]) => {
+      const l = listaSeguimiento();
+      const poner = (id, txt) => { const e = document.getElementById(id); if (e) e.textContent = txt; };
+      poner('k-seguimiento-resumen', l.length ? `${l.length} empresa${l.length === 1 ? '' : 's'}` : 'ninguna todavía');
+      poner('b13f-sigues', 'Las acciones de tu cartera se siguen solas. Para seguir otra, pulsa la ☆ junto a su nombre en el Rastreo. Donde aparecen en las tablas de Mercado se marcan en turquesa.');
+      if (!l.length) { const tr = document.createElement('tr'), td = el('td', 'Todavía no sigues ninguna empresa: busca una en el Rastreo y pulsa la ☆.', 'nm'); td.colSpan = 7; tr.append(td); tb.replaceChildren(tr); return; }
+      tb.replaceChildren(...l.map((x) => {
+        const p = pr[x.s], fu = fundAcc[x.s], usd = !!p && p.currency !== 'EUR', mon = p && p.currency === 'EUR' ? '€' : '$';
+        const num = (txt, titulo) => { const c = el('td', txt == null ? '—' : txt, 'text-right'); if (titulo) c.title = titulo; return c; };
+        const tr = document.createElement('tr'); tr.className = 'sigo';
+        const emp = document.createElement('td');
+        emp.append(x.auto ? el('span', '★', '') : botonEstrella(x.s, x.n)); if (x.auto) emp.firstChild.style.cssText = 'color:var(--accent-yellow);margin-right:8px';
+        emp.append(el('span', x.n, 'tk')); const sg = el('span', x.s, 'section-badge'); sg.style.cssText = 'margin-left:8px;background:var(--bg-input);color:var(--text-secondary);'; emp.append(sg);
+        if (x.auto) { const t = el('span', 'en tu cartera', 'section-badge'); t.style.cssText = 'margin-left:6px;background:var(--accent-green-bg);color:var(--accent-green);'; emp.append(t); }
+        const rango = p && p.min_52s != null && p.max_52s > p.min_52s ? Math.round((p.price - p.min_52s) / (p.max_52s - p.min_52s) * 100) : null;
+        const cv = document.createElement('td'); cv.className = 'text-right'; if (p) { if (p.change) cv.append(cambioChip(Math.round(p.change * 100) / 100)); else cv.textContent = '0 %'; } else cv.textContent = '—';
+        tr.append(emp, num(p ? `${n2g(p.price)} ${mon}` : null, p ? '' : 'Sin dato: no está en la lista de precios automáticos'), cv, num(rango !== null ? rango + ' %' : null, 'Dónde está el precio entre el mínimo (0 %) y el máximo (100 %) de las últimas 52 semanas'),
+          usd && fu && fu.acciones ? num(grandeUsd(p.price * fu.acciones)) : num(null), usd && fu && fu.bpa > 0 ? num(n2g(p.price / fu.bpa)) : num(null), chipsPoseedores(poseedoresDe(pos, x.n), pos.gestores));
+        return tr;
+      }));
+    });
+  }
   function buscador(d) {
     const caja = document.getElementById('b13f-buscar');
     const sec = document.createElement('details'); sec.className = 'card mk-desplegable'; sec.open = true; sec.style.cssText = 'margin-top:12px;padding:12px 16px';
@@ -179,7 +250,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     const campo = document.createElement('div'); campo.className = 'add-field'; campo.style.marginTop = '12px';
     const entrada = document.createElement('input'); entrada.type = 'text'; entrada.placeholder = 'Busca una empresa: Amazon, Vistra, Chevron, AAPL…'; entrada.autocomplete = 'off'; campo.append(entrada);
     const res = el('div', '', 'table-wrapper'); res.style.marginTop = '12px';
-    const cambio = (c) => c === 'nueva' ? el('span', '★ nueva', 'chip new') : c === 'salio' ? el('span', '✖ vendió todo', 'chip dn') : c === 0 ? el('span', '=', 'chip') : el('span', (c > 0 ? '▲ +' : '▼ ') + c.toLocaleString('es-ES') + ' %', 'chip ' + (c > 0 ? 'up' : 'dn'));
+    const cambio = cambioChip;
     // 13F: emisor → {clave: [peso, acciones, cambio]}; índice por nombre normalizado para unir con los resultados de la búsqueda por símbolo
     const porNorm = new Map(); Object.entries(d.filas).forEach(([e, por]) => { const k = norm(e); if (k && !porNorm.has(k)) porNorm.set(k, [e, por]); });
     const dePorNombre = (nombreEmpresa) => { const k = norm(nombreEmpresa); if (!k) return null; if (porNorm.has(k)) return porNorm.get(k); for (const [kk, v] of porNorm) if (kk.startsWith(k + ' ') || k.startsWith(kk + ' ')) return v; return null; };
@@ -198,6 +269,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
       filas.slice(0, 30).forEach((f) => {
         const tr = document.createElement('tr'); if (sigo(f.nombre)) tr.className = 'sigo';
         const emp = document.createElement('td'); emp.append(el('span', f.nombre, 'tk')); if (f.simbolo) { const s = el('span', f.simbolo, 'section-badge'); s.style.cssText = 'margin-left:8px;background:var(--bg-input);color:var(--text-secondary);'; emp.append(s); }
+        if (f.simbolo) emp.prepend(botonEstrella(f.simbolo, f.nombre));   // ☆ seguir / ★ ya la sigues
         const pr = f.simbolo && preciosAcc && preciosAcc[f.simbolo], fu = (f.simbolo && fundAcc[f.simbolo]) || null;
         const n2 = (v) => v.toLocaleString('es-ES', { maximumFractionDigits: 2 }), usd = pr && pr.currency !== 'EUR';
         const mon = pr && pr.currency === 'EUR' ? '€' : '$';
@@ -218,14 +290,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
           pr && pr.volumen ? celda(pr.volumen >= 1e6 ? n2(pr.volumen / 1e6) + ' M' : pr.volumen.toLocaleString('es-ES')) : vacio(), capi, per,
           fu && fu.bpa != null ? celda(n2(fu.bpa) + ' $', ejercicio) : vacio(sinFund), fu && fu.ingresos ? celda(grande(fu.ingresos), ejercicio) : vacio(sinFund),
           fu && fu.beneficio != null ? celda(grande(fu.beneficio), ejercicio) : vacio(sinFund));
-        const quien = document.createElement('td');
-        d.gestores.filter((g) => f.por && f.por[g.clave]).forEach((g) => {
-          const v = f.por[g.clave], chip = document.createElement('span'); chip.className = 'chip'; chip.style.cssText = 'margin:0 6px 4px 0;display:inline-flex;gap:6px;align-items:center';
-          const salio = v[2] === 'salio';   // ya no la tiene: v[3] y v[4] son el peso y las acciones que tenía el trimestre anterior
-          chip.title = salio ? `${g.nombre}: la vendió entera este trimestre (tenía ${v[3].toLocaleString('es-ES')} % de su cartera · ${v[4].toLocaleString('es-ES')} acciones)` : `${g.nombre}: ${v[0].toLocaleString('es-ES')} % de su cartera · ${v[1].toLocaleString('es-ES')} acciones`;
-          chip.append(el('b', g.corto), salio ? `tenía ${v[3].toLocaleString('es-ES')} %` : `${v[0].toLocaleString('es-ES')} %`, cambio(v[2])); quien.append(chip);
-        });
-        if (!quien.hasChildNodes()) { quien.textContent = 'Ninguno de tus inversores'; quien.style.color = 'var(--text-muted)'; }
+        const quien = chipsPoseedores(f.por, d.gestores);
         tr.append(quien); tb.append(tr);
       });
       t.append(tb); res.replaceChildren(t);
@@ -294,9 +359,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     document.getElementById('b13f-coinciden').replaceChildren(...coin.filas.map(filaCoinciden));
     poner('k-coinciden-resumen', `${coin.en_2_o_mas} empresas en 2 o más carteras`);
     if (indice) ['b13f-leyenda', 'b13f-leyenda2'].forEach(pintaLeyenda);
-    poner('k-seguimiento-resumen', `${coin.seguidas.filter((s) => s.gestores.length).length} de ${coin.seguidas.length} las tiene algún inversor`);
-    poner('b13f-sigues', `Tus empresas en seguimiento: ${coin.seguidas.map((s) => s.nombre).join(', ')}. Donde aparecen en las tablas de Mercado, se marcan en turquesa.`);
-    document.getElementById('b13f-seguidas').replaceChildren(...coin.seguidas.map(filaSeguida));
+    pintarSeguimiento();
   }
   document.getElementById('mk-btn').addEventListener('click', () => {
     if (view.hidden || datos) return;
