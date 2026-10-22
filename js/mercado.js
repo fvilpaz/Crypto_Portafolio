@@ -166,7 +166,15 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
         const tr = document.createElement('tr'); if (sigo(f.nombre)) tr.className = 'sigo';
         const emp = document.createElement('td'); emp.append(el('span', f.nombre, 'tk')); if (f.simbolo) { const s = el('span', f.simbolo, 'section-badge'); s.style.cssText = 'margin-left:8px;background:var(--bg-input);color:var(--text-secondary);'; emp.append(s); }
         const pr = f.simbolo && preciosAcc && preciosAcc[f.simbolo], precio = el('td', '', 'text-right');
-        if (pr) { precio.append(`${pr.price.toLocaleString('es-ES', { maximumFractionDigits: 2 })} ${pr.currency === 'EUR' ? '€' : '$'} `); if (pr.change) precio.append(cambio(Math.round(pr.change * 100) / 100)); } else precio.textContent = '—';
+        if (pr) {
+          const mon = pr.currency === 'EUR' ? '€' : '$', n2 = (v) => v.toLocaleString('es-ES', { maximumFractionDigits: 2 });
+          precio.append(`${n2(pr.price)} ${mon} `); if (pr.change) precio.append(cambio(Math.round(pr.change * 100) / 100));
+          const datos = [];   // datos técnicos (de Yahoo): rango del día, rango de 52 semanas y volumen
+          if (pr.dia_min != null && pr.dia_max != null) datos.push(`Día ${n2(pr.dia_min)}–${n2(pr.dia_max)}`);
+          if (pr.min_52s != null && pr.max_52s > pr.min_52s) datos.push(`52 sem. ${n2(pr.min_52s)}–${n2(pr.max_52s)} (${Math.round((pr.price - pr.min_52s) / (pr.max_52s - pr.min_52s) * 100)} % del rango)`);
+          if (pr.volumen) datos.push('Vol. ' + (pr.volumen >= 1e6 ? n2(pr.volumen / 1e6) + ' M' : pr.volumen.toLocaleString('es-ES')));
+          if (datos.length) precio.append(el('div', datos.join(' · '), 'nm'));
+        } else precio.textContent = '—';
         const quien = document.createElement('td');
         d.gestores.filter((g) => f.por && f.por[g.clave]).forEach((g) => {
           const v = f.por[g.clave], chip = document.createElement('span'); chip.className = 'chip'; chip.style.cssText = 'margin:0 6px 4px 0;display:inline-flex;gap:6px;align-items:center';
