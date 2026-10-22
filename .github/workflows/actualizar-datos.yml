@@ -44,7 +44,7 @@ jobs:
         run: |
           if [ -z "$SEC_USER_AGENT" ]; then echo "::warning::Falta el secreto SEC_USER_AGENT: se omiten los insiders"; exit 0; fi
           python scripts/update_insiders.py || { echo "::warning::Fallo update_insiders.py: se conservan los datos anteriores"; git checkout -- data/insiders.json; }
-      - name: Fundamentales (SEC: capitalizacion, PER, ingresos, beneficio)
+      - name: Fundamentales de la SEC (capitalizacion, PER, ingresos, beneficio)
         env:
           SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
         run: |
