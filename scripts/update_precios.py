@@ -36,17 +36,39 @@ def cargar_lista():
     return lista
 
 
+def media(c, n):
+    """Media movil simple de los ultimos n cierres (None si no hay tantos)."""
+    return sum(c[-n:]) / n if len(c) >= n else None
+
+
+def rsi(c, n=14):
+    """RSI de Wilder a n periodos (0-100): fuerza de las subidas frente a las bajadas recientes."""
+    if len(c) < n + 1:
+        return None
+    g = sum(max(c[i] - c[i - 1], 0) for i in range(1, n + 1)) / n
+    p = sum(max(c[i - 1] - c[i], 0) for i in range(1, n + 1)) / n
+    for i in range(n + 1, len(c)):
+        g = (g * (n - 1) + max(c[i] - c[i - 1], 0)) / n
+        p = (p * (n - 1) + max(c[i - 1] - c[i], 0)) / n
+    return 100.0 if p == 0 else 100 - 100 / (1 + g / p)
+
+
 def yahoo(ticker):
     """Precio desde el grafico publico de Yahoo Finance. Devuelve (error, datos); error es None si todo fue bien."""
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(ticker)}?interval=1d&range=1d"
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{urllib.parse.quote(ticker)}?interval=1d&range=1y"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     try:
         with urllib.request.urlopen(req, timeout=30) as r:
-            m = json.loads(r.read())["chart"]["result"][0]["meta"]
-        precio, previo = float(m["regularMarketPrice"]), float(m.get("chartPreviousClose") or 0)
+            res = json.loads(r.read())["chart"]["result"][0]
+        m = res["meta"]
+        cierres = [x for x in (res.get("indicators", {}).get("quote") or [{}])[0].get("close", []) if x is not None]   # un año de cierres diarios
+        precio = float(m["regularMarketPrice"])
+        previo = float(cierres[-2]) if len(cierres) >= 2 else float(m.get("chartPreviousClose") or 0)   # con rango de 1 año chartPreviousClose es el del primer dia del rango
+        tecnico = {"sma50": media(cierres, 50), "sma200": media(cierres, 200), "rsi14": rsi(cierres), "serie": [round(x, 2) for x in cierres[::-5][::-1][-52:]] if len(cierres) >= 20 else None}
+        tecnico = {k: (round(v, 2) if isinstance(v, float) else v) for k, v in tecnico.items() if v is not None}
         extra = {k: m.get(src) for k, src in (("dia_min", "regularMarketDayLow"), ("dia_max", "regularMarketDayHigh"), ("volumen", "regularMarketVolume"),
                                               ("min_52s", "fiftyTwoWeekLow"), ("max_52s", "fiftyTwoWeekHigh")) if isinstance(m.get(src), (int, float))}   # datos tecnicos del propio grafico
-        return None, {"close": precio, "percent_change": (precio / previo - 1) * 100 if previo > 0 else 0, "currency": m.get("currency"), "exchange": m.get("exchangeName"), **extra}
+        return None, {"close": precio, "percent_change": (precio / previo - 1) * 100 if previo > 0 else 0, "currency": m.get("currency"), "exchange": m.get("exchangeName"), **extra, **tecnico}
     except urllib.error.HTTPError as e:
         return f"{e.code}: Yahoo no dio el precio de {ticker}", None
     except Exception as e:
@@ -91,6 +113,12 @@ def main():
     previo = anterior.get("precios", {})
     precios = {s: v for s, v in previo.items() if s in simbolos}   # lo que falle ahora conserva su precio (y su fecha) anterior
     errores, nuevos, usados_twelve, parar_twelve = {}, 0, 0, False
+    SALIDA_TEC = SALIDA.with_name("tecnico.json")   # medias, RSI y serie de un año: cambian poco en el dia, asi que no se reescriben cada 2 horas
+    try:
+        tec_anterior = json.loads(SALIDA_TEC.read_text(encoding="utf8"))
+    except Exception:
+        tec_anterior = {}
+    tecnico = {s: v for s, v in tec_anterior.get("simbolos", {}).items() if s in simbolos}
     ahora = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
     for it in lista:
@@ -121,6 +149,9 @@ def main():
             continue
         precios[sim] = {"price": d["close"], "change": d["percent_change"], "currency": d["currency"], "exchange": d["exchange"], "ts": ahora,
                         **{k: d[k] for k in ("dia_min", "dia_max", "volumen", "min_52s", "max_52s") if k in d}}
+        tec = {k: d[k] for k in ("sma50", "sma200", "rsi14", "serie") if k in d}
+        if tec:
+            tecnico[sim] = tec
         nuevos += 1
         print(f"OK {sim} ({fuente}): {d['close']} {d['currency']}")
 
@@ -137,6 +168,12 @@ def main():
         print("Sin cambios en los precios: no se reescribe el archivo.")
         return 0
     SALIDA.write_text(json.dumps({"updated": ahora, "fuente": "Yahoo Finance (respaldo: Twelve Data)", "precios": precios, "errores": errores}, ensure_ascii=False, indent=1) + "\n", encoding="utf8")
+    try:
+        tec_reciente = (datetime.now(timezone.utc) - datetime.fromisoformat(tec_anterior["updated"])).total_seconds() < 20 * 3600
+    except Exception:
+        tec_reciente = False
+    if tecnico and not (tec_reciente and set(tecnico) == set(tec_anterior.get("simbolos", {}))):
+        SALIDA_TEC.write_text(json.dumps({"updated": ahora, "fuente": "Calculado con un año de cierres diarios de Yahoo Finance", "simbolos": tecnico}, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf8")
     return 0
 
 

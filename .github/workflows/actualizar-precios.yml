@@ -37,10 +37,10 @@ jobs:
         env:
           TWELVE_DATA_KEY: ${{ secrets.TWELVE_DATA_KEY }}
         run: |
-          python scripts/update_precios.py || { echo "::warning::Fallo update_precios.py: se conservan los precios anteriores"; git checkout -- data/precios.json; }
+          python scripts/update_precios.py || { echo "::warning::Fallo update_precios.py: se conservan los precios anteriores"; git checkout -- data/precios.json data/tecnico.json; }
       - name: Subir si hay cambios y desplegar
         run: |
-          git add data/precios.json
+          git add data/precios.json data/tecnico.json
           if git diff --cached --quiet; then echo "Sin cambios"; exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
