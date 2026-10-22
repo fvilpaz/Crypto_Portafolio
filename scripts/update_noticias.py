@@ -17,6 +17,13 @@ UA = os.environ.get("SEC_USER_AGENT")
 if not UA:
     sys.exit('Falta SEC_USER_AGENT, p. ej.: SEC_USER_AGENT="Crypto_Portafolio tu@correo.com"')
 NOTICIAS_POR_EMPRESA, DIAS_MAX, PAUSA = 3, 14, 1.2
+PALABRAS_ES = {"de", "la", "el", "en", "los", "las", "del", "por", "para", "con", "que", "un", "una", "se", "su", "al", "más", "y", "tras", "ante", "sobre"}
+
+
+def es_espanol(titulo):
+    """Heuristica sencilla: un titular en espanol lleva algunas palabras vacias tipicas o letras como la enie y las vocales con tilde."""
+    palabras = [w.strip(".,:;¿?¡!()\"'").lower() for w in titulo.split()]
+    return sum(w in PALABRAS_ES for w in palabras) >= 2 or any(c in titulo for c in "ñáéíóú¿¡")
 
 
 def get(url, ua):
@@ -41,10 +48,9 @@ def titulares(consulta):
         titulo, fuente = (it.findtext("title") or "").strip(), (it.findtext("source") or "").strip()
         if fuente and titulo.endswith(" - " + fuente):   # Google anade el medio al final del titulo
             titulo = titulo[: -len(fuente) - 3]
-        salida.append([titulo, enlace, fuente, fecha.astimezone(timezone.utc).date().isoformat()])
-        if len(salida) >= NOTICIAS_POR_EMPRESA:
-            break
-    return salida
+        salida.append([titulo, enlace, fuente, fecha.astimezone(timezone.utc).date().isoformat(), "es" if es_espanol(titulo) else "en"])
+    salida.sort(key=lambda n: n[4] != "es")   # primero los titulares en espanol (el orden por fecha se conserva dentro de cada idioma)
+    return salida[:NOTICIAS_POR_EMPRESA]
 
 
 def main():

@@ -322,11 +322,11 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
       cargaNoticias().then((todas) => {
         const l = todas[f.simbolo];
         if (!l || !l.length) { nt.append(el('p', 'Sin noticias recientes en la última actualización.', 'nm')); return; }
-        l.forEach(([titulo, url, fuente, fecha]) => {
+        l.forEach(([titulo, url, fuente, fecha, idioma]) => {
           const fila = document.createElement('div'); fila.style.cssText = 'padding:5px 0;display:flex;gap:10px;flex-wrap:wrap;align-items:baseline';
           const a = el('a', titulo, ''); if (/^https:\/\//.test(url)) { a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; }
           a.style.cssText = 'color:var(--text-primary);text-decoration:none;font-weight:600;max-width:100%;min-width:0;overflow-wrap:anywhere';
-          fila.append(a, el('span', `${fuente || 'medio'} · ${new Date(fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`, 'nm')); nt.append(fila);
+          fila.append(a, el('span', `${fuente || 'medio'} · ${new Date(fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`, 'nm')); if (idioma === 'en') { const en = el('span', 'inglés', 'chip'); en.title = 'Titular en inglés'; fila.append(en); } nt.append(fila);
         });
       });
     }
