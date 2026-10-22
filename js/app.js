@@ -1149,6 +1149,8 @@ const App = (() => {
   const ETF_CORTO = { VUAA: 'S&P 500', VUSA: 'S&P 500 Dist', CSPX: 'S&P 500', SXR8: 'S&P 500', SPYL: 'S&P 500', VOO: 'S&P 500', SPY: 'S&P 500', IVV: 'S&P 500',
     VWCE: 'Global', VWRL: 'Global Dist', VT: 'Global', IWDA: 'MSCI World', EUNL: 'MSCI World', SWDA: 'MSCI World', VTI: 'USA total', VXUS: 'Internacional',
     EQQQ: 'Nasdaq 100', CNDX: 'Nasdaq 100', QQQ: 'Nasdaq 100', EMIM: 'Emergentes', VUG: 'Growth', SCHD: 'Dividendos', VYM: 'Dividendos' };
+  // Nombre corto para la tabla: la lista de la SEC trae el título legal ("Shell plc American Depositary Shares (Each representing…)"); se corta antes de la clase de valor.
+  const nombreCorto = (n) => String(n).replace(/\s+(American Depositary|Class [A-Z]|Common Stock|Ordinary Shares|Depositary).*$/i, '');
   function bolsaNombre(tok) {
     if (ETF_CORTO[tok]) return ETF_CORTO[tok];
     const nombre = limpiaNombre(bolsaLista().find(x => x[0] === tok)?.[1] || COINS[tok]?.name || tok);
@@ -1726,7 +1728,7 @@ const App = (() => {
             <div class="token-cell">
               ${iconHtml(asset.token, asset.cssClass)}
               <div>
-                <div class="token-name">${asset.name}${asset.hidden ? ' <span class="hidden-tag">oculta</span>' : ''}</div>
+                <div class="token-name" title="${asset.name}">${nombreCorto(asset.name)}${asset.hidden ? ' <span class="hidden-tag">oculta</span>' : ''}</div>
                 <div class="token-symbol">${asset.token}</div>
               </div>
             </div>
