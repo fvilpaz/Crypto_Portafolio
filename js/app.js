@@ -2665,7 +2665,8 @@ const App = (() => {
   // Precio en vivo de la moneda seleccionada, en €.
   function addPriceEur() {
     const t = addState.token;
-    const usd = prices[t]?.price || settings.manualPrices?.[t]?.usd || portfolio.find(a => a.token === t)?.avgPrice || (t === 'USDC' ? 1 : 0);
+    // El precio de compra (avgPrice) solo vale como precio de una crypto; en una acción no: una compra anterior de 1 € como 1 unidad lo dejaría como "precio" y el importe volvería a dar 1 unidad.
+    const usd = prices[t]?.price || settings.manualPrices?.[t]?.usd || (COINS[t]?.kind === 'stock' ? 0 : portfolio.find(a => a.token === t)?.avgPrice) || (t === 'USDC' ? 1 : 0);
     return usd * EUR_USD;
   }
 
@@ -2804,14 +2805,17 @@ const App = (() => {
     let qty = parseNum(document.getElementById('add-qty').value);
     const amountEur = parseNum(document.getElementById('add-amount').value);
     const isReward = type === 'Recompensa';
-    // Compra sin precio conocido (p. ej. una acción sin cotización en vivo) y solo importe: no se puede calcular la cantidad, así que se guarda
-    // como 1 unidad al precio pagado. Así se abre una posición de 1 € sin tener que inventar cuántas unidades son.
+    // Compra sin precio conocido y solo importe: en una crypto se guarda como 1 unidad al precio pagado; en una acción hay que dar el precio por
+    // unidad o la cantidad (con 1 unidad inventada, al llegar el precio real la posición valdría cientos de veces lo que pagaste).
     const precioManual = addSinPrecio() ? parseNum(document.getElementById('add-price-manual').value) : 0;   // € por unidad
     if (precioManual > 0) {
       if (!(qty > 0) && amountEur > 0) qty = amountEur / precioManual;
       settings.manualPrices = Object.assign({}, settings.manualPrices, { [token]: { usd: precioManual / EUR_USD, ts: Date.now() } });
     }
-    if (!(qty > 0) && type === 'Compra' && amountEur > 0 && !(addPriceEur() > 0)) qty = 1;
+    if (!(qty > 0) && type === 'Compra' && amountEur > 0 && !(addPriceEur() > 0)) {
+      if (COINS[token]?.kind === 'stock') { errEl.textContent = 'Esta acción no tiene precio automático: pon el precio por unidad (€) o la cantidad.'; return; }
+      qty = 1;
+    }
 
     if (!date || !(qty > 0)) {
       errEl.textContent = 'Rellena fecha y cantidad (mayores que 0).';
