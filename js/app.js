@@ -1205,8 +1205,8 @@ const App = (() => {
         <div class="card"><div class="card-label">Llegas al ratio en</div><div class="card-value">${llega}</div><div class="card-sub">${llegaSub}</div></div>
       </div>
       ${[avisoObjs, ...m.avisos.filter(x => !(avisoObjs && x.startsWith('Dentro de')))].filter(Boolean).map(x => `<div class="warning-banner">⚠ ${x}</div>`).join('')}
-      <p class="reparto-hint">Sin contar variaciones de precio: crypto pasa de ${plPct(m.lados.crypto.peso)} a ${plPct(pr.pesos[12].crypto)} en 12 meses y a ${plPct(pr.pesos[24].crypto)} en 24; bolsa, de ${plPct(m.lados.bolsa.peso)} a ${plPct(pr.pesos[12].bolsa)} y a ${plPct(pr.pesos[24].bolsa)}.</p>
       <div class="card" style="margin-top:12px"><div class="card-label">Peso de la bolsa en la cartera</div>
+        <div class="pl-chips" style="margin:6px 0 10px">${chip('crypto', `Crypto <b>${plPct(m.lados.crypto.peso)}</b> → ${plPct(pr.pesos[12].crypto)} en 12 m → ${plPct(pr.pesos[24].crypto)} en 24 m`)}${chip('bolsa', `Bolsa <b>${plPct(m.lados.bolsa.peso)}</b> → ${plPct(pr.pesos[12].bolsa)} en 12 m → ${plPct(pr.pesos[24].bolsa)} en 24 m`)}</div>
         <div class="strat-head"><span>Dentro de <b>${planMeses}</b> ${planMeses === 1 ? 'mes' : 'meses'}</span></div>
         <input type="range" class="pl-rango" min="1" max="36" step="1" data-plan="meses" value="${planMeses}">
         <div class="card-sub">En ${planMeses} ${planMeses === 1 ? 'mes' : 'meses'}: bolsa <strong>${plPct(prN.pesos[planMeses].bolsa)}</strong> · crypto <strong>${plPct(prN.pesos[planMeses].crypto)}</strong> (objetivo de bolsa ${100 - rc} %). ${prN.llega === 0 ? 'Ya estás en el ratio.' : prN.llega === null ? 'No llegas al ratio en 20 años.' : `Llegas al ratio en ${prN.llega} ${prN.llega === 1 ? 'mes' : 'meses'}.`} Sin contar variaciones de precio.</div></div>
