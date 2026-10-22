@@ -1,5 +1,5 @@
 {
- "updated": "2026-10-22T09:39:59+00:00",
+ "updated": "2026-10-22T09:59:15+00:00",
  "fuente": "Twelve Data y Yahoo Finance",
  "precios": {
   "NVDA": {
@@ -7,70 +7,84 @@
    "change": 2.54077,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T09:39:59+00:00"
+   "ts": "2026-10-22T09:59:15+00:00"
   },
   "TSLA": {
    "price": 386.47,
    "change": 3.41441,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T09:39:59+00:00"
+   "ts": "2026-10-22T09:59:15+00:00"
   },
   "AMD": {
    "price": 552.71997,
    "change": 3.36238,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T09:39:59+00:00"
+   "ts": "2026-10-22T09:59:15+00:00"
   },
   "SPCX": {
    "price": 159.28,
    "change": 7.77455,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T09:39:59+00:00"
+   "ts": "2026-10-22T09:59:15+00:00"
   },
   "MSFT": {
    "price": 532.95001,
    "change": 0.20306035,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T09:39:59+00:00"
+   "ts": "2026-10-22T09:59:15+00:00"
   },
   "VUAA": {
-   "price": 132.265,
-   "change": -1.0029564761797838,
+   "price": 132.21,
+   "change": -1.0441226002020798,
    "currency": "EUR",
    "exchange": "GER",
-   "ts": "2026-10-22T09:39:59+00:00"
+   "ts": "2026-10-22T09:59:15+00:00"
   },
   "SPYL": {
-   "price": 16.937,
-   "change": -0.9763797942001773,
+   "price": 16.928,
+   "change": -1.0289990645462987,
    "currency": "EUR",
    "exchange": "GER",
-   "ts": "2026-10-22T09:39:59+00:00"
+   "ts": "2026-10-22T09:59:15+00:00"
   },
   "AAPL": {
    "price": 343.98999,
    "change": 1.32253,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T09:39:59+00:00"
+   "ts": "2026-10-22T09:59:15+00:00"
   },
   "AMZN": {
    "price": 262.37,
    "change": -0.099002308,
    "currency": "USD",
    "exchange": "NASDAQ",
-   "ts": "2026-10-22T09:39:59+00:00"
+   "ts": "2026-10-22T09:59:15+00:00"
   },
   "AXP": {
    "price": 323.60999,
    "change": 1.65546,
    "currency": "USD",
    "exchange": "NYSE",
-   "ts": "2026-10-22T09:39:59+00:00"
+   "ts": "2026-10-22T09:59:15+00:00"
+  },
+  "GOOG": {
+   "price": 330.95001,
+   "change": -1.62009,
+   "currency": "USD",
+   "exchange": "NASDAQ",
+   "ts": "2026-10-22T09:59:15+00:00"
+  },
+  "GOOGL": {
+   "price": 334.76001,
+   "change": -1.62219,
+   "currency": "USD",
+   "exchange": "NASDAQ",
+   "ts": "2026-10-22T09:59:15+00:00"
   }
  },
  "errores": {}
