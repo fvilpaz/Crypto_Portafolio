@@ -834,6 +834,18 @@ const App = (() => {
     return '#f6465d';
   }
 
+  // Fila de iconos de una tarjeta: si hay más de los que caben se desliza (rueda del ratón o dedo) y se difumina el borde para avisar de que hay más.
+  function marcaDeslizable(id) {
+    const e = document.getElementById(id); if (!e) return;
+    if (!e.dataset.rueda) {
+      e.dataset.rueda = '1';
+      e.addEventListener('wheel', (ev) => { if (e.scrollWidth > e.clientWidth && Math.abs(ev.deltaY) > Math.abs(ev.deltaX)) { e.scrollLeft += ev.deltaY; ev.preventDefault(); } }, { passive: false });
+      e.addEventListener('scroll', () => marcaDeslizable(id), { passive: true });
+    }
+    e.classList.toggle('mas-der', e.scrollWidth - e.clientWidth - e.scrollLeft > 2);
+    e.classList.toggle('mas-izq', e.scrollLeft > 2);
+  }
+
   function renderCards() {
     const total = getInvestedValue();   // base de cubos: capital invertido, sin airdrops (suman 100%)
     const btcAsset = portfolio.find(a => a.token === 'BTC');
@@ -914,7 +926,8 @@ const App = (() => {
     const bolsaVal = stocks.reduce((s, a) => s + getAssetValue(a), 0);
     const bolsaWeight = total > 0 ? bolsaVal / total : 0, bolsaTarget = settings.bolsaTarget || 0;
     document.getElementById('card-bolsa-pct').textContent = `${(bolsaWeight * 100).toFixed(1)}%`;
-    document.getElementById('bolsa-icons').innerHTML = stocks.slice(0, 5).map(a => iconHtml(a.token, a.cssClass || 'stk', 30)).join('');
+    document.getElementById('bolsa-icons').innerHTML = stocks.map(a => iconHtml(a.token, a.cssClass || 'stk', 30)).join('');   // todos: la fila se desliza si no caben
+    ['btceth-icons', 'cosmos-icons', 'defense-icons', 'bolsa-icons'].forEach(marcaDeslizable);
     const bolsaBar = document.getElementById('bolsa-bar-fill');
     const bolsaRatio = bolsaTarget > 0 ? (bolsaWeight * 100) / bolsaTarget : 1;
     bolsaBar.style.width = `${Math.min(bolsaWeight * 100, 100)}%`;

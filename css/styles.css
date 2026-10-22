@@ -2298,3 +2298,11 @@ body.light #mercado .new { color: #8a6500; }
 }
 .vista-nav .seg-grupo button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }   /* icono + nombre */
 .vista-nav .seg-grupo button svg { flex: none; }
+
+/* Iconos de las tarjetas (Núcleo, Satélites, Refugio, Bolsa): si hay más de los que caben, la fila se desliza como un dock y el borde se difumina */
+.card-coins { max-width: 100%; min-width: 0; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; padding: 2px 0; }
+.card-coins::-webkit-scrollbar { display: none; }
+.card-coins > * { flex: none; scroll-snap-align: start; }
+.card-coins.mas-der { -webkit-mask-image: linear-gradient(90deg, #000 82%, transparent); mask-image: linear-gradient(90deg, #000 82%, transparent); }
+.card-coins.mas-izq { -webkit-mask-image: linear-gradient(270deg, #000 82%, transparent); mask-image: linear-gradient(270deg, #000 82%, transparent); }
+.card-coins.mas-izq.mas-der { -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 82%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 82%, transparent); }
