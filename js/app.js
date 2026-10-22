@@ -2586,7 +2586,11 @@ const App = (() => {
 
   function chooseStock(c) {
     const token = c.symbol, err = document.getElementById('add-error');
-    if (COINS[token] && COINS[token].kind !== 'stock') { err.textContent = `El símbolo ${token} ya es una moneda crypto de tu catálogo.`; return; }
+    if (COINS[token] && COINS[token].kind !== 'stock') {
+      // Una crypto añadida por búsqueda que ya no tienes en cartera solo queda en el catálogo: se retira para poder añadir la acción.
+      if (!settings.customCoins?.[token] || portfolio.some(x => x.token === token)) { err.textContent = `El símbolo ${token} ya es una moneda crypto de tu cartera: bórrala primero (o sus movimientos) y vuelve a buscarla.`; return; }
+      const { [token]: _quitada, ...resto } = settings.customCoins; settings.customCoins = resto; delete COINS[token];
+    }
     if (!COINS[token]) {
       const previo = settings.customStocks;
       settings.customStocks = Object.assign({}, previo, { [token]: { name: c.name } });
