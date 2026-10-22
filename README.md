@@ -181,7 +181,8 @@ half. Each does one thing well and they link to each other.
     treasuries/ETF endpoints are paid). Bitcoin ETFs such as IBIT are funds, not companies
   - Scope: get the basics working first (fixed list of ~5 managers, static JSON,
     read-only view). Everything below is a later phase, only if the app grows
-  - Later, phase 1: configurable manager list (name + SEC CIK in a file the script reads)
+  - **Done (22-oct), phase 1:** configurable manager list: `data/gestores.json` (key, 2-letter code, name, SEC CIK; optional profile in
+    `data/gestores_info.json`); to follow another investor add one entry and run the Action
   - Later, phase 2: small cloud function (e.g. Cloudflare Worker) as a proxy: it solves
     EDGAR's missing CORS and keeps any API key out of the frontend
   - Later, phase 3, on top of that function: in-app manager search, and an analysis chat

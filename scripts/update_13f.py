@@ -11,11 +11,19 @@ import xml.etree.ElementTree as ET
 from collections import defaultdict
 from pathlib import Path
 
+# Los inversores que se siguen salen de data/gestores.json (una entrada por inversor: clave, sigla de 2 letras, nombre y CIK de la SEC). Para anadir uno basta una entrada
+# alli (el CIK sale de EDGAR) y volver a ejecutar; si falta el archivo se usan estos tres.
 GESTORES = [
     {"clave": "berkshire", "corto": "BK", "nombre": "Berkshire Hathaway", "cik": "0001067983"},
     {"clave": "bridgewater", "corto": "BR", "nombre": "Bridgewater Associates", "cik": "0001350694"},
     {"clave": "gates", "corto": "GF", "nombre": "Gates Foundation Trust", "cik": "0001166559"},
 ]
+try:
+    _cfg = json.loads((Path(__file__).resolve().parent.parent / "data" / "gestores.json").read_text(encoding="utf8"))["gestores"]
+    if _cfg and all(set(g) >= {"clave", "corto", "nombre", "cik"} for g in _cfg):
+        GESTORES = _cfg
+except (OSError, ValueError, KeyError):
+    pass
 # Empresas que sigo en bolsa: (nombre, texto que lleva el emisor en el 13F, en mayusculas). Se busca por nombre:
 # un fondo como ISHARES TR o VANGUARD INDEX FDS no dice que indice sigue, asi que el S&P 500 puede quedar infracontado.
 SEGUIDAS = [("S&P 500", "S&P 500"), ("SpaceX", "SPACE EXPLORATION"), ("Tesla", "TESLA"), ("Nvidia", "NVIDIA"), ("Microsoft", "MICROSOFT")]
