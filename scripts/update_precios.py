@@ -18,7 +18,7 @@ LISTA = Path(sys.argv[1]) if len(sys.argv) > 1 else RAIZ / "data" / "acciones.js
 SALIDA = Path(sys.argv[2]) if len(sys.argv) > 2 else RAIZ / "data" / "precios.json"
 PAUSA = int(os.environ.get("PAUSA_SEGUNDOS", "10"))   # segundos entre llamadas a Twelve Data (8 creditos/minuto: 10 s = 6 por minuto)
 PAUSA_YAHOO = float(os.environ.get("PAUSA_YAHOO", "0.7"))
-MAX_SIMBOLOS = 400
+MAX_SIMBOLOS = 500
 MAX_TWELVE = 40
 API = "https://api.twelvedata.com/quote"
 
@@ -26,8 +26,14 @@ API = "https://api.twelvedata.com/quote"
 def cargar_lista():
     """data/acciones.json: {"simbolos": ["NVDA", {"symbol": "VUAA", "yahoo": "VUAA.DE"}, {"symbol": "X", "exchange": "LSE"}, ...]}"""
     datos = json.loads(LISTA.read_text(encoding="utf8"))
+    extra = []   # las mayores posiciones de los inversores de Mercado (las genera update_13f.py); solo con la lista por defecto
+    if len(sys.argv) <= 1:
+        try:
+            extra = json.loads((RAIZ / "data" / "acciones_13f.json").read_text(encoding="utf8")).get("simbolos", [])
+        except (OSError, ValueError):
+            pass
     vistos, lista = set(), []
-    for x in datos.get("simbolos", []):
+    for x in datos.get("simbolos", []) + extra:
         it = x if isinstance(x, dict) else {"symbol": x}
         sim = str(it.get("symbol", "")).strip().upper()
         if sim and sim not in vistos:

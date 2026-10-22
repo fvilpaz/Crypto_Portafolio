@@ -6,7 +6,7 @@ dejar el correo escrito en el repo. El 13F es trimestral y llega hasta 45 dias t
 lo que tenian, no lo que tienen hoy. Para anadir un gestor: una linea en GESTORES (el CIK sale
 de EDGAR) y volver a ejecutar.
 """
-import json, os, sys, time, urllib.request
+import json, os, re, sys, time, urllib.request
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from pathlib import Path
@@ -102,6 +102,40 @@ def procesar(gestor):
     return {"ahora": ahora, "antes": antes, "total": total, "periodo": periodo}
 
 
+SUFIJOS = {"INC", "CORP", "CORPORATION", "CO", "COMPANY", "LTD", "LIMITED", "PLC", "HOLDINGS", "HOLDING", "HLDGS", "HLDG", "GROUP", "THE", "NV", "SA", "AG", "LLC", "LP", "DE", "DEL", "NEW"}
+# el 13F abrevia los nombres (BANK OF AMER CORP, APPLIED MATLS INC); la lista de tickers de la SEC los lleva enteros
+ABREVIATURAS = {"AMER": "AMERICA", "MATLS": "MATERIALS", "FINL": "FINANCIAL", "NATL": "NATIONAL", "RY": "RAILWAY", "MNG": "MINING", "SYS": "SYSTEMS", "TECHNOLOGIES": "TECHNOLOGIES",
+                "INTL": "INTERNATIONAL", "ENERGY": "ENERGY", "SVCS": "SERVICES", "RESOURCES": "RESOURCES", "PETE": "PETROLEUM", "MFG": "MANUFACTURING", "ELEC": "ELECTRIC", "COMMUNICATIONS": "COMMUNICATIONS"}
+TOP_PRECIOS = 60   # de cada inversor se sigue el precio de sus TOP_PRECIOS mayores posiciones
+
+
+def norm(s, expandir=False):
+    """Nombre de emisor sin puntuacion ni sufijos legales (parecido al de la app), para cruzar el 13F con la lista de tickers de la SEC; con expandir=True se desabrevian
+    las palabras del 13F."""
+    palabras = [w for w in re.sub(r"[.,&'()/-]", " ", s.upper()).split() if w not in SUFIJOS]
+    return " ".join(ABREVIATURAS.get(w, w) if expandir else w for w in palabras)
+
+
+def acciones_de_los_inversores(todos):
+    """data/acciones_13f.json: tickers de las mayores posiciones de cada inversor (los que se pueden cruzar por nombre con la SEC). Los usa la Action de precios
+    ademas de data/acciones.json, asi todo lo que tienen los grandes sale con precio, analisis tecnico y fundamentales."""
+    tickers = json.loads(get("https://www.sec.gov/files/company_tickers.json"))
+    por_nombre = {}
+    for v in tickers.values():   # el fichero viene ordenado por tamano: ante varios tickers del mismo nombre se queda el primero
+        por_nombre.setdefault(norm(v["title"]), v["ticker"].upper())
+    simbolos, sin_ticker = {}, []
+    for clave, t in todos.items():
+        for emisor, _ in sorted(t["ahora"].items(), key=lambda kv: -kv[1][0])[:TOP_PRECIOS]:
+            tk = por_nombre.get(norm(emisor, True)) or por_nombre.get(norm(emisor))
+            if tk:
+                simbolos.setdefault(tk, emisor)
+            else:
+                sin_ticker.append(emisor)
+    (DATOS / "acciones_13f.json").write_text(json.dumps({"_nota": "Generado por scripts/update_13f.py: tickers de las mayores posiciones de cada inversor. No editar a mano.",
+                                                         "simbolos": sorted(simbolos), "sin_ticker": sorted(set(sin_ticker))}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    print(f"acciones_13f.json: {len(simbolos)} simbolos; {len(set(sin_ticker))} posiciones grandes sin ticker (nombre distinto en la SEC)")
+
+
 def seguidas(todos):
     """Para cada empresa seguida, que gestores la tienen (suma los emisores cuyo nombre contiene el texto), aunque este fuera del top 10."""
     salida = []
@@ -155,6 +189,11 @@ if todos:   # TODAS las posiciones de cada gestor (no solo las 10 mayores), para
                 filas[emisor][clave] = [0, 0, "salio", round(valor / total_ant * 100, 3), acciones]
     (DATOS / "13f_posiciones.json").write_text(json.dumps({"periodo": max(t["periodo"] for t in todos.values()), "gestores": hechos, "filas": filas},
                                                         ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+if todos:
+    try:
+        acciones_de_los_inversores(todos)
+    except Exception as e:   # un fallo aqui no tumba lo demas
+        print(f"AVISO acciones_13f.json: {str(e)[:100]}", file=sys.stderr)
 if len(todos) >= 2:
     (DATOS / "13f_coinciden.json").write_text(json.dumps(coincidencias(todos), ensure_ascii=False, indent=2), encoding="utf-8")
 sys.exit(1 if fallos else 0)

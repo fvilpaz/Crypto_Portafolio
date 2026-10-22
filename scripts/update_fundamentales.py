@@ -69,6 +69,10 @@ def acciones_en_circulacion(cik):
 
 def main():
     lista = json.loads((DATOS / "acciones.json").read_text(encoding="utf8"))["simbolos"]
+    try:
+        lista = lista + json.loads((DATOS / "acciones_13f.json").read_text(encoding="utf8")).get("simbolos", [])   # mayores posiciones de los inversores de Mercado
+    except (OSError, ValueError):
+        pass
     simbolos = [(x if isinstance(x, str) else x["symbol"]).upper() for x in lista if isinstance(x, str) or not x.get("yahoo")]   # sin los europeos con sufijo
     tickers = get("https://www.sec.gov/files/company_tickers.json")
     cik_de = {v["ticker"].upper(): str(v["cik_str"]).zfill(10) for v in tickers.values()}
