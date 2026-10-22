@@ -1,0 +1,229 @@
+{
+ "actualizado": "2026-10-22T09:10:21+00:00",
+ "personas": [
+  {
+   "clave": "musk",
+   "nombre": "Elon Musk",
+   "participaciones": [
+    {
+     "emisor": "Space Exploration Technologies Corp.",
+     "formulario": "SCHEDULE 13G",
+     "acciones": 6418547515.0,
+     "pct": 48.4,
+     "clase": "Class A Common Stock, $0.001 par value per share",
+     "presentado": "2026-08-13"
+    },
+    {
+     "emisor": "Tesla, Inc.",
+     "formulario": "SCHEDULE 13G/A",
+     "acciones": 699580882.0,
+     "pct": 19.9,
+     "clase": "Common Stock, $0.001 par value per share",
+     "presentado": "2026-06-17"
+    }
+   ],
+   "operaciones": [
+    {
+     "fecha": "2026-06-16",
+     "emisor": "Tesla, Inc.",
+     "simbolo": "TSLA",
+     "codigo": "M",
+     "acciones": 303960630.0,
+     "precio": 23.34,
+     "tipo": "A",
+     "tras": 727704534.0
+    },
+    {
+     "fecha": "2026-06-16",
+     "emisor": "Tesla, Inc.",
+     "simbolo": "TSLA",
+     "codigo": "F",
+     "acciones": 17531857.0,
+     "precio": 404.66,
+     "tipo": "D",
+     "tras": 710172677.0
+    },
+    {
+     "fecha": "2026-06-15",
+     "emisor": "SPACE EXPLORATION TECHNOLOGIES CORP",
+     "simbolo": "SPCX",
+     "codigo": "C",
+     "acciones": 282614850.0,
+     "precio": 0.0,
+     "tipo": "A",
+     "tras": 808780270.0
+    },
+    {
+     "fecha": "2026-06-15",
+     "emisor": "SPACE EXPLORATION TECHNOLOGIES CORP",
+     "simbolo": "SPCX",
+     "codigo": "C",
+     "acciones": 18518500.0,
+     "precio": 0.0,
+     "tipo": "A",
+     "tras": 827298770.0
+    },
+    {
+     "fecha": "2026-06-15",
+     "emisor": "SPACE EXPLORATION TECHNOLOGIES CORP",
+     "simbolo": "SPCX",
+     "codigo": "C",
+     "acciones": 14792900.0,
+     "precio": 0.0,
+     "tipo": "A",
+     "tras": 842091670.0
+    },
+    {
+     "fecha": "2026-04-21",
+     "emisor": "Tesla, Inc.",
+     "simbolo": "TSLA",
+     "codigo": "D",
+     "acciones": 96000000.0,
+     "precio": 0.0,
+     "tipo": "D",
+     "tras": 423743904.0
+    },
+    {
+     "fecha": "2026-04-02",
+     "emisor": "SPACE EXPLORATION TECHNOLOGIES CORP",
+     "simbolo": "SPCX",
+     "codigo": "S",
+     "acciones": 11390.0,
+     "precio": 105.318,
+     "tipo": "D",
+     "tras": 526165900.0
+    },
+    {
+     "fecha": "2026-04-02",
+     "emisor": "SPACE EXPLORATION TECHNOLOGIES CORP",
+     "simbolo": "SPCX",
+     "codigo": "G",
+     "acciones": 480.0,
+     "precio": 0.0,
+     "tipo": "D",
+     "tras": 526165420.0
+    },
+    {
+     "fecha": "2026-04-02",
+     "emisor": "SPACE EXPLORATION TECHNOLOGIES CORP",
+     "simbolo": "SPCX",
+     "codigo": "J",
+     "acciones": 186545.0,
+     "precio": 0.0,
+     "tipo": "D",
+     "tras": 0.0
+    },
+    {
+     "fecha": "2026-03-23",
+     "emisor": "SPACE EXPLORATION TECHNOLOGIES CORP",
+     "simbolo": "SPCX",
+     "codigo": "D",
+     "acciones": 25172695.0,
+     "precio": 0.0,
+     "tipo": "D",
+     "tras": 526177290.0
+    },
+    {
+     "fecha": "2026-02-02",
+     "emisor": "SPACE EXPLORATION TECHNOLOGIES CORP",
+     "simbolo": "SPCX",
+     "codigo": "A",
+     "acciones": 511289725.0,
+     "precio": 0.0,
+     "tipo": "A",
+     "tras": 551349985.0
+    },
+    {
+     "fecha": "2026-02-02",
+     "emisor": "SPACE EXPLORATION TECHNOLOGIES CORP",
+     "simbolo": "SPCX",
+     "codigo": "A",
+     "acciones": 78395.0,
+     "precio": 0.0,
+     "tipo": "A",
+     "tras": 186545.0
+    },
+    {
+     "fecha": "2025-12-30",
+     "emisor": "Tesla, Inc.",
+     "simbolo": "TSLA",
+     "codigo": "G",
+     "acciones": 210699.0,
+     "precio": 0.0,
+     "tipo": "D",
+     "tras": 413152109.0
+    },
+    {
+     "fecha": "2025-11-06",
+     "emisor": "Tesla, Inc.",
+     "simbolo": "TSLA",
+     "codigo": "A",
+     "acciones": 423743904.0,
+     "precio": 334.09,
+     "tipo": "A",
+     "tras": 519743904.0
+    },
+    {
+     "fecha": "2025-09-12",
+     "emisor": "Tesla, Inc.",
+     "simbolo": "TSLA",
+     "codigo": "P",
+     "acciones": 22537.0,
+     "precio": 371.9,
+     "tipo": "A",
+     "tras": 410816613.0
+    },
+    {
+     "fecha": "2025-09-12",
+     "emisor": "Tesla, Inc.",
+     "simbolo": "TSLA",
+     "codigo": "P",
+     "acciones": 34530.0,
+     "precio": 372.821,
+     "tipo": "A",
+     "tras": 410851143.0
+    },
+    {
+     "fecha": "2025-09-12",
+     "emisor": "Tesla, Inc.",
+     "simbolo": "TSLA",
+     "codigo": "P",
+     "acciones": 45909.0,
+     "precio": 373.989,
+     "tipo": "A",
+     "tras": 410897052.0
+    },
+    {
+     "fecha": "2025-09-12",
+     "emisor": "Tesla, Inc.",
+     "simbolo": "TSLA",
+     "codigo": "P",
+     "acciones": 8000.0,
+     "precio": 374.57,
+     "tipo": "A",
+     "tras": 410905052.0
+    },
+    {
+     "fecha": "2025-09-12",
+     "emisor": "Tesla, Inc.",
+     "simbolo": "TSLA",
+     "codigo": "P",
+     "acciones": 31019.0,
+     "precio": 376.145,
+     "tipo": "A",
+     "tras": 410936071.0
+    },
+    {
+     "fecha": "2025-09-12",
+     "emisor": "Tesla, Inc.",
+     "simbolo": "TSLA",
+     "codigo": "P",
+     "acciones": 47384.0,
+     "precio": 377.063,
+     "tipo": "A",
+     "tras": 410983455.0
+    }
+   ]
+  }
+ ]
+}

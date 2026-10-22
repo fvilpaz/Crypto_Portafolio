@@ -146,8 +146,10 @@ half. Each does one thing well and they link to each other.
     teal highlight for the stocks I follow; Crypto tab from DefiLlama and CoinGecko (`scripts/update_crypto.py`, no keys); the
     daily Action `actualizar-datos.yml` (written, never run on GitHub yet). Still example data (yellow label): the text cards
     "Inversores y gestoras" and "Empresas y fondos". **Pending:** create the repo secret `SEC_USER_AGENT` (without it the Action
-    skips the 13F) and run the Action once to check it; people such as Elon Musk (not 13F filers: they show up in Form 4 and
-    13D/13G filings, a different source); phases 2 and 3 below
+    skips the 13F) and run the Action once to check it; phases 2 and 3 below. **Done (22-oct):** people who are not 13F filers
+    (Elon Musk first) come from the SEC's Form 4 and Schedule 13D/13G filings (`scripts/update_insiders.py` → `data/insiders.json`,
+    shown in Mercado under the 13F managers; add a person with one line in `PERSONAS`); the two hand-written example text cards
+    were hidden (commented out, not deleted)
   - Base the analysis on quarter-to-quarter changes (new buys, increases) and portfolio
     weight, not only on plain overlap
   - Per-company drill-down: who holds it, since when, weight, plus recent news and
