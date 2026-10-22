@@ -282,7 +282,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     const tr = document.createElement('tr'), td = document.createElement('td'); td.colSpan = columnas; tr.append(td);
     const caja = document.createElement('div');
     const ancho = (document.querySelector('#b13f-buscar .table-wrapper') || {}).clientWidth || 800;   // la tabla es más ancha que la pantalla: la ficha se queda en la parte visible
-    caja.style.cssText = `display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;padding:14px 8px;align-items:start;position:sticky;left:0;box-sizing:border-box;width:${Math.max(ancho - 28, 280)}px`;
+    caja.style.cssText = `display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;padding:14px 8px;align-items:start;position:sticky;left:0;box-sizing:border-box;white-space:normal;width:${Math.max(ancho - 28, 280)}px`;
     const izq = document.createElement('div'), der = document.createElement('div');
     const s = tec.serie;
     if (s && s.length >= 10 && typeof Chart !== 'undefined') {
@@ -304,7 +304,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
       kv('Capitalización', usd && fu && fu.acciones ? grandeUsd(pr.price * fu.acciones) : null), kv('PER', usd && fu && fu.bpa > 0 ? n2g(pr.price / fu.bpa) : null),
       kv('Ingresos', fu && fu.ingresos ? grandeUsd(fu.ingresos) : null), kv('Beneficio', fu && fu.beneficio != null ? grandeUsd(fu.beneficio) : null));
     der.firstChild.style.cssText = 'font-weight:700;font-size:16px;margin-bottom:6px';
-    const poseedores = chipsPoseedores(f.por, gestores); poseedores.style.cssText += ';display:block;padding-top:10px'; der.append(el('div', 'Quién la tiene', 'nm'), poseedores);
+    const poseedores = chipsPoseedores(f.por, gestores); poseedores.style.cssText += ';display:block;padding-top:10px;white-space:normal'; der.append(el('div', 'Quién la tiene', 'nm'), poseedores);
     caja.append(izq, der); td.append(caja);
     // noticias recientes (solo titular y enlace al medio); ocupan todo el ancho de la ficha
     if (f.simbolo) {
