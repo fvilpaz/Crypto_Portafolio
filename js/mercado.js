@@ -46,7 +46,34 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   const el = (tag, txt, cls) => { const e = document.createElement(tag); e.textContent = txt; if (cls) e.className = cls; return e; };
   const billones = (usd) => (fx.toCur(usd) / 1e9).toLocaleString('es-ES', { maximumFractionDigits: 1 }) + ' mil M' + (fx.cur() === 'EUR' ? '€' : '$');
   const dia = (iso) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-  function seccion(d) {
+  // Todas las posiciones de cada inversor (data/13f_posiciones.json): las usan el buscador y el botón "Ver la lista completa" de cada tabla.
+  let posAll = null;
+  const cargaPos = () => (posAll ? Promise.resolve(posAll) : fetch('data/13f_posiciones.json').then((r) => r.json()).then((x) => { posAll = x; return x; }));
+  function listaCompleta(d, clave, hueco, boton) {
+    if (hueco.hasChildNodes()) { hueco.replaceChildren(); boton.textContent = `Ver la lista completa (${d.n_emisores} empresas)`; return; }
+    boton.textContent = 'Cargando…';
+    cargaPos().then((x) => {
+      const filas = Object.entries(x.filas).filter(([, por]) => por[clave]).sort((p, q) => q[1][clave][0] - p[1][clave][0]);
+      const tbody = document.createElement('tbody');
+      filas.forEach(([emisor, por]) => {
+        const f = por[clave], c = f[2], tr = document.createElement('tr'), cel = document.createElement('td');
+        if (sigo(emisor)) tr.className = 'sigo';
+        if (c === 'nueva') cel.append(el('span', '★ Compra nueva', 'chip new'));
+        else if (c === 0) cel.textContent = 'Sin cambios';
+        else cel.append(el('span', (c > 0 ? '▲ +' : '▼ ') + c.toLocaleString('es-ES') + ' % acciones', 'chip ' + (c > 0 ? 'up' : 'dn')));
+        const num = (txt) => el('td', txt, 'text-right');
+        tr.append(el('td', emisor, 'tk'), num(billones(d.total_usd * f[0] / 100)), num(f[0].toLocaleString('es-ES') + ' %'), num(f[1].toLocaleString('es-ES')), cel);
+        tbody.append(tr);
+      });
+      const tabla = document.createElement('table');
+      tabla.innerHTML = '<thead><tr><th>Empresa en la que invierte</th><th class="text-right">Valor invertido</th><th class="text-right">% de su cartera</th><th class="text-right">Nº de acciones</th><th>Cambio frente al trimestre anterior</th></tr></thead>';
+      tabla.append(tbody);
+      const wrap = el('div', '', 'table-wrapper'); wrap.style.cssText = 'margin-top:12px;max-height:520px;overflow:auto'; wrap.append(tabla);
+      hueco.replaceChildren(wrap);
+      boton.textContent = 'Ocultar la lista completa';
+    }).catch(() => { boton.textContent = 'No se pudo cargar la lista'; });
+  }
+  function seccion(d, clave) {
     const sec = document.createElement('details');
     sec.className = 'card mk-desplegable'; sec.style.cssText = 'margin-top:12px;padding:12px 16px';
     const badge = el('span', '13F · SEC', 'section-badge');
@@ -77,11 +104,20 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     tabla.append(tbody);
     const wrap = el('div', '', 'table-wrapper'); wrap.append(tabla); wrap.style.marginTop = '12px';
     sec.append(h, hint, wrap);
+    if (d.n_emisores > d.top.length) {   // más empresas que las 10 mayores: botón para ver todas (y enlace al informe original)
+      const pie = document.createElement('div'); pie.style.cssText = 'display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:12px';
+      const boton = el('button', `Ver la lista completa (${d.n_emisores} empresas)`, 'add-submit'); boton.type = 'button';
+      const hueco = document.createElement('div');
+      boton.addEventListener('click', () => listaCompleta(d, clave, hueco, boton));
+      const enlace = el('a', 'Informe original en la SEC', ''); enlace.href = `https://www.sec.gov/Archives/edgar/data/${parseInt(d.cik, 10)}/${d.accesion.replace(/-/g, '')}/`; enlace.target = '_blank'; enlace.rel = 'noopener';
+      enlace.style.cssText = 'font-size:12px;color:var(--text-muted)';
+      pie.append(boton, enlace); sec.append(pie, hueco);
+    }
     return sec;
   }
   function pintar() {
     if (!datos || !coin) return;
-    cont.replaceChildren(...datos.map(seccion));
+    cont.replaceChildren(...datos.map((d, i) => seccion(d, indice[i].clave)));
   }
   const pct = (n) => n.toLocaleString('es-ES') + ' %';
   // Personas que no presentan 13F (p. ej. Elon Musk): lo que declaran a la SEC en los Schedule 13D/13G (pasar del 5 % de una empresa) y en los Form 4
@@ -206,7 +242,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
       .then((ix) => { indice = ix; return Promise.all([json('data/13f_coinciden.json'), ...ix.map((g) => json('data/13f_' + encodeURIComponent(g.clave) + '.json'))]); })
       .then(([c, ...ds]) => { coin = c; datos = ds; pintar(); pintarCoinciden(); })
       .catch(() => { cont.textContent = 'No se pudieron cargar los datos de los gestores.'; });
-    json('data/13f_posiciones.json').then(buscador).catch(() => {});   // aparte: si falta, la pestaña sigue igual
+    cargaPos().then(buscador).catch(() => {});   // aparte: si falta, la pestaña sigue igual
     json('data/insiders.json').then(pintarPersonas).catch(() => {});   // aparte: si falta, la pestaña sigue igual
   });
   fx.onChange(pintar);
