@@ -82,7 +82,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     sec.append(h, hint, wrap);
     if (d.n_emisores > d.top.length) {   // más empresas que las 10 mayores: página propia con todas (buscador y orden) y, aparte, la tabla original de la SEC
       const pie = document.createElement('div'); pie.style.cssText = 'display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-top:12px';
-      const todas = el('a', `Ver la lista completa (${d.n_emisores} empresas) ↗`, ''); todas.href = 'gestor.html?g=' + encodeURIComponent(clave); todas.target = '_blank'; todas.rel = 'noopener';
+      const todas = el('a', `Ver la lista completa (${d.n_emisores} empresas) ↗`, ''); todas.href = 'gestor.html?g=' + encodeURIComponent(clave);   // misma pestaña: la flecha de esa página vuelve a Mercado
       todas.style.cssText = 'font-weight:600;color:var(--accent-blue)'; pie.append(todas);
       if (d.tabla_url) { const sec13 = el('a', 'Tabla original de la SEC ↗', ''); sec13.href = d.tabla_url; sec13.target = '_blank'; sec13.rel = 'noopener'; sec13.style.cssText = 'font-size:12px;color:var(--text-muted)'; pie.append(sec13); }
       sec.append(pie);
@@ -347,4 +347,11 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     else (!mk.hidden ? mkBtn : opBtn).click();                          // Cartera: cierra la vista que esté abierta
     sync();
   });
+})();
+
+/* Volver desde otra página (p. ej. la lista completa de un inversor, gestor.html) con index.html#mercado: abre directamente la vista Mercado. */
+(function () {
+  if (location.hash !== '#mercado') return;
+  const seg = document.querySelector('#seg-vista [data-g="mercado"]');
+  if (seg) seg.click();
 })();
