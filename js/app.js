@@ -2594,9 +2594,17 @@ const App = (() => {
   function chooseStock(c) {
     const token = c.symbol, err = document.getElementById('add-error');
     if (COINS[token] && COINS[token].kind !== 'stock') {
-      // Una crypto añadida por búsqueda que ya no tienes en cartera solo queda en el catálogo: se retira para poder añadir la acción.
-      if (!settings.customCoins?.[token] || portfolio.some(x => x.token === token)) { err.textContent = `El símbolo ${token} ya es una moneda crypto de tu cartera: bórrala primero (o sus movimientos) y vuelve a buscarla.`; return; }
+      // Una crypto añadida por búsqueda con el símbolo de una acción (p. ej. TSLA de Backpack) se pasa a acción: sale del catálogo crypto y,
+      // si la tenías en cartera, esa posición (y sus movimientos, que van por símbolo) pasa a la Bolsa con las mismas cantidades.
+      if (!settings.customCoins?.[token]) { err.textContent = `El símbolo ${token} ya es una moneda crypto de tu catálogo.`; return; }
       const { [token]: _quitada, ...resto } = settings.customCoins; settings.customCoins = resto; delete COINS[token];
+      settings.customStocks = Object.assign({}, settings.customStocks, { [token]: { name: c.name } });
+      registerCustomStocks();
+      portfolio.filter(x => x.token === token).forEach(x => {
+        const m = COINS[token]; x.kind = 'stock'; x.name = m.name; x.icon = m.icon; x.color = m.color; x.cssClass = m.cssClass; delete x.coingeckoId;
+      });
+      delete prices[token]; liveTokens.delete(token);   // el precio de la crypto no vale para la acción
+      persist(); render();
     }
     if (!COINS[token]) {
       const previo = settings.customStocks;
