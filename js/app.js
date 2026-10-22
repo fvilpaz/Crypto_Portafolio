@@ -1142,9 +1142,23 @@ const App = (() => {
     return Object.fromEntries(l.map(t => [t, suma > 0 ? usd * pb[t] / suma : 0]));
   }
 
+  // Plan del mes: de lo que aportas en total al mes (settings.presupuestoMes), lo que se invierte (dcaTarget) se reparte por el ratio y el resto es
+  // "Ahorro y gastos": cuenta aparte, no es inversión. Con presupuesto 0 no se muestra el reparto.
+  let planMeses = 12;   // meses de la proyección del peso de la bolsa (deslizador; no se guarda)
+  function planMesHtml(rc) {
+    const inv = settings.dcaTarget || 0, pres = settings.presupuestoMes || 0, e = (eur) => fmtCurrency(eur / EUR_USD);
+    const partes = [['Crypto', inv * rc / 100, 'core'], ['Bolsa', inv * (100 - rc) / 100, 'bolsa'], ['Ahorro y gastos', Math.max(pres - inv, 0), 'refugio']];
+    const base = Math.max(pres, inv) || 1;
+    const detalle = pres > 0 ? `<div class="strat-bar" style="margin-top:10px">${partes.map(([, v, c]) => `<span class="seg seg-${c}" style="width:${v / base * 100}%"></span>`).join('')}</div>
+      <div class="strat-head" style="flex-wrap:wrap;gap:4px 12px">${partes.map(([n, v, c]) => `<span class="strat-legend lg-${c}">${n} ${e(v)} · ${(v / base * 100).toFixed(0)} %</span>`).join('')}</div>
+      ${inv > pres ? '<div class="card-sub" style="color:var(--accent-red)">Inviertes más de lo que aportas al mes</div>' : ''}` : '<div class="card-sub">Pon lo que aportas en total al mes para ver cuánto queda para ahorro y gastos</div>';
+    return `<div class="card"><div class="card-label">Aportación total del mes (€)</div><div class="add-field"><input type="number" min="0" step="10" data-plan="presupuesto" value="${pres}"></div>${detalle}</div>`;
+  }
+
   function planPanelesHtml() {
     const rc = 100 - (settings.bolsaTarget || 0);
     return `<div class="cards-grid">
+        ${planMesHtml(rc)}
         <div class="card"><div class="card-label">Dinero al mes para invertir (€)</div><div class="add-field"><input type="number" min="0" step="10" data-plan="dca" value="${settings.dcaTarget || 0}"></div></div>
         <div class="card"><div class="card-label">Ratio crypto / bolsa</div><input type="range" class="pl-rango" min="0" max="100" step="1" data-plan="rc" value="${rc}">
           <div class="strat-head"><span class="strat-legend lg-core">Crypto ${rc} %</span><span class="strat-legend lg-bolsa">Bolsa ${100 - rc} %</span></div>
@@ -1156,7 +1170,7 @@ const App = (() => {
     const box = document.getElementById('plan-panel');
     if (!box || typeof Plan === 'undefined') return;
     const p = planInput(), m = Plan.modelo(p), pr = Plan.proyeccion({ ...p, mensual: monthlySplit().totalUsd }, [12, 24]);   // la proyección usa el mes entero
-    const rc = p.ratioCrypto;
+    const rc = p.ratioCrypto, prN = Plan.proyeccion({ ...p, mensual: monthlySplit().totalUsd }, [planMeses]);   // proyección a los meses del deslizador
     // "No en 20 años" no distingue por qué no llega: sin dinero al mes o sin objetivo de bolsa (ratio 100 / 0) nunca habrá reparto que alcanzar.
     const mensualTotal = monthlySplit().totalUsd, sinObjetivoBolsa = rc >= 100 && m.lados.bolsa.valor > 0;
     const llega = pr.llega === 0 ? 'Ya estás' : mensualTotal <= 0 ? 'Sin dinero al mes' : sinObjetivoBolsa ? 'Sin objetivo de bolsa' : pr.llega === null ? 'Más de 20 años' : `${pr.llega} ${pr.llega === 1 ? 'mes' : 'meses'}`;
@@ -1192,6 +1206,10 @@ const App = (() => {
       </div>
       ${[avisoObjs, ...m.avisos.filter(x => !(avisoObjs && x.startsWith('Dentro de')))].filter(Boolean).map(x => `<div class="warning-banner">⚠ ${x}</div>`).join('')}
       <p class="reparto-hint">Sin contar variaciones de precio: crypto pasa de ${plPct(m.lados.crypto.peso)} a ${plPct(pr.pesos[12].crypto)} en 12 meses y a ${plPct(pr.pesos[24].crypto)} en 24; bolsa, de ${plPct(m.lados.bolsa.peso)} a ${plPct(pr.pesos[12].bolsa)} y a ${plPct(pr.pesos[24].bolsa)}.</p>
+      <div class="card" style="margin-top:12px"><div class="card-label">Peso de la bolsa en la cartera</div>
+        <div class="strat-head"><span>Dentro de <b>${planMeses}</b> ${planMeses === 1 ? 'mes' : 'meses'}</span></div>
+        <input type="range" class="pl-rango" min="1" max="36" step="1" data-plan="meses" value="${planMeses}">
+        <div class="card-sub">En ${planMeses} ${planMeses === 1 ? 'mes' : 'meses'}: bolsa <strong>${plPct(prN.pesos[planMeses].bolsa)}</strong> · crypto <strong>${plPct(prN.pesos[planMeses].crypto)}</strong> (objetivo de bolsa ${100 - rc} %). ${prN.llega === 0 ? 'Ya estás en el ratio.' : prN.llega === null ? 'No llegas al ratio en 20 años.' : `Llegas al ratio en ${prN.llega} ${prN.llega === 1 ? 'mes' : 'meses'}.`} Sin contar variaciones de precio.</div></div>
       <div class="cards-grid">${lados}</div>`;
   }
 
@@ -1200,6 +1218,8 @@ const App = (() => {
     if (!k) return;
     const num = (i) => Math.max(parseFloat(i.value) || 0, 0);
     if (k === 'dca') settings.dcaTarget = num(e.target);
+    else if (k === 'presupuesto') settings.presupuestoMes = num(e.target);
+    else if (k === 'meses') planMeses = Math.min(Math.max(Math.round(num(e.target)), 1), 36);
     else if (k === 'rc') { settings.bolsaTarget = 100 - Math.min(num(e.target), 100); fitTargetsTo100(); }   // el ratio fija la bolsa y los otros tres se reajustan, como con el lápiz de Bolsa
     persist();
     render();
