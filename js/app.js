@@ -249,7 +249,7 @@ const App = (() => {
   let sparklineData = {};
   let chartInstance = null;
   let chartBolsaInstance = null;   // rosca de la Bolsa en Distribución
-  const grupoVista = { dist: 'crypto', evo: 'crypto' };   // grupo (crypto / bolsa) que muestra cada sección con selector
+  const grupoVista = { dist: 'crypto', evo: 'crypto', mov: 'crypto' };   // grupo (crypto / bolsa) que muestra cada sección con selector
   let evolutionChart = null;
   let refreshInterval = null;
   let txFilter = '';
@@ -260,6 +260,9 @@ const App = (() => {
   // ── FORMATEO ──
   // Cantidades SIEMPRE con 2 decimales como máximo (0 → 0.00), salvo valores
   // sin dígitos (enteros/porcentajes) que explícitamente piden 0 decimales.
+  // Cantidad de una posición: las acciones admiten fracciones (1 € de TSLA son 0,0029 unidades) y fmt() las dejaría en 0.00.
+  const fmtQty = (n, token, decimals) => COINS[token]?.kind === 'stock' && n > 0 && n < 100
+    ? n.toLocaleString('en-US', { maximumFractionDigits: 6 }) : fmt(n, decimals);
   const fmt = (n, decimals = 2) => {
     if (n === null || n === undefined || isNaN(n)) return '—';
     const d = Math.max(0, Math.min(decimals, 2));
@@ -1658,7 +1661,7 @@ const App = (() => {
               </div>
             </div>
           </td>
-          <td class="text-right">${fmt(asset.qty, asset.token === 'BTC' ? 8 : 4)}</td>
+          <td class="text-right">${fmtQty(asset.qty, asset.token, asset.token === 'BTC' ? 8 : 4)}</td>
           <td class="text-right">${fmtCurrency(p)}</td>
           <td class="text-right ${pnlClass(change / 100)}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</td>
           <td>${renderSparkline(asset.token, change >= 0)}</td>
@@ -2007,6 +2010,12 @@ const App = (() => {
   function renderTransactions() {
     const tbody = document.getElementById('tx-tbody');
     let filtered = [...transactions].reverse();
+    // Crypto y Bolsa por separado, con el mismo selector que Distribución y Evolución; sin acciones no hay selector.
+    const esBolsa = (tx) => COINS[tx.token]?.kind === 'stock';
+    const hayBolsa = transactions.some(esBolsa), hayCrypto = transactions.some(tx => !esBolsa(tx));
+    const grupo = pintaSelector('seg-mov', 'mov', hayCrypto, hayBolsa);
+    if (hayBolsa && hayCrypto) filtered = filtered.filter(tx => (grupo === 'bolsa') === esBolsa(tx));
+    else if (hayBolsa) filtered = filtered.filter(esBolsa);
     if (txFilter) {
       const q = txFilter.toLowerCase();
       filtered = filtered.filter(tx =>
@@ -2032,7 +2041,7 @@ const App = (() => {
           <span style="color:${tx.type === 'Compra' ? 'var(--accent-green)' : 'var(--accent-blue)'};">${tx.type}</span>
         </td>
         <td class="text-right">${tx.price > 0 ? fmtTxAmount(tx, tx.price) : '—'}</td>
-        <td class="text-right">${fmt(tx.qty, tx.token === 'BTC' ? 8 : 2)}</td>
+        <td class="text-right">${fmtQty(tx.qty, tx.token, tx.token === 'BTC' ? 8 : 2)}</td>
         <td class="text-right">${tx.totalUsd > 0 ? fmtTxAmount(tx, tx.totalUsd) : '—'}</td>
         <td class="text-right tx-actions">
           <button type="button" class="tx-btn tx-edit" data-txid="${tx.id}" title="Editar" aria-label="Editar">
@@ -2192,7 +2201,7 @@ const App = (() => {
         <div class="modal-grid-3">
           <div class="modal-stat-card">
             <div class="modal-stat-label">Cantidad</div>
-            <div class="modal-stat-big">${fmt(asset.qty, asset.token === 'BTC' ? 8 : 4)}</div>
+            <div class="modal-stat-big">${fmtQty(asset.qty, asset.token, asset.token === 'BTC' ? 8 : 4)}</div>
             <div class="modal-stat-sub">${asset.token}</div>
           </div>
           <div class="modal-stat-card">
@@ -2286,7 +2295,7 @@ const App = (() => {
               <div class="modal-tx-row">
                 <div class="modal-tx-left">
                   <div class="modal-tx-date">${tx.date}</div>
-                  <div class="modal-tx-qty">${fmt(tx.qty, tx.token === 'BTC' ? 8 : 4)} ${tx.token}</div>
+                  <div class="modal-tx-qty">${fmtQty(tx.qty, tx.token, tx.token === 'BTC' ? 8 : 4)} ${tx.token}</div>
                 </div>
                 <div class="modal-tx-right">
                   <div class="modal-tx-price">${tx.price > 0 ? fmtTxAmount(tx, tx.price) : '—'}</div>
@@ -3440,7 +3449,7 @@ const App = (() => {
 
     document.querySelectorAll('.seg-grupo button').forEach(b => b.addEventListener('click', () => {
       grupoVista[b.parentElement.dataset.seccion] = b.dataset.g;
-      renderAllocation(); renderEvolutionChart();
+      renderAllocation(); renderEvolutionChart(); renderTransactions();
     }));
 
     // Render inmediato con snapshot cacheado — no espera a la API.
