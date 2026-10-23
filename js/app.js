@@ -3789,6 +3789,23 @@ Aceptar = ponerlas a cero (se registra una Venta de todo). Cancelar = dejarlas c
       renderAllocation(); renderEvolutionChart(); renderTransactions(); renderAssetTable();
     }));
 
+    // Botón "atrás" del móvil: cada ventana abierta (modal) añade una entrada al historial; atrás cierra la ventana en vez de sacar de la app.
+    // Si se cierra con su X, se retira esa entrada (history.go) y el popstate que provoca se ignora.
+    let entradas = 0, ignorarPop = false;
+    const abiertas = () => document.querySelectorAll('.modal-overlay.open');
+    new MutationObserver(() => {
+      const n = abiertas().length;
+      while (entradas < n) { history.pushState({ ventana: true }, ''); entradas++; }
+      if (entradas > n) { const sobran = entradas - n; entradas = n; ignorarPop = true; history.go(-sobran); }
+    }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+    window.addEventListener('popstate', () => {
+      if (ignorarPop) { ignorarPop = false; return; }
+      if (entradas > 0) entradas--;
+      const arriba = [...abiertas()].pop();
+      const x = arriba && arriba.querySelector('.modal-close');
+      if (x) x.click();
+    });
+
     try { if (localStorage.getItem('miCartera.moneda') === 'EUR') setCurrency('EUR'); } catch (e) { /* sin almacenamiento */ }   // recuerda la moneda elegida
     // Render inmediato con snapshot cacheado — no espera a la API.
     // El usuario ve sus movimientos y cartera al instante; los precios
