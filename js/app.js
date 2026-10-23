@@ -3433,7 +3433,7 @@ const App = (() => {
     const head = parseCsvLine(lines[h]).map(x => x.trim());
     const cN = head.indexOf('Name'), cQ = head.indexOf('Amount'), cA = head.findIndex(x => x.startsWith('Avg Buy'));
     const num = (s) => parseFloat(String(s || '').replace(/,/g, ''));
-    const monedas = {}, cambios = [], sinMoneda = [];
+    const monedas = {}, cambios = [], sinMoneda = [], filasTok = new Set();
     for (let i = h + 1; i < lines.length; i++) {
       const row = parseCsvLine(lines[i]).map(x => x.trim()), name = row[cN], qty = num(row[cQ]), avg = num(row[cA]);
       if (!name || !(qty > 0)) continue;
@@ -3446,18 +3446,26 @@ const App = (() => {
         await new Promise(r => setTimeout(r, 250));
       }
       if (!tok) { sinMoneda.push(name); continue; }
+      filasTok.add(tok);
       const tengo = (portfolio.find(x => x.token === tok) || {}).qty || 0, dif = qty - tengo;
       if (Math.abs(dif) > Math.max(qty * 0.0005, 1e-9)) cambios.push({ token: tok, name, dif, avg: avg > 0 ? avg : 0 });
     }
+    const enArchivo = new Set(cambios.map(c => c.token));
+    const fuera = portfolio.filter(x => x.kind !== 'stock' && x.qty > 0 && !enArchivo.has(x.token) && !filasTok.has(x.token));
     const nuevas = Object.keys(monedas);
-    if (!cambios.length) { alert(`CoinMarketCap Overview: tu cartera ya coincide${sinMoneda.length ? ` (no encontradas: ${sinMoneda.join(', ')})` : ''}.`); return; }
+    if (!cambios.length && !fuera.length) { alert(`CoinMarketCap Overview: tu cartera ya coincide${sinMoneda.length ? ` (no encontradas: ${sinMoneda.join(', ')})` : ''}.`); return; }
     const lista = cambios.map(c => `${c.dif > 0 ? '+' : ''}${+c.dif.toFixed(6)} ${c.token}`).join(', ');
     if (!confirm(`CoinMarketCap Overview: se ajustarán ${cambios.length} monedas a las cantidades del archivo (${lista}). No se borra nada${nuevas.length ? `\n\nMonedas nuevas: ${nuevas.map(t => `${t} = ${monedas[t].name}`).join(', ')}` : ''}${sinMoneda.length ? `\n\nNo encontradas (se saltan): ${sinMoneda.join(', ')}` : ''}.\n\n¿Continuar?`)) return;
     if (nuevas.length) {
       settings.customCoins = Object.assign({}, settings.customCoins, ...nuevas.map(t => ({ [t]: { name: monedas[t].name, coingeckoId: monedas[t].id, icon: monedas[t].large || monedas[t].thumb } })));
       registerCustomCoins();
     }
+    // Monedas que tienes en la app y NO están en el archivo: solo se ponen a cero si lo confirmas aparte.
+    const aCero = fuera.length && confirm(`Estas monedas están en tu cartera pero NO en el archivo: ${fuera.map(x => `${x.token} (${+x.qty.toFixed(6)})`).join(', ')}.
+
+Aceptar = ponerlas a cero (se registra una Venta de todo). Cancelar = dejarlas como están.`);
     const txs = cambios.filter(c => COINS[c.token]).map(c => ({ date: fecha, token: c.token, type: c.dif > 0 ? 'Compra' : 'Venta', price: c.avg, qty: Math.abs(c.dif), totalUsd: Math.abs(c.dif) * c.avg }));
+    if (aCero) fuera.forEach(x => txs.push({ date: fecha, token: x.token, type: 'Venta', price: x.avgPrice || 0, qty: x.qty, totalUsd: x.costUsd || 0 }));
     fillTotalEur(txs);
     txs.forEach(tx => { tx.applied = true; tx.id = uid(); applyMovement(tx); transactions.push(tx); });
     persist(); render(); fetchPrices();
