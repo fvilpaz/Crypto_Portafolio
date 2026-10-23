@@ -3339,7 +3339,7 @@ const App = (() => {
         if (lines.length < 2) throw new Error('El CSV está vacío o mal formado.');
         const header = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
         if (header.includes('Ticker') && header.includes('Price per share')) { importRevolut(lines, header); return; }
-        if (header.includes('Token') && header.includes('Amount') && header.some(h => h.startsWith('Price ('))) { importCoinMarketCap(lines, header); return; }
+        if (header.includes('Token') && header.includes('Amount') && header.some(h => h.startsWith('Price ('))) { importCoinMarketCap(lines, header).catch(e => alert('CoinMarketCap: ' + e.message)); return; }
         const idx = {};
         ['date', 'token', 'type', 'price', 'qty', 'totalUsd', 'totalEur'].forEach(f => { idx[f] = header.indexOf(f); });
         if (idx.token < 0 || idx.type < 0) throw new Error('Cabecera CSV no reconocida. Usa: date,token,type,price,qty,totalUsd');
@@ -3426,28 +3426,48 @@ const App = (() => {
 
   // CSV de CoinMarketCap (Portfolio > Exportar): Date (UTC+2:00),Token,Type,Price (USD),Amount,Total value (USD),Fee,...
   // Solo AÑADE movimientos (como el de Revolut): no reconstruye la cartera, así que no toca tus acciones. Salta los que ya tengas (misma fecha, moneda y cantidad).
-  function importCoinMarketCap(lines, header) {
+  // Las monedas que la app no conoce se buscan en CoinGecko (símbolo exacto, mejor puesto por capitalización) y SOLO se dan de alta si confirmas, con su nombre a la vista.
+  async function importCoinMarketCap(lines, header) {
     const col = (p) => header.findIndex(h => h.startsWith(p));
     const cD = col('Date'), cT = col('Token'), cY = col('Type'), cP = col('Price'), cQ = col('Amount'), cV = col('Total value');
     const num = (s) => parseFloat(String(s || '').replace(/,/g, ''));   // "2,482.82" -> 2482.82
-    const nuevos = [], desconocidas = new Set(); let ignoradas = 0, repetidas = 0;
+    const filas = []; let ignoradas = 0, repetidas = 0;
     for (let i = 1; i < lines.length; i++) {
       const row = parseCsvLine(lines[i]).map(x => x.trim());
       const tipo = (row[cY] || '').toLowerCase(), tok = (row[cT] || '').toUpperCase(), qty = num(row[cQ]), price = num(row[cP]);
-      if ((tipo !== 'buy' && tipo !== 'sell') || !(qty > 0)) { ignoradas++; continue; }
-      if (!COINS[tok] || COINS[tok].kind === 'stock') { ignoradas++; desconocidas.add(tok); continue; }
-      const date = (row[cD] || '').slice(0, 10), type = tipo === 'buy' ? 'Compra' : 'Venta', totalUsd = num(row[cV]) || qty * price || 0;
-      if (transactions.some(t => t.token === tok && t.type === type && t.date === date && Math.abs(t.qty - qty) <= qty * 0.001)) { repetidas++; continue; }
-      nuevos.push({ date, token: tok, type, price: price > 0 ? price : totalUsd / qty, qty, totalUsd });
+      if ((tipo !== 'buy' && tipo !== 'sell') || !(qty > 0) || !/^[A-Z0-9]{1,12}$/.test(tok) || (COINS[tok] && COINS[tok].kind === 'stock')) { ignoradas++; continue; }
+      filas.push({ tok, qty, price, tipo, date: (row[cD] || '').slice(0, 10), totalUsd: num(row[cV]) || qty * price || 0 });
     }
-    const aviso = `${repetidas} ya estaban (misma fecha, moneda y cantidad), ${ignoradas} filas ignoradas${desconocidas.size ? `; no están en tu catálogo: ${[...desconocidas].join(', ')}` : ''}`;
+    const monedas = {}, sinMoneda = new Set(), dudosas = new Set();
+    for (const tok of new Set(filas.map(f => f.tok).filter(t => !COINS[t]))) {
+      try {
+        const exactas = (await searchCoins(tok)).filter(c => c.symbol.toUpperCase() === tok).sort((x, y) => (x.market_cap_rank || 1e9) - (y.market_cap_rank || 1e9));
+        if (exactas.length) { monedas[tok] = exactas[0]; if (exactas.length > 1) dudosas.add(tok); } else sinMoneda.add(tok);
+      } catch (e) { sinMoneda.add(tok); }
+      await new Promise(r => setTimeout(r, 250));   // sin ametrallar a CoinGecko
+    }
+    const nuevos = [];
+    for (const f of filas) {
+      if (!COINS[f.tok] && !monedas[f.tok]) { ignoradas++; continue; }
+      const type = f.tipo === 'buy' ? 'Compra' : 'Venta';
+      if (transactions.some(t => t.token === f.tok && t.type === type && t.date === f.date && Math.abs(t.qty - f.qty) <= f.qty * 0.001)) { repetidas++; continue; }
+      nuevos.push({ date: f.date, token: f.tok, type, price: f.price > 0 ? f.price : f.totalUsd / f.qty, qty: f.qty, totalUsd: f.totalUsd });
+    }
+    const altas = Object.keys(monedas).filter(t => nuevos.some(n => n.token === t));
+    const aviso = `${repetidas} ya estaban (misma fecha, moneda y cantidad), ${ignoradas} filas ignoradas${sinMoneda.size ? `; no encontradas en CoinGecko: ${[...sinMoneda].join(', ')}` : ''}`;
     if (!nuevos.length) { alert(`CoinMarketCap: no hay movimientos nuevos (${aviso}).`); return; }
-    if (!confirm(`CoinMarketCap: se añadirán ${nuevos.length} movimientos a tu cartera sin borrar nada (${aviso}). ¿Continuar?`)) return;
-    fillTotalEur(nuevos);
-    nuevos.sort((x, y) => x.date.localeCompare(y.date));
-    nuevos.forEach(tx => { tx.applied = true; tx.id = uid(); applyMovement(tx); transactions.push(tx); });
+    const lista = altas.map(t => `${t} = ${monedas[t].name}${dudosas.has(t) ? ' (elegida entre varias con ese símbolo)' : ''}`).join(', ');
+    if (!confirm(`CoinMarketCap: se añadirán ${nuevos.length} movimientos a tu cartera sin borrar nada (${aviso}).${altas.length ? `\n\nMonedas nuevas que se darán de alta: ${lista}. Si alguna no es la tuya, cancela.` : ''}\n\n¿Continuar?`)) return;
+    if (altas.length) {   // alta como al elegir una moneda en la búsqueda
+      settings.customCoins = Object.assign({}, settings.customCoins, ...altas.map(t => ({ [t]: { name: monedas[t].name, coingeckoId: monedas[t].id, icon: monedas[t].large || monedas[t].thumb } })));
+      registerCustomCoins();
+    }
+    const validos = nuevos.filter(n => COINS[n.token]);
+    fillTotalEur(validos);
+    validos.sort((x, y) => x.date.localeCompare(y.date));
+    validos.forEach(tx => { tx.applied = true; tx.id = uid(); applyMovement(tx); transactions.push(tx); });
     persist(); render(); fetchPrices();
-    alert(`Importación de CoinMarketCap completada: ${nuevos.length} movimientos.`);
+    alert(`Importación de CoinMarketCap completada: ${validos.length} movimientos${altas.length ? ` y ${altas.length} monedas nuevas` : ''}.`);
   }
 
   function parseCsvLine(line) {
