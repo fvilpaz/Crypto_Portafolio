@@ -151,7 +151,7 @@ const App = (() => {
   const _store = loadStore();
   let portfolio = _store.portfolio;
   let transactions = _store.transactions;
-  let settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, coreTarget: DEFAULT_CORE_TARGET, satTarget: DEFAULT_SAT_TARGET, strategy: DEFAULT_STRATEGY, coreSplit: { BTC: 0.6, ETH: 0.4 }, satSplit: { SOL: 0.5, ATOM: 0.3, TIA: 0.2 } }, _store.settings || {});   // dcaTarget en €, defenseTarget en %, strategy = plantilla de reparto
+  let settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, coreTarget: DEFAULT_CORE_TARGET, satTarget: DEFAULT_SAT_TARGET, strategy: DEFAULT_STRATEGY, coreSplit: { BTC: 0.6, ETH: 0.4 }, satSplit: _store.portfolio.length || _store.transactions.length ? { SOL: 0.5, ATOM: 0.3, TIA: 0.2 } : {} }, _store.settings || {});   // quien instala la app empieza sin satélites (los elige con el lápiz); quien ya tiene datos y nunca guardó ajustes conserva el reparto de siempre   // dcaTarget en €, defenseTarget en %, strategy = plantilla de reparto
 
   // Nombre de una moneda o acción venida de fuera (CoinGecko, buscador, JSON importado), listo para ir dentro del HTML: se quitan < > " ' y el & se escribe
   // como &amp; (sin esto "Vanguard S&P 500" quedaba como "Vanguard SP 500"). Se puede aplicar dos veces sin duplicar el &amp;.
@@ -916,7 +916,7 @@ const App = (() => {
     }
     const cosmosStakingEl = document.getElementById('card-cosmos-staking');
     if (cosmosStakingEl) {
-      cosmosStakingEl.innerHTML = '';
+      cosmosStakingEl.textContent = getSatTokens().length ? '' : 'Añade monedas a Satélites con el lápiz';
     }
 
     // Refugio (USDC): peso actual vs objetivo editable (defenseTarget en %).
