@@ -3337,6 +3337,7 @@ const App = (() => {
       try {
         const lines = String(reader.result).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
         if (lines.length < 2) throw new Error('El CSV está vacío o mal formado.');
+        if (/^"?Last updated/.test(lines[0]) && lines.some(l => /^"Name","Price \(/.test(l))) { importCmcOverview(lines).catch(e => alert('CoinMarketCap Overview: ' + e.message)); return; }
         const header = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
         if (header.includes('Ticker') && header.includes('Price per share')) { importRevolut(lines, header); return; }
         if (header.includes('Token') && header.includes('Amount') && header.some(h => h.startsWith('Price ('))) { importCoinMarketCap(lines, header).catch(e => alert('CoinMarketCap: ' + e.message)); return; }
@@ -3422,6 +3423,45 @@ const App = (() => {
     });
     persist(); render(); fetchPrices();
     alert(`Importación de Revolut completada: ${nuevos.length} movimientos.`);
+  }
+
+  // CSV "Overview" de CoinMarketCap: foto de tus tenencias actuales (Name, Amount, Avg Buy Price...), sin movimientos.
+  // Ajusta cada moneda a la cantidad del archivo: si te falta, añade una Compra por la diferencia (a tu precio medio); si te sobra, una Venta. Nunca borra.
+  async function importCmcOverview(lines) {
+    const fecha = ((lines[0].match(/\d{4}-\d{2}-\d{2}/) || [])[0]) || new Date().toISOString().slice(0, 10);
+    const h = lines.findIndex(l => /^"Name","Price \(/.test(l));
+    const head = parseCsvLine(lines[h]).map(x => x.trim());
+    const cN = head.indexOf('Name'), cQ = head.indexOf('Amount'), cA = head.findIndex(x => x.startsWith('Avg Buy'));
+    const num = (s) => parseFloat(String(s || '').replace(/,/g, ''));
+    const monedas = {}, cambios = [], sinMoneda = [];
+    for (let i = h + 1; i < lines.length; i++) {
+      const row = parseCsvLine(lines[i]).map(x => x.trim()), name = row[cN], qty = num(row[cQ]), avg = num(row[cA]);
+      if (!name || !(qty > 0)) continue;
+      let tok = Object.keys(COINS).find(t => COINS[t].kind !== 'stock' && COINS[t].name.toLowerCase() === name.toLowerCase()) || (COINS[name.toUpperCase()] && COINS[name.toUpperCase()].kind !== 'stock' ? name.toUpperCase() : undefined);
+      if (!tok) {
+        try {
+          const r = (await searchCoins(name)).filter(c => c.name.toLowerCase() === name.toLowerCase()).sort((x, y) => (x.market_cap_rank || 1e9) - (y.market_cap_rank || 1e9))[0];
+          if (r && /^[A-Z0-9]{1,12}$/.test(r.symbol.toUpperCase()) && !COINS[r.symbol.toUpperCase()]) { tok = r.symbol.toUpperCase(); monedas[tok] = r; }
+        } catch (e) { /* sin moneda */ }
+        await new Promise(r => setTimeout(r, 250));
+      }
+      if (!tok) { sinMoneda.push(name); continue; }
+      const tengo = (portfolio.find(x => x.token === tok) || {}).qty || 0, dif = qty - tengo;
+      if (Math.abs(dif) > Math.max(qty * 0.0005, 1e-9)) cambios.push({ token: tok, name, dif, avg: avg > 0 ? avg : 0 });
+    }
+    const nuevas = Object.keys(monedas);
+    if (!cambios.length) { alert(`CoinMarketCap Overview: tu cartera ya coincide${sinMoneda.length ? ` (no encontradas: ${sinMoneda.join(', ')})` : ''}.`); return; }
+    const lista = cambios.map(c => `${c.dif > 0 ? '+' : ''}${+c.dif.toFixed(6)} ${c.token}`).join(', ');
+    if (!confirm(`CoinMarketCap Overview: se ajustarán ${cambios.length} monedas a las cantidades del archivo (${lista}). No se borra nada${nuevas.length ? `\n\nMonedas nuevas: ${nuevas.map(t => `${t} = ${monedas[t].name}`).join(', ')}` : ''}${sinMoneda.length ? `\n\nNo encontradas (se saltan): ${sinMoneda.join(', ')}` : ''}.\n\n¿Continuar?`)) return;
+    if (nuevas.length) {
+      settings.customCoins = Object.assign({}, settings.customCoins, ...nuevas.map(t => ({ [t]: { name: monedas[t].name, coingeckoId: monedas[t].id, icon: monedas[t].large || monedas[t].thumb } })));
+      registerCustomCoins();
+    }
+    const txs = cambios.filter(c => COINS[c.token]).map(c => ({ date: fecha, token: c.token, type: c.dif > 0 ? 'Compra' : 'Venta', price: c.avg, qty: Math.abs(c.dif), totalUsd: Math.abs(c.dif) * c.avg }));
+    fillTotalEur(txs);
+    txs.forEach(tx => { tx.applied = true; tx.id = uid(); applyMovement(tx); transactions.push(tx); });
+    persist(); render(); fetchPrices();
+    alert(`Overview de CoinMarketCap cargado: ${txs.length} monedas ajustadas.`);
   }
 
   // CSV de CoinMarketCap (Portfolio > Exportar): Date (UTC+2:00),Token,Type,Price (USD),Amount,Total value (USD),Fee,...
