@@ -71,6 +71,10 @@ are intentionally not merged. The apps cross-link, nothing more.
   purchase price when a stock has no recent price (older than 5 days) or is not in the file. The symbols it tracks are
   listed in `data/acciones.json`. A stock with no automatic price (e.g. European UCITS ETFs the free plan does not cover)
   has a **Price** box in its detail window where you type the current price in euros; market price wins when it exists
+- **Import from CoinMarketCap:** *Importar → CSV* also accepts CoinMarketCap's portfolio export (`Date (UTC+2:00), Token, Type,
+  Price (USD), Amount, Total value (USD), Fee, …`). Like Revolut's it **adds** and rebuilds nothing: `buy` / `sell` rows only
+  (transfers are ignored), prices written as `2,482.82` are read correctly, coins not in your catalogue are skipped and named,
+  and a row you already have (same date, coin and amount) is not duplicated
 - **Import from Revolut:** *Importar → CSV* also accepts Revolut's transactions statement (`Date, Ticker, Type, Quantity,
   Price per share, Total Amount, Currency, FX Rate`). Unlike the app's own CSV it **adds** to what you have (nothing is
   rebuilt): only BUY / SELL rows are imported, top-ups, withdrawals and dividends are ignored, and a movement imported
