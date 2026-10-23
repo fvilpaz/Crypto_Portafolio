@@ -2805,7 +2805,7 @@ const App = (() => {
   function renderAddPrice() {
     const pe = addPriceEur();
     const pf = document.getElementById('add-price-field');
-    if (pf) pf.hidden = !addSinPrecio();
+    if (pf) pf.hidden = addState.type === 'Recompensa';   // el precio por unidad se puede dar siempre; si lo pones, manda sobre el de mercado
     if (addSinPrecio()) {
       document.getElementById('add-price-live').textContent = `Sin precio de ${addState.token} en vivo. Pon el precio por unidad (una vez, queda guardado) y con el importe se calculan las unidades.`;
       return;
@@ -2830,6 +2830,8 @@ const App = (() => {
     const amountField = document.getElementById('add-amount-field');
     if (amountField) amountField.style.display = isReward ? 'none' : '';
     const priceLive = document.getElementById('add-price-live');
+    const pfm = document.getElementById('add-price-field');
+    if (pfm && isReward) pfm.hidden = true;
     if (isReward && priceLive) priceLive.textContent = 'Recompensa: monedas gratis a 0€ (solo suma cantidad, no cuenta como invertido).';
     else renderAddPrice();
     // Cerrado: el nombre seleccionado conserva su color (solo el texto, borde neutro).
@@ -2841,14 +2843,16 @@ const App = (() => {
   }
 
   // Metes € → calcula la cantidad. Metes cantidad → calcula los €. (Precio en vivo.)
+  // Precio por unidad que pones a mano en el formulario (€): si lo rellenas, prevalece sobre el de mercado al calcular importe/cantidad.
+  const addPrecioMano = () => parseNum(document.getElementById('add-price-manual').value) || 0;
   function onAmountInput() {
-    const pe = addPriceEur() || (addSinPrecio() ? parseNum(document.getElementById('add-price-manual').value) : 0);
+    const pe = addPrecioMano() || addPriceEur();
     const amount = parseNum(document.getElementById('add-amount').value);
     if (pe > 0 && amount > 0) document.getElementById('add-qty').value = fmtInput(amount / pe, 8);
     updateEffective();
   }
   function onQtyInput() {
-    const pe = addPriceEur();
+    const pe = addPrecioMano() || addPriceEur();
     const qty = parseNum(document.getElementById('add-qty').value);
     if (pe > 0 && qty > 0) document.getElementById('add-amount').value = fmtInput(qty * pe, 2);
     updateEffective();
@@ -2938,6 +2942,7 @@ const App = (() => {
     // Compra sin precio conocido y solo importe: en una crypto se guarda como 1 unidad al precio pagado; en una acción hay que dar el precio por
     // unidad o la cantidad (con 1 unidad inventada, al llegar el precio real la posición valdría cientos de veces lo que pagaste).
     const precioManual = addSinPrecio() ? parseNum(document.getElementById('add-price-manual').value) : 0;   // € por unidad
+    if (!precioManual && addPrecioMano() > 0 && !(qty > 0) && amountEur > 0) qty = amountEur / addPrecioMano();   // precio puesto a mano con precio de mercado disponible: manda el tuyo
     if (precioManual > 0) {
       if (!(qty > 0) && amountEur > 0) qty = amountEur / precioManual;
       settings.manualPrices = Object.assign({}, settings.manualPrices, { [token]: { usd: precioManual / EUR_USD, ts: Date.now() } });
