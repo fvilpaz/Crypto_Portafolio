@@ -287,7 +287,9 @@ const App = (() => {
   // sin dígitos (enteros/porcentajes) que explícitamente piden 0 decimales.
   // Cantidad de una posición: las acciones admiten fracciones (1 € de TSLA son 0,0029 unidades) y fmt() las dejaría en 0.00.
   const fmtQty = (n, token, decimals) => COINS[token]?.kind === 'stock' && n > 0 && n < 100
-    ? n.toLocaleString('en-US', { maximumFractionDigits: 6 }) : fmt(n, decimals);
+    ? n.toLocaleString('en-US', { maximumFractionDigits: 6 })
+    // Monedas: se respetan los decimales que pide cada sitio (BTC 8, resto 4 o 2), con mínimo 2; fmt() los recortaba a 2 y 0,095 BTC salía 0,10.
+    : (n === null || n === undefined || isNaN(n)) ? '—' : n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: Math.max(2, Math.min(decimals || 2, 8)) });
   const fmt = (n, decimals = 2) => {
     if (n === null || n === undefined || isNaN(n)) return '—';
     const d = Math.max(0, Math.min(decimals, 2));
