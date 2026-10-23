@@ -46,6 +46,8 @@ const App = (() => {
 //   'airdrop'   → desviada al chart de airdrops
 // Los filtros derivados reemplazan a los antiguos arrays fijos.
 
+  // Monedas del Refugio: las que elijas con el lápiz de su tarjeta (settings.refugioTokens); por defecto USDC.
+  const getRefugioTokens = () => { const t = (Array.isArray(settings.refugioTokens) ? settings.refugioTokens : []).filter(x => COINS[x] && COINS[x].kind !== 'stock'); return t.length ? t : ['USDC']; };
   const getStakingAssets = () => portfolio.filter(a => a.tag === 'staking');
   const getAirdropAssets = () => portfolio.filter(a => a.tag === 'airdrop');
 
@@ -929,14 +931,15 @@ const App = (() => {
       cosmosStakingEl.textContent = getSatTokens().length ? '' : 'Añade monedas a Satélites con el lápiz';
     }
 
-    // Refugio (USDC): peso actual vs objetivo editable (defenseTarget en %).
-    const usdcVal = getAssetValue(portfolio.find(a => a.token === 'USDC'));
+    // Refugio (por defecto USDC, configurable): peso actual vs objetivo editable (defenseTarget en %).
+    const usdcVal = getRefugioTokens().reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t)), 0);
     const defenseTargetFrac = (settings.defenseTarget || 0) / 100;
     const defenseWeight = total > 0 ? usdcVal / total : 0;
     const reached = defenseTargetFrac > 0 && defenseWeight >= defenseTargetFrac;
     document.getElementById('card-defense-pct').textContent = `${(defenseWeight * 100).toFixed(1)}%`;
     const defenseIconsEl = document.getElementById('defense-icons');
-    if (defenseIconsEl && !defenseIconsEl.childElementCount) defenseIconsEl.innerHTML = iconHtml('USDC', 'usdc', 30);
+    const refTokens = getRefugioTokens();
+    if (defenseIconsEl && defenseIconsEl.dataset.tokens !== refTokens.join(',')) { defenseIconsEl.dataset.tokens = refTokens.join(','); defenseIconsEl.innerHTML = refTokens.map(t => iconHtml(t, (COINS[t] || {}).cssClass || t.toLowerCase(), 30)).join(''); }
     const defenseBar = document.getElementById('defense-bar-fill');
     const defRatio = defenseTargetFrac > 0 ? defenseWeight / defenseTargetFrac : 1;
     if (defenseBar) {
@@ -1021,7 +1024,7 @@ const App = (() => {
       const after = getInvestedValue() + monthlySplit().totalUsd;   // tras aportar todo el dinero, también el de bolsa
       const targets = [settings.defenseTarget || 0, settings.coreTarget ?? DEFAULT_CORE_TARGET, settings.satTarget ?? DEFAULT_SAT_TARGET];
       const vals = [
-        getAssetValue(portfolio.find(a => a.token === 'USDC')),
+        getRefugioTokens().reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t)), 0),
         coreTotal0,
         getSatTokens().reduce((s, tok) => s + getAssetValue(portfolio.find(a => a.token === tok)), 0),
       ];
@@ -1127,14 +1130,14 @@ const App = (() => {
     const stk = portfolio.filter(a => a.kind === 'stock' && a.tag !== 'airdrop');
     return { mensual: Math.max(monthlySplit().totalUsd - dcaMonthBoughtUsd(), 0), ratioCrypto: rc,
       pesos: { crypto: { nucleo: t[0], satelites: t[1], refugio: t[2] }, bolsa: { nucleo: bs.nucleo, satelites: bs.satelites } },
-      valores: { crypto: { nucleo: val(getCoreTokens()), satelites: val(getSatTokens()), refugio: val(['USDC']) },
+      valores: { crypto: { nucleo: val(getCoreTokens()), satelites: val(getSatTokens()), refugio: val(getRefugioTokens()) },
         bolsa: { nucleo: stk.filter(a => a.token === nuc).reduce((s, a) => s + getAssetValue(a), 0), satelites: stk.filter(a => a.token !== nuc).reduce((s, a) => s + getAssetValue(a), 0) } } };
   }
 
   // Dónde cae el dinero de un cubo: reparto interno de la app (coreSplit / satSplit; bolsa: S&P 500 y el resto a partes iguales)
   function planDonde(lado, cubo, usd) {
     let pos;
-    if (lado === 'crypto') pos = cubo === 'nucleo' ? Object.entries(settings.coreSplit) : cubo === 'satelites' ? Object.entries(settings.satSplit) : [['USDC', 1]];
+    if (lado === 'crypto') pos = cubo === 'nucleo' ? Object.entries(settings.coreSplit) : cubo === 'satelites' ? Object.entries(settings.satSplit) : getRefugioTokens().map(t => [t, 1]);
     else { const nuc = bolsaNucleo(), pb = plBolsaActual(); pos = bolsaLista().filter(x => (cubo === 'nucleo') === (x[0] === nuc)).map(x => [x[1], pb[x[0]]]); }
     const s = pos.reduce((x, [, w]) => x + w, 0);
     if (s <= 0) return '';
@@ -1308,7 +1311,7 @@ const App = (() => {
         function rowProgress(token) {
           const val = getAssetValue(portfolio.find(a => a.token === token));
           if (settings.coreSplit[token] > 0) return coreTotal > 0 ? Math.min((val / coreTotal) / settings.coreSplit[token], 1) : 0;
-          if (token === 'USDC') return defFrac > 0 && invTotal > 0 ? Math.min((val / invTotal) / defFrac, 1) : 0;
+          if (getRefugioTokens().includes(token)) return defFrac > 0 && invTotal > 0 ? Math.min((val / invTotal) / defFrac, 1) : 0;
           const split = settings.satSplit[token];
           return (split > 0 && satTotal > 0) ? Math.min((val / satTotal) / split, 1) : 0;
         }
@@ -1321,7 +1324,7 @@ const App = (() => {
         const coreRows = getCoreTokens().map(tok => ({ token: tok, cssClass: (COINS[tok] || { cssClass: tok.toLowerCase() }).cssClass, amount: r.coreAlloc?.[tok] ?? 0, label: tok }));
         const rows = [
           ...coreRows,
-          { token: 'USDC', cssClass: 'usdc', amount: r.toRefugio, label: 'USDC' },
+          ...getRefugioTokens().map(t => ({ token: t, cssClass: (COINS[t] || {}).cssClass || t.toLowerCase(), amount: r.toRefugio / getRefugioTokens().length, label: t })),
           ...satRows,
         ];
         const detail = rows.map(row => {
@@ -1403,10 +1406,18 @@ const App = (() => {
 
   function editDefenseTarget() {
     const cur = settings.defenseTarget;
-    const input = prompt('Objetivo de refugio (USDC) en % de la cartera:', cur);
+    const input = prompt('Objetivo de refugio en % de la cartera:', cur);
     if (input === null) return;
     const val = parseFloat(String(input).replace(',', '.'));
     if (isNaN(val) || val < 0 || val > 100) return;
+    // Qué monedas cuentan como refugio (símbolos separados por coma: USDC, USDT, BTC...). Cancelar = dejar las que había.
+    const mon = prompt('Monedas del refugio (símbolos separados por coma). Solo monedas que ya tengas en la app y que no estén en Núcleo ni Satélites:', getRefugioTokens().join(', '));
+    if (mon !== null) {
+      const lista = [...new Set(String(mon).toUpperCase().split(/[\s,;]+/).filter(Boolean))];
+      const malas = lista.filter(t => !COINS[t] || COINS[t].kind === 'stock' || settings.coreSplit[t] > 0 || settings.satSplit[t] > 0);
+      if (malas.length) { alert(`No se pueden usar como refugio: ${malas.join(', ')} (no existen en la app, son acciones o ya están en Núcleo/Satélites). No se ha cambiado la lista de monedas.`); }
+      else if (lista.length) settings.refugioTokens = lista;
+    }
     settings.defenseTarget = val;
     persist();
     render();
@@ -2550,7 +2561,7 @@ const App = (() => {
       refugio: {
         label: 'Refugio',
         color: 'var(--accent-blue)',
-        tokens: ['USDC'],
+        tokens: getRefugioTokens(),
         target: settings.defenseTarget || null,
       },
       bolsa: {
