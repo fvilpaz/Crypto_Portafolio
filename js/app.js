@@ -2205,6 +2205,7 @@ const App = (() => {
     const code = document.getElementById('currency-code');
     if (glyph) glyph.textContent = c === 'USD' ? '$' : '€';
     if (code) code.textContent = c;
+    try { localStorage.setItem('miCartera.moneda', c); } catch (e) { /* sin almacenamiento: no se recuerda */ }   // preferencia de este navegador, no viaja en la copia
     render();
   }
 
@@ -3788,6 +3789,7 @@ Aceptar = ponerlas a cero (se registra una Venta de todo). Cancelar = dejarlas c
       renderAllocation(); renderEvolutionChart(); renderTransactions(); renderAssetTable();
     }));
 
+    try { if (localStorage.getItem('miCartera.moneda') === 'EUR') setCurrency('EUR'); } catch (e) { /* sin almacenamiento */ }   // recuerda la moneda elegida
     // Render inmediato con snapshot cacheado — no espera a la API.
     // El usuario ve sus movimientos y cartera al instante; los precios
     // se actualizan en cuanto llega la respuesta de CoinGecko.
