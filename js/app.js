@@ -3339,6 +3339,7 @@ const App = (() => {
         if (lines.length < 2) throw new Error('El CSV está vacío o mal formado.');
         const header = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
         if (header.includes('Ticker') && header.includes('Price per share')) { importRevolut(lines, header); return; }
+        if (header.includes('Token') && header.includes('Amount') && header.some(h => h.startsWith('Price ('))) { importCoinMarketCap(lines, header); return; }
         const idx = {};
         ['date', 'token', 'type', 'price', 'qty', 'totalUsd', 'totalEur'].forEach(f => { idx[f] = header.indexOf(f); });
         if (idx.token < 0 || idx.type < 0) throw new Error('Cabecera CSV no reconocida. Usa: date,token,type,price,qty,totalUsd');
@@ -3421,6 +3422,32 @@ const App = (() => {
     });
     persist(); render(); fetchPrices();
     alert(`Importación de Revolut completada: ${nuevos.length} movimientos.`);
+  }
+
+  // CSV de CoinMarketCap (Portfolio > Exportar): Date (UTC+2:00),Token,Type,Price (USD),Amount,Total value (USD),Fee,...
+  // Solo AÑADE movimientos (como el de Revolut): no reconstruye la cartera, así que no toca tus acciones. Salta los que ya tengas (misma fecha, moneda y cantidad).
+  function importCoinMarketCap(lines, header) {
+    const col = (p) => header.findIndex(h => h.startsWith(p));
+    const cD = col('Date'), cT = col('Token'), cY = col('Type'), cP = col('Price'), cQ = col('Amount'), cV = col('Total value');
+    const num = (s) => parseFloat(String(s || '').replace(/,/g, ''));   // "2,482.82" -> 2482.82
+    const nuevos = [], desconocidas = new Set(); let ignoradas = 0, repetidas = 0;
+    for (let i = 1; i < lines.length; i++) {
+      const row = parseCsvLine(lines[i]).map(x => x.trim());
+      const tipo = (row[cY] || '').toLowerCase(), tok = (row[cT] || '').toUpperCase(), qty = num(row[cQ]), price = num(row[cP]);
+      if ((tipo !== 'buy' && tipo !== 'sell') || !(qty > 0)) { ignoradas++; continue; }
+      if (!COINS[tok] || COINS[tok].kind === 'stock') { ignoradas++; desconocidas.add(tok); continue; }
+      const date = (row[cD] || '').slice(0, 10), type = tipo === 'buy' ? 'Compra' : 'Venta', totalUsd = num(row[cV]) || qty * price || 0;
+      if (transactions.some(t => t.token === tok && t.type === type && t.date === date && Math.abs(t.qty - qty) <= qty * 0.001)) { repetidas++; continue; }
+      nuevos.push({ date, token: tok, type, price: price > 0 ? price : totalUsd / qty, qty, totalUsd });
+    }
+    const aviso = `${repetidas} ya estaban (misma fecha, moneda y cantidad), ${ignoradas} filas ignoradas${desconocidas.size ? `; no están en tu catálogo: ${[...desconocidas].join(', ')}` : ''}`;
+    if (!nuevos.length) { alert(`CoinMarketCap: no hay movimientos nuevos (${aviso}).`); return; }
+    if (!confirm(`CoinMarketCap: se añadirán ${nuevos.length} movimientos a tu cartera sin borrar nada (${aviso}). ¿Continuar?`)) return;
+    fillTotalEur(nuevos);
+    nuevos.sort((x, y) => x.date.localeCompare(y.date));
+    nuevos.forEach(tx => { tx.applied = true; tx.id = uid(); applyMovement(tx); transactions.push(tx); });
+    persist(); render(); fetchPrices();
+    alert(`Importación de CoinMarketCap completada: ${nuevos.length} movimientos.`);
   }
 
   function parseCsvLine(line) {
