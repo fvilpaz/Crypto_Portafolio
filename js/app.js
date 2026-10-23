@@ -3662,6 +3662,15 @@ Aceptar = ponerlas a cero (se registra una Venta de todo). Cancelar = dejarlas c
       render();
     });
 
+    // Tocar "Mi Cartera" (arriba a la izquierda) vuelve al inicio de la página.
+    const logo = document.querySelector('.logo');
+    if (logo) {
+      logo.style.cursor = 'pointer'; logo.setAttribute('role', 'button'); logo.setAttribute('tabindex', '0'); logo.title = 'Volver al inicio';
+      const alInicio = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+      logo.addEventListener('click', alInicio);
+      logo.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alInicio(); } });
+    }
+
     document.getElementById('currency-switch').addEventListener('click', () => {
       setCurrency(currency === 'USD' ? 'EUR' : 'USD');
     });
