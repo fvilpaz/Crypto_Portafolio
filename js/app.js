@@ -47,7 +47,20 @@ const App = (() => {
 // Los filtros derivados reemplazan a los antiguos arrays fijos.
 
   // Monedas del Refugio: las que elijas con el lápiz de su tarjeta (settings.refugioTokens); por defecto USDC.
-  const getRefugioTokens = () => { const t = (Array.isArray(settings.refugioTokens) ? settings.refugioTokens : []).filter(x => COINS[x] && COINS[x].kind !== 'stock'); return t.length ? t : ['USDC']; };
+  const getRefugioTokens = () => Array.isArray(settings.refugioTokens) ? settings.refugioTokens.filter(x => COINS[x] && COINS[x].kind !== 'stock') : ['USDC'];   // sin configurar = USDC; lista vacía = ninguna
+  // A qué cubo pertenece una moneda (cripto): 'core' | 'sat' | 'refugio' | null. Se cambia desde su ficha (setBucket).
+  const bucketDe = (tok) => settings.coreSplit?.[tok] != null ? 'core' : settings.satSplit?.[tok] != null ? 'sat' : getRefugioTokens().includes(tok) ? 'refugio' : null;
+  function setBucket(tok, dest) {
+    const sinTok = (obj) => { const o = Object.assign({}, obj); delete o[tok]; const ks = Object.keys(o), s = ks.reduce((x, k) => x + o[k], 0); if (s > 0) ks.forEach(k => { o[k] = o[k] / s; }); return o; };   // quita y reparte el resto a 100 %
+    const ref = getRefugioTokens().filter(t => t !== tok);
+    settings.coreSplit = sinTok(settings.coreSplit); settings.satSplit = sinTok(settings.satSplit); settings.refugioTokens = ref;
+    if (dest === 'refugio') settings.refugioTokens = [...ref, tok];
+    else if (dest === 'core' || dest === 'sat') {
+      const key = dest === 'core' ? 'coreSplit' : 'satSplit', k = Object.keys(settings[key]).length, o = {};
+      Object.keys(settings[key]).forEach(t => { o[t] = settings[key][t] * k / (k + 1); });   // la nueva entra a partes iguales y las demás ceden
+      o[tok] = 1 / (k + 1); settings[key] = o;
+    }
+  }
   const getStakingAssets = () => portfolio.filter(a => a.tag === 'staking');
   const getAirdropAssets = () => portfolio.filter(a => a.tag === 'airdrop');
 
@@ -2350,6 +2363,14 @@ const App = (() => {
           ${settings.manualPrices?.[token] ? '<button type="button" class="hide-btn" id="manual-price-del" style="margin:0;width:auto;padding:0 16px">Quitar</button>' : ''}</div>
       </div>` : ''}
 
+      ${asset.kind === 'stock' ? '' : `<div class="modal-section">
+        <div class="modal-section-label">Cubo</div>
+        <div class="modal-tag-selector">
+          ${[['core', 'Núcleo'], ['sat', 'Satélites'], ['refugio', 'Refugio'], [null, 'Ninguno']].map(([k, t]) => `<button type="button" class="tag-btn ${bucketDe(token) === k ? 'active tag-portfolio' : ''}" data-bucket="${k}">${t}</button>`).join('')}
+        </div>
+        <div class="modal-tag-hint">Dónde cuenta esta moneda en el reparto. Al moverla entra a partes iguales con las demás (se ajusta con el lápiz de cada tarjeta).</div>
+      </div>`}
+
       <div class="modal-section">
         <div class="modal-section-label">Categoría</div>
         <div class="modal-tag-selector">
@@ -2441,7 +2462,12 @@ const App = (() => {
       if (e.target === modal) closeModal();
     });
 
-    document.querySelectorAll('.tag-btn').forEach(btn => {
+    document.querySelectorAll('.tag-btn[data-bucket]').forEach(btn => btn.addEventListener('click', () => {
+      const dest = btn.dataset.bucket === 'null' ? null : btn.dataset.bucket;
+      if (dest === bucketDe(token)) return;
+      setBucket(token, dest); persist(); closeModal(); render();
+    }));
+    document.querySelectorAll('.tag-btn[data-tag]').forEach(btn => {
       btn.addEventListener('click', () => {
         const newTag = btn.dataset.tag;
         if (newTag === asset.tag) return;
