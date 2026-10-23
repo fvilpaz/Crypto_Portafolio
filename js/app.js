@@ -229,6 +229,17 @@ const App = (() => {
   // 'ATOMONE' es como mucha gente guardó AtomOne en el export; aquí se alía al
   // símbolo del catálogo ('ATONE') para que recupere coingeckoId y precio en vivo.
   const TOKEN_ALIASES = { ATOMONE: 'ATONE' };
+  // Todo lo que viene de fuera (backup JSON, gist de sync, localStorage manipulado) se limpia antes de pintarse con innerHTML: se quitan < > " ' ` de los textos
+  // (así ni un nombre, ni un token, ni un icono pueden abrir una etiqueta o salirse de un atributo) y los números se fuerzan a número. No se borra ninguna moneda ni movimiento.
+  function saneaEstado(pf, tx) {
+    const limpia = (arr, nums) => (Array.isArray(arr) ? arr : []).forEach(o => {
+      if (!o || typeof o !== 'object') return;
+      Object.keys(o).forEach(k => { if (typeof o[k] === 'string') o[k] = o[k].replace(/[<>"'`]/g, ''); });
+      nums.forEach(k => { if (o[k] != null && typeof o[k] !== 'number') o[k] = Number(o[k]) || 0; });
+    });
+    limpia(pf, ['qty', 'costUsd', 'avgPrice', 'apr']);
+    limpia(tx, ['price', 'qty', 'totalUsd', 'totalEur']);
+  }
   function normalizePortfolio(list) {
     if (!Array.isArray(list)) return;
     list.forEach(a => {
@@ -245,6 +256,7 @@ const App = (() => {
       }
     });
   }
+  saneaEstado(portfolio, transactions);
   normalizePortfolio(portfolio);
 
   // Guarda el estado actual (holdings + movimientos) tras cada edición.
@@ -2697,7 +2709,7 @@ const App = (() => {
   async function searchCoins(q) {
     const key = COINGECKO_API_KEY ? `&${COINGECKO_API_PARAM}=${COINGECKO_API_KEY}` : '';
     const res = await fetchCoinGecko([`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}${key}`]);
-    return (await res.json()).coins.slice(0, 8);
+    return (await res.json()).coins.slice(0, 8).map(c => Object.fromEntries(Object.entries(c).map(([k, v]) => [k, typeof v === 'string' ? v.replace(/[<>"'`]/g, '') : v])));   // lo que viene de fuera se limpia
   }
 
   // ETF habituales, para encontrarlos por nombre ("sp500", "global vanguard"...): la búsqueda de Twelve Data es literal y solo entiende símbolos y
@@ -3121,8 +3133,10 @@ const App = (() => {
     }
     portfolio = data.portfolio;
     transactions = data.transactions;
+    saneaEstado(portfolio, transactions);
     fillTotalEur(transactions);
     if (data.settings) settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, strategy: DEFAULT_STRATEGY }, data.settings);
+    settings.coreSplit = settings.coreSplit || {}; settings.satSplit = settings.satSplit || {};   // un backup viejo sin estos repartos rompía el pintado
     registerCustomCoins();
     registerCustomStocks();
     normalizePortfolio(portfolio);
