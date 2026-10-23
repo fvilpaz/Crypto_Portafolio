@@ -2043,7 +2043,7 @@ const App = (() => {
               ${iconHtml(s.token, s.cssClass || '', 32)}
               <span class="token-name">${s.token} Staking</span>
             </div>
-            <span class="staking-apr">${fmtApr(s.apr)} APR</span>
+            <span class="staking-apr" data-apr-edit="${s.token}" title="Toca para cambiar el APR" style="cursor:pointer">${fmtApr(s.apr)} APR ✎</span>
           </div>
           <div class="staking-stats">
             <div>
@@ -2413,7 +2413,7 @@ const App = (() => {
             </div>
             <div class="modal-stat-card">
               <div class="modal-stat-label">APR</div>
-              <div class="modal-stat-big positive">${fmtApr(asset.apr)}</div>
+              <div class="modal-stat-big positive" data-apr-edit="${token}" title="Toca para cambiar el APR" style="cursor:pointer">${fmtApr(asset.apr)} ✎</div>
             </div>
             <div class="modal-stat-card">
               <div class="modal-stat-label">Ingreso / año</div>
@@ -3644,6 +3644,22 @@ Aceptar = ponerlas a cero (se registra una Venta de todo). Cancelar = dejarlas c
     // background los ticks se dilatan y era fácil quedarse con precios viejos.
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) fetchPrices();
+    });
+
+    // APR de staking editable: tocar el porcentaje (en la tarjeta de staking o en la ficha) pide el nuevo.
+    document.addEventListener('click', (e) => {
+      const el = e.target.closest('[data-apr-edit]');
+      const s = el && portfolio.find(x => x.token === el.dataset.aprEdit && x.tag === 'staking');
+      if (!s) return;
+      const input = prompt(`APR de ${s.token} (en %, solo número, p.ej. 12.5):`, +((s.apr || 0) * 100).toFixed(2));
+      if (input === null) return;
+      const v = parseFloat(String(input).replace(',', '.'));
+      if (isNaN(v) || v < 0) return;
+      s.apr = v / 100;
+      persist();
+      const ficha = document.getElementById('token-modal');
+      if (ficha && ficha.classList.contains('open')) closeModal();
+      render();
     });
 
     document.getElementById('currency-switch').addEventListener('click', () => {
