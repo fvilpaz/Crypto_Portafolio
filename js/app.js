@@ -2851,6 +2851,12 @@ const App = (() => {
     if (pe > 0 && amount > 0) document.getElementById('add-qty').value = fmtInput(amount / pe, 8);
     updateEffective();
   }
+  // Cambiar el precio a mano con la cantidad ya puesta: la cantidad NO cambia, se recalcula el importe. Sin cantidad, se calcula desde el importe.
+  function onPriceInput() {
+    const qty = parseNum(document.getElementById('add-qty').value), pe = addPrecioMano();
+    if (qty > 0 && pe > 0) { document.getElementById('add-amount').value = fmtInput(qty * pe, 2); updateEffective(); }
+    else onAmountInput();
+  }
   function onQtyInput() {
     const pe = addPrecioMano() || addPriceEur();
     const qty = parseNum(document.getElementById('add-qty').value);
@@ -3772,7 +3778,7 @@ Aceptar = ponerlas a cero (se registra una Venta de todo). Cancelar = dejarlas c
     });
     document.getElementById('add-qty').addEventListener('input', onQtyInput);
     document.getElementById('add-amount').addEventListener('input', onAmountInput);
-    document.getElementById('add-price-manual').addEventListener('input', onAmountInput);
+    document.getElementById('add-price-manual').addEventListener('input', onPriceInput);
     document.getElementById('add-form').addEventListener('submit', submitAdd);
 
     document.querySelectorAll('.seg-grupo button').forEach(b => b.addEventListener('click', () => {
