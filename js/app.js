@@ -33,6 +33,11 @@ const App = (() => {
     const ks = Object.keys(settings.satSplit || {}), base = ['ATOM', 'TIA', 'SOL'];   // las de siempre, en su orden de siempre; las nuevas detrás
     return [...base.filter(t => ks.includes(t)), ...ks.filter(t => !base.includes(t))];
   }
+  // Igual para el Núcleo: las monedas de su reparto interno (settings.coreSplit); BTC y ETH primero y en ese orden, las demás detrás.
+  function getCoreTokens() {
+    const ks = Object.keys(settings.coreSplit || {}), base = ['BTC', 'ETH'];
+    return [...base.filter(t => ks.includes(t)), ...ks.filter(t => !base.includes(t))];
+  }
   const REPARTO_OPEN = new Set();   // grupos (crypto/bolsa) que tienes abiertos: renderReparto repinta todo
 
   // La cartera es UN SOLO monedero. Cada moneda lleva un tag:
@@ -151,7 +156,8 @@ const App = (() => {
   const _store = loadStore();
   let portfolio = _store.portfolio;
   let transactions = _store.transactions;
-  let settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, coreTarget: DEFAULT_CORE_TARGET, satTarget: DEFAULT_SAT_TARGET, strategy: DEFAULT_STRATEGY, coreSplit: { BTC: 0.6, ETH: 0.4 }, satSplit: _store.portfolio.length || _store.transactions.length ? { SOL: 0.5, ATOM: 0.3, TIA: 0.2 } : {} }, _store.settings || {});   // quien instala la app empieza sin satélites (los elige con el lápiz); quien ya tiene datos y nunca guardó ajustes conserva el reparto de siempre   // dcaTarget en €, defenseTarget en %, strategy = plantilla de reparto
+  const _hayDatos = _store.portfolio.length > 0 || _store.transactions.length > 0;
+  let settings = Object.assign({ dcaTarget: DEFAULT_DCA_TARGET, defenseTarget: DEFAULT_DEFENSE_TARGET, coreTarget: DEFAULT_CORE_TARGET, satTarget: DEFAULT_SAT_TARGET, strategy: DEFAULT_STRATEGY, coreSplit: _hayDatos ? { BTC: 0.6, ETH: 0.4 } : {}, satSplit: _hayDatos ? { SOL: 0.5, ATOM: 0.3, TIA: 0.2 } : {} }, _store.settings || {});   // quien instala la app empieza sin satélites (los elige con el lápiz); quien ya tiene datos y nunca guardó ajustes conserva el reparto de siempre   // dcaTarget en €, defenseTarget en %, strategy = plantilla de reparto
 
   // Nombre de una moneda o acción venida de fuera (CoinGecko, buscador, JSON importado), listo para ir dentro del HTML: se quitan < > " ' y el & se escribe
   // como &amp; (sin esto "Vanguard S&P 500" quedaba como "Vanguard SP 500"). Se puede aplicar dos veces sin duplicar el &amp;.
@@ -872,10 +878,9 @@ const App = (() => {
 
   function renderCards() {
     const total = getInvestedValue();   // base de cubos: capital invertido, sin airdrops (suman 100%)
-    const btcAsset = portfolio.find(a => a.token === 'BTC');
-    const ethAsset = portfolio.find(a => a.token === 'ETH');
-    const btcEth = getAssetValue(btcAsset) + getAssetValue(ethAsset);
-    const coreCost = (btcAsset?.costUsd || 0) + (ethAsset?.costUsd || 0);
+    const coreAssets = getCoreTokens().map(t => portfolio.find(a => a.token === t));
+    const btcEth = coreAssets.reduce((s, x) => s + getAssetValue(x), 0);
+    const coreCost = coreAssets.reduce((s, x) => s + (x?.costUsd || 0), 0);
     const corePnlPct = coreCost > 0 ? (btcEth - coreCost) / coreCost : 0;
     const coreWeight = total > 0 ? btcEth / total : 0;
     const cosmosPct = getCosmosPct();
@@ -898,10 +903,13 @@ const App = (() => {
       btcEthLabel.style.color = barColor(coreTarget > 0 ? (coreWeight * 100) / coreTarget : 1, 'var(--accent-green)');
     }
     const iconsEl = document.getElementById('btceth-icons');
-    if (iconsEl && !iconsEl.childElementCount) iconsEl.innerHTML = iconHtml('BTC', 'btc', 30) + iconHtml('ETH', 'eth', 30);
+    if (iconsEl && iconsEl.dataset.sig !== getCoreTokens().join()) {   // se repinta si cambia la lista del núcleo
+      iconsEl.dataset.sig = getCoreTokens().join();
+      iconsEl.innerHTML = getCoreTokens().map(tok => { const c = COINS[tok]; return c ? iconHtml(tok, c.cssClass, 30) : ''; }).join('');
+    }
     const btcEthSub = document.getElementById('card-btceth-sub');
     if (btcEthSub) {
-      btcEthSub.innerHTML = '';
+      btcEthSub.textContent = getCoreTokens().length ? '' : 'Añade monedas a Núcleo con el lápiz';
     }
     // Satelites: todos los tokens de getSatTokens() presentes en la cartera.
     const cosmosNum = document.getElementById('card-cosmos-pct');
@@ -998,8 +1006,10 @@ const App = (() => {
     const monthlyUsd = strat.byTargets ? split0.cryptoUsd : split0.totalUsd * (1 - split0.target);
     const bolsaUsd = strat.byTargets ? split0.bolsaUsd : split0.totalUsd * split0.target;
     const satBlocked = getCosmosPct() >= (cosmosTopPct() - 0.05);
-    const btcVal = getAssetValue(portfolio.find(a => a.token === 'BTC'));
-    const ethVal = getAssetValue(portfolio.find(a => a.token === 'ETH'));
+    const coreTokens = Object.keys(settings.coreSplit);
+    const coreVals = {};
+    coreTokens.forEach(tok => { coreVals[tok] = getAssetValue(portfolio.find(a => a.token === tok)); });
+    const coreTotal0 = coreTokens.reduce((s, tok) => s + coreVals[tok], 0);
 
     let toRefugio, toCore, toSat;
     if (strat.byTargets) {
@@ -1010,7 +1020,7 @@ const App = (() => {
       const targets = [settings.defenseTarget || 0, settings.coreTarget ?? DEFAULT_CORE_TARGET, settings.satTarget ?? DEFAULT_SAT_TARGET];
       const vals = [
         getAssetValue(portfolio.find(a => a.token === 'USDC')),
-        btcVal + ethVal,
+        coreTotal0,
         getSatTokens().reduce((s, tok) => s + getAssetValue(portfolio.find(a => a.token === tok)), 0),
       ];
       const gaps = targets.map((t, i) => Math.max(t / 100 * after - vals[i], 0));
@@ -1029,19 +1039,22 @@ const App = (() => {
       toSat = monthlyUsd * wS / sum;
     }
 
-    const coreAfter = btcVal + ethVal + toCore;
-    const btcGap = Math.max(settings.coreSplit.BTC * coreAfter - btcVal, 0);
-    const ethGap = Math.max(settings.coreSplit.ETH * coreAfter - ethVal, 0);
-    const gapSum = btcGap + ethGap;
-    let toBtc, toEth;
-    if (!strat.byTargets || gapSum <= 0) {
-      toBtc = toCore * settings.coreSplit.BTC; toEth = toCore * settings.coreSplit.ETH;
-    } else if (gapSum >= toCore) {
-      toBtc = toCore * (btcGap / gapSum); toEth = toCore * (ethGap / gapSum);
-    } else {
-      const rest = toCore - gapSum;
-      toBtc = btcGap + rest * settings.coreSplit.BTC; toEth = ethGap + rest * settings.coreSplit.ETH;
-    }
+    // Núcleo: mismo mecanismo que los satélites, para las monedas de coreSplit.
+    const coreAfter = coreTotal0 + toCore;
+    const coreGaps = {};
+    coreTokens.forEach(tok => { coreGaps[tok] = Math.max(settings.coreSplit[tok] * coreAfter - coreVals[tok], 0); });
+    const coreGapSum = coreTokens.reduce((s, tok) => s + coreGaps[tok], 0);
+    const coreAlloc = {};
+    coreTokens.forEach(tok => {
+      if (!strat.byTargets || coreGapSum <= 0) {
+        coreAlloc[tok] = toCore * settings.coreSplit[tok];
+      } else if (coreGapSum >= toCore) {
+        coreAlloc[tok] = toCore * (coreGaps[tok] / coreGapSum);
+      } else {
+        const rest = toCore - coreGapSum;
+        coreAlloc[tok] = coreGaps[tok] + rest * settings.coreSplit[tok];
+      }
+    });
 
     // Gap-logic para satelites: mismo mecanismo que el nucleo.
     const satTokens = Object.keys(settings.satSplit);
@@ -1064,7 +1077,7 @@ const App = (() => {
       }
     });
 
-    return { toBtc, toEth, toRefugio, toSat, satAlloc, satBlocked, monthlyUsd, bolsaUsd };
+    return { toCore, coreAlloc, toRefugio, toSat, satAlloc, satBlocked, monthlyUsd, bolsaUsd };
   }
 
   // Una fila del Reparto (crypto o bolsa). pct = null: sin barra de progreso.
@@ -1112,7 +1125,7 @@ const App = (() => {
     const stk = portfolio.filter(a => a.kind === 'stock' && a.tag !== 'airdrop');
     return { mensual: Math.max(monthlySplit().totalUsd - dcaMonthBoughtUsd(), 0), ratioCrypto: rc,
       pesos: { crypto: { nucleo: t[0], satelites: t[1], refugio: t[2] }, bolsa: { nucleo: bs.nucleo, satelites: bs.satelites } },
-      valores: { crypto: { nucleo: val(['BTC', 'ETH']), satelites: val(getSatTokens()), refugio: val(['USDC']) },
+      valores: { crypto: { nucleo: val(getCoreTokens()), satelites: val(getSatTokens()), refugio: val(['USDC']) },
         bolsa: { nucleo: stk.filter(a => a.token === nuc).reduce((s, a) => s + getAssetValue(a), 0), satelites: stk.filter(a => a.token !== nuc).reduce((s, a) => s + getAssetValue(a), 0) } } };
   }
 
@@ -1283,17 +1296,16 @@ const App = (() => {
         const r = computeReparto(s);
         // Cabecera (números y barra): los % fijos de la plantilla o, en "objetivos", los que salen hoy.
         const share = (usd) => r.monthlyUsd > 0 ? Math.round(usd / r.monthlyUsd * 100) : 0;
-        const mix = s.byTargets ? { refugio: share(r.toRefugio), core: share(r.toBtc + r.toEth), satelites: share(r.toSat) } : s;
+        const mix = s.byTargets ? { refugio: share(r.toRefugio), core: share(r.toCore), satelites: share(r.toSat) } : s;
         // Progreso actual de cada token respecto a su objetivo
-        const coreTotal = getAssetValue(portfolio.find(a => a.token === 'BTC')) + getAssetValue(portfolio.find(a => a.token === 'ETH'));
+        const coreTotal = getCoreTokens().reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t)), 0);
         const satTotal  = getSatTokens().reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t)), 0);
         const invTotal  = getInvestedValue();
         const defFrac   = (settings.defenseTarget || 0) / 100;
 
         function rowProgress(token) {
           const val = getAssetValue(portfolio.find(a => a.token === token));
-          if (token === 'BTC') return coreTotal > 0 ? Math.min((val / coreTotal) / settings.coreSplit.BTC, 1) : 0;
-          if (token === 'ETH') return coreTotal > 0 ? Math.min((val / coreTotal) / settings.coreSplit.ETH, 1) : 0;
+          if (settings.coreSplit[token] > 0) return coreTotal > 0 ? Math.min((val / coreTotal) / settings.coreSplit[token], 1) : 0;
           if (token === 'USDC') return defFrac > 0 && invTotal > 0 ? Math.min((val / invTotal) / defFrac, 1) : 0;
           const split = settings.satSplit[token];
           return (split > 0 && satTotal > 0) ? Math.min((val / satTotal) / split, 1) : 0;
@@ -1304,9 +1316,9 @@ const App = (() => {
           const amount = r.satAlloc?.[tok] ?? 0;
           return { token: tok, cssClass: c.cssClass, amount, label: tok };
         });
+        const coreRows = getCoreTokens().map(tok => ({ token: tok, cssClass: (COINS[tok] || { cssClass: tok.toLowerCase() }).cssClass, amount: r.coreAlloc?.[tok] ?? 0, label: tok }));
         const rows = [
-          { token: 'BTC',  cssClass: 'btc',  amount: r.toBtc,     label: 'BTC'  },
-          { token: 'ETH',  cssClass: 'eth',  amount: r.toEth,     label: 'ETH'  },
+          ...coreRows,
           { token: 'USDC', cssClass: 'usdc', amount: r.toRefugio, label: 'USDC' },
           ...satRows,
         ];
@@ -2523,7 +2535,7 @@ const App = (() => {
       core: {
         label: 'Nucleo',
         color: 'var(--accent-green)',
-        tokens: ['BTC', 'ETH'],
+        tokens: getCoreTokens(),
         target: null,
       },
       satelites: {
