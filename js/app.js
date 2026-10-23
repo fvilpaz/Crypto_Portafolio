@@ -46,17 +46,22 @@ const App = (() => {
 //   'airdrop'   → desviada al chart de airdrops
 // Los filtros derivados reemplazan a los antiguos arrays fijos.
 
-  // Monedas del Refugio: las que elijas con el lápiz de su tarjeta (settings.refugioTokens); por defecto USDC.
-  const getRefugioTokens = () => Array.isArray(settings.refugioTokens) ? settings.refugioTokens.filter(x => COINS[x] && COINS[x].kind !== 'stock') : ['USDC'];   // sin configurar = USDC; lista vacía = ninguna
+  // Refugio: igual que Núcleo y Satélites, un reparto interno (settings.refugioSplit, el del lápiz de su tarjeta); sin configurar = USDC.
+  // (refugioTokens era la versión anterior: una lista sin porcentajes; se lee como partes iguales.)
+  const getRefugioSplit = () => {
+    const ok = (o) => Object.fromEntries(Object.entries(o).filter(([t]) => COINS[t] && COINS[t].kind !== 'stock'));
+    if (settings.refugioSplit && typeof settings.refugioSplit === 'object') return ok(settings.refugioSplit);
+    if (Array.isArray(settings.refugioTokens)) { const l = settings.refugioTokens.filter(t => COINS[t] && COINS[t].kind !== 'stock'); return Object.fromEntries(l.map(t => [t, 1 / l.length])); }
+    return { USDC: 1 };
+  };
+  const getRefugioTokens = () => Object.keys(getRefugioSplit());
   // A qué cubo pertenece una moneda (cripto): 'core' | 'sat' | 'refugio' | null. Se cambia desde su ficha (setBucket).
   const bucketDe = (tok) => settings.coreSplit?.[tok] != null ? 'core' : settings.satSplit?.[tok] != null ? 'sat' : getRefugioTokens().includes(tok) ? 'refugio' : null;
   function setBucket(tok, dest) {
     const sinTok = (obj) => { const o = Object.assign({}, obj); delete o[tok]; const ks = Object.keys(o), s = ks.reduce((x, k) => x + o[k], 0); if (s > 0) ks.forEach(k => { o[k] = o[k] / s; }); return o; };   // quita y reparte el resto a 100 %
-    const ref = getRefugioTokens().filter(t => t !== tok);
-    settings.coreSplit = sinTok(settings.coreSplit); settings.satSplit = sinTok(settings.satSplit); settings.refugioTokens = ref;
-    if (dest === 'refugio') settings.refugioTokens = [...ref, tok];
-    else if (dest === 'core' || dest === 'sat') {
-      const key = dest === 'core' ? 'coreSplit' : 'satSplit', k = Object.keys(settings[key]).length, o = {};
+    settings.coreSplit = sinTok(settings.coreSplit); settings.satSplit = sinTok(settings.satSplit); settings.refugioSplit = sinTok(getRefugioSplit());
+    if (dest === 'core' || dest === 'sat' || dest === 'refugio') {
+      const key = dest === 'core' ? 'coreSplit' : dest === 'sat' ? 'satSplit' : 'refugioSplit', k = Object.keys(settings[key]).length, o = {};
       Object.keys(settings[key]).forEach(t => { o[t] = settings[key][t] * k / (k + 1); });   // la nueva entra a partes iguales y las demás ceden
       o[tok] = 1 / (k + 1); settings[key] = o;
     }
@@ -1150,7 +1155,7 @@ const App = (() => {
   // Dónde cae el dinero de un cubo: reparto interno de la app (coreSplit / satSplit; bolsa: S&P 500 y el resto a partes iguales)
   function planDonde(lado, cubo, usd) {
     let pos;
-    if (lado === 'crypto') pos = cubo === 'nucleo' ? Object.entries(settings.coreSplit) : cubo === 'satelites' ? Object.entries(settings.satSplit) : getRefugioTokens().map(t => [t, 1]);
+    if (lado === 'crypto') pos = cubo === 'nucleo' ? Object.entries(settings.coreSplit) : cubo === 'satelites' ? Object.entries(settings.satSplit) : Object.entries(getRefugioSplit());
     else { const nuc = bolsaNucleo(), pb = plBolsaActual(); pos = bolsaLista().filter(x => (cubo === 'nucleo') === (x[0] === nuc)).map(x => [x[1], pb[x[0]]]); }
     const s = pos.reduce((x, [, w]) => x + w, 0);
     if (s <= 0) return '';
@@ -1337,7 +1342,7 @@ const App = (() => {
         const coreRows = getCoreTokens().map(tok => ({ token: tok, cssClass: (COINS[tok] || { cssClass: tok.toLowerCase() }).cssClass, amount: r.coreAlloc?.[tok] ?? 0, label: tok }));
         const rows = [
           ...coreRows,
-          ...getRefugioTokens().map(t => ({ token: t, cssClass: (COINS[t] || {}).cssClass || t.toLowerCase(), amount: r.toRefugio / getRefugioTokens().length, label: t })),
+          ...getRefugioTokens().map(t => ({ token: t, cssClass: (COINS[t] || {}).cssClass || t.toLowerCase(), amount: r.toRefugio * (getRefugioSplit()[t] || 0), label: t })),
           ...satRows,
         ];
         const detail = rows.map(row => {
@@ -1418,29 +1423,14 @@ const App = (() => {
   }
 
   function editDefenseTarget() {
-    const cur = settings.defenseTarget;
-    const input = prompt('Objetivo de refugio en % de la cartera:', cur);
-    if (input === null) return;
-    const val = parseFloat(String(input).replace(',', '.'));
-    if (isNaN(val) || val < 0 || val > 100) return;
-    // Qué monedas cuentan como refugio (símbolos separados por coma: USDC, USDT, BTC...). Cancelar = dejar las que había.
-    const mon = prompt('Monedas del refugio (símbolos separados por coma). Solo monedas que ya tengas en la app y que no estén en Núcleo ni Satélites:', getRefugioTokens().join(', '));
-    if (mon !== null) {
-      const lista = [...new Set(String(mon).toUpperCase().split(/[\s,;]+/).filter(Boolean))];
-      const malas = lista.filter(t => !COINS[t] || COINS[t].kind === 'stock' || settings.coreSplit[t] > 0 || settings.satSplit[t] > 0);
-      if (malas.length) { alert(`No se pueden usar como refugio: ${malas.join(', ')} (no existen en la app, son acciones o ya están en Núcleo/Satélites). No se ha cambiado la lista de monedas.`); }
-      else if (lista.length) settings.refugioTokens = lista;
-    }
-    settings.defenseTarget = val;
-    persist();
-    render();
+    openBucketEditModal({ title: 'Refugio', targetKey: 'defenseTarget', splitKey: 'refugioSplit', defaultTarget: DEFAULT_DEFENSE_TARGET, color: 'var(--accent-blue)' });
   }
 
   // Modal de edición de cubo: % objetivo + tokens con sus % internos
   function openBucketEditModal({ title, targetKey, splitKey, defaultTarget, color, stock = false }) {
     const curTarget = settings[targetKey] ?? defaultTarget;
     // Bolsa (stock): las acciones salen de tu lista (bolsaLista) con su % (stockSplit) y la ★ marca el núcleo
-    const curSplit  = stock ? Object.fromEntries(Object.entries(plBolsaActual()).map(([t, p]) => [t, p / 100])) : { ...(settings[splitKey] || {}) };
+    const curSplit  = stock ? Object.fromEntries(Object.entries(plBolsaActual()).map(([t, p]) => [t, p / 100])) : splitKey === 'refugioSplit' ? { ...getRefugioSplit() } : { ...(settings[splitKey] || {}) };
     let nucleo = stock ? bolsaNucleo() : null;
 
     const ov = document.createElement('div');
@@ -1638,6 +1628,8 @@ const App = (() => {
         document.getElementById('bucket-warn').style.display = '';
         return;
       }
+      const solapan = splitKey === 'refugioSplit' ? Object.keys(tokenMap).filter(t => settings.coreSplit?.[t] != null || settings.satSplit?.[t] != null) : [];
+      if (solapan.length) { alert(`${solapan.join(', ')} ya están en Núcleo o Satélites: muévelas desde su ficha (sección Cubo) para que no cuenten dos veces.`); return; }
       settings[targetKey] = target;
       settings[splitKey]  = { ...tokenMap };
       if (stock) {   // el núcleo de la bolsa y, si con la bolsa los objetivos ya no suman 100, los otros tres se reajustan en proporción
