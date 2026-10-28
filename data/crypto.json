@@ -1,60 +1,60 @@
 {
-  "actualizado": "2026-10-27T12:22:42+00:00",
+  "actualizado": "2026-10-28T13:08:05+00:00",
   "fuentes": "DefiLlama (TVL, comisiones, ingresos, stablecoins) y CoinGecko (empresas con crypto)",
   "tvl_total": {
-    "usd": 88576469617,
-    "cambio_7d_pct": -1.9
+    "usd": 88795360661,
+    "cambio_7d_pct": -3.1
   },
   "stablecoins": {
-    "usd": 301520223188.65,
-    "flujo_7d_usd": -2217806318.3499756
+    "usd": 301474646187.88,
+    "flujo_7d_usd": -2063879489.119995
   },
   "monedas": [
     {
       "simbolo": "BTC",
       "nombre": "Bitcoin",
-      "tvl_usd": 4270402697.025888,
-      "comisiones_30d_usd": 849919.1900000002,
-      "comisiones_cambio_7d_pct": -8.61,
-      "ingresos_30d_usd": 237726.49
+      "tvl_usd": 6403168725.844434,
+      "comisiones_30d_usd": 768161.6500000001,
+      "comisiones_cambio_7d_pct": -11.12,
+      "ingresos_30d_usd": 202132.62999999998
     },
     {
       "simbolo": "ETH",
       "nombre": "Ethereum",
-      "tvl_usd": 48192079571.69289,
-      "comisiones_30d_usd": 333926943.58999854,
-      "comisiones_cambio_7d_pct": -3.52,
-      "ingresos_30d_usd": 57901960.59
+      "tvl_usd": 46316714131.8518,
+      "comisiones_30d_usd": 332377712.5499984,
+      "comisiones_cambio_7d_pct": -4.17,
+      "ingresos_30d_usd": 57442902.43000002
     },
     {
       "simbolo": "SOL",
       "nombre": "Solana",
-      "tvl_usd": 5682190485.811887,
-      "comisiones_30d_usd": 418374241.3799991,
-      "comisiones_cambio_7d_pct": -3.7,
-      "ingresos_30d_usd": 152603513.3699999
+      "tvl_usd": 5794863486.723361,
+      "comisiones_30d_usd": 412360906.7499992,
+      "comisiones_cambio_7d_pct": -8.53,
+      "ingresos_30d_usd": 151319192.45999992
     },
     {
       "simbolo": "ATOM",
       "nombre": "Cosmos Hub",
-      "tvl_usd": 127632.00106362828,
-      "comisiones_30d_usd": 31911.8,
-      "comisiones_cambio_7d_pct": -47.89,
-      "ingresos_30d_usd": 4277.060000000001
+      "tvl_usd": 129853.64406860675,
+      "comisiones_30d_usd": 29631.8,
+      "comisiones_cambio_7d_pct": -30.9,
+      "ingresos_30d_usd": 4006.0600000000004
     },
     {
       "simbolo": "TIA",
       "nombre": "Celestia",
       "tvl_usd": null,
-      "comisiones_30d_usd": 744,
+      "comisiones_30d_usd": 692,
       "comisiones_cambio_7d_pct": null,
-      "ingresos_30d_usd": 74.52000000000001
+      "ingresos_30d_usd": 69.34
     }
   ],
   "tenedores": {
     "bitcoin": {
       "total": 1312578.2192943657,
-      "valor_usd": 104773032749.64973,
+      "valor_usd": 105855173397.77376,
       "pct_suministro": 6.25,
       "n_empresas": 181,
       "top": [
@@ -65,7 +65,7 @@
           "cantidad": 848517.0,
           "pct_suministro": 4.041,
           "coste_usd": 64558528391.0,
-          "valor_usd": 67730591688.03484
+          "valor_usd": 68430142177.92326
         },
         {
           "nombre": "Metaplanet",
@@ -74,7 +74,7 @@
           "cantidad": 44000.0,
           "pct_suministro": 0.21,
           "coste_usd": 3896249023.48,
-          "valor_usd": 3512181882.3589077
+          "valor_usd": 3548457197.473502
         },
         {
           "nombre": "Twenty One Capital",
@@ -83,7 +83,7 @@
           "cantidad": 43514.0,
           "pct_suministro": 0.207,
           "coste_usd": null,
-          "valor_usd": 3473388237.021943
+          "valor_usd": 3509262874.7923174
         },
         {
           "nombre": "Strive",
@@ -92,7 +92,7 @@
           "cantidad": 43000.0,
           "pct_suministro": 0.205,
           "coste_usd": 3777574004.0,
-          "valor_usd": 3432359566.8507504
+          "valor_usd": 3467810442.985468
         },
         {
           "nombre": "MARA Holdings",
@@ -101,13 +101,13 @@
           "cantidad": 35577.0,
           "pct_suministro": 0.169,
           "coste_usd": null,
-          "valor_usd": 2839838518.833701
+          "valor_usd": 2869169584.4207907
         }
       ]
     },
     "ethereum": {
       "total": 8127138.229976,
-      "valor_usd": 18821968229.17679,
+      "valor_usd": 18993459213.58743,
       "pct_suministro": 6.65,
       "n_empresas": 35,
       "top": [
@@ -118,7 +118,7 @@
           "cantidad": 6051933.0,
           "pct_suministro": 4.954,
           "coste_usd": null,
-          "valor_usd": 14015916479.796719
+          "valor_usd": 14143618497.209105
         },
         {
           "nombre": "SharpLink",
@@ -127,7 +127,7 @@
           "cantidad": 888938.0,
           "pct_suministro": 0.728,
           "coste_usd": null,
-          "valor_usd": 2058727478.2648017
+          "valor_usd": 2077484985.3215604
         },
         {
           "nombre": "The Ether Machine",
@@ -136,7 +136,7 @@
           "cantidad": 496712.0,
           "pct_suministro": 0.407,
           "coste_usd": null,
-          "valor_usd": 1150355416.4450908
+          "valor_usd": 1160836551.063227
         },
         {
           "nombre": "Bit Digital",
@@ -145,7 +145,7 @@
           "cantidad": 158461.75,
           "pct_suministro": 0.13,
           "coste_usd": 450300476.0,
-          "valor_usd": 366987977.7655218
+          "valor_usd": 370331683.84384376
         },
         {
           "nombre": "Coinbase Global",
@@ -154,7 +154,7 @@
           "cantidad": 150279.0,
           "pct_suministro": 0.123,
           "coste_usd": 340602000.0,
-          "valor_usd": 348037215.9882423
+          "valor_usd": 351208257.6165478
         }
       ]
     }
