@@ -6,3 +6,6 @@ MAS CRYPTO.xlsx
 
 # Artefactos de pruebas con navegador (Playwright MCP)
 .playwright-mcp/
+
+# Informes de nando-toolkit (no subir: señalan los puntos débiles)
+docs/audit-*
