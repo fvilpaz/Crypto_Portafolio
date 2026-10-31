@@ -209,7 +209,9 @@ const App = (() => {
   const esFondo = (tok) => /^0P[0-9A-Z]{8}$/.test(tok);   // los fondos no tienen ticker: usan el símbolo de Yahoo (0P…)
   const insignia = (nombre, tok) => (esSpdr(nombre, tok) ? { letras: 'SPDR', cls: 'spdr' } : esBbva(nombre, tok) ? { letras: 'BBVA', cls: 'bbva' }
     : esFondo(tok) ? { letras: String(nombre || '').replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ]/g, ' ').trim().split(' ')[0].slice(0, 4).toUpperCase() || 'FI', cls: 'fondo' } : null);
-  const logoGestora = (nombre, tok) => { const g = GESTORAS.find(([re]) => re.test(nombre || '')); const dom = g ? g[1] : GESTORA_DE_ETF[tok]; return dom ? `https://www.google.com/s2/favicons?domain=${dom}&sz=64` : null; };
+  const LOGO_GESTORA = { 'ishares.com': 'icons/etf/ishares.svg', 'vanguard.com': 'icons/etf/vanguard.svg', 'etf.dws.com': 'icons/etf/xtrackers.svg',
+    'invesco.com': 'icons/etf/invesco.svg', 'amundi.com': 'icons/etf/amundi.svg', 'vaneck.com': 'icons/etf/vaneck.svg' };
+  const logoGestora = (nombre, tok) => { const g = GESTORAS.find(([re]) => re.test(nombre || '')); const dom = g ? g[1] : GESTORA_DE_ETF[tok]; return dom ? (LOGO_GESTORA[dom] || `https://www.google.com/s2/favicons?domain=${dom}&sz=64`) : null; };
   function registerCustomStocks() {
     Object.entries(settings.customStocks || {}).forEach(([tok, m]) => {
       if (!/^[A-Z0-9.]{1,10}$/.test(tok) || COINS[tok]) return;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-cartera-v7';
+const CACHE_NAME = 'mi-cartera-v8';
 const ASSETS = [
   './',
   './index.html',
@@ -12,7 +12,13 @@ const ASSETS = [
   './js/gestor.js',
   './manifest.json',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './icons/etf/ishares.svg',
+  './icons/etf/vanguard.svg',
+  './icons/etf/xtrackers.svg',
+  './icons/etf/invesco.svg',
+  './icons/etf/amundi.svg',
+  './icons/etf/vaneck.svg'
 ];
 
 self.addEventListener('install', (event) => {
