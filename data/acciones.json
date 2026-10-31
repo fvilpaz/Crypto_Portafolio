@@ -181,6 +181,14 @@
   {
    "symbol": "CSPX",
    "yahoo": "SXR8.DE"
+  },
+  {
+   "symbol": "IWDA",
+   "yahoo": "IWDA.AS"
+  },
+  {
+   "symbol": "XNAS",
+   "yahoo": "XNAS.DE"
   }
  ]
 }

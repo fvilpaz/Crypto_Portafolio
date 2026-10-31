@@ -202,7 +202,7 @@ const App = (() => {
   // Si el nombre es solo el símbolo (ETF importados de Revolut: SPYL, VUAA...), se reconoce la gestora por el símbolo de los ETF más habituales.
   const GESTORA_DE_ETF = { SPYL: 'ssga.com', SPY: 'ssga.com', VUAA: 'vanguard.com', VUSA: 'vanguard.com', VWCE: 'vanguard.com', VWRL: 'vanguard.com', VOO: 'vanguard.com', VTI: 'vanguard.com',
     VT: 'vanguard.com', VXUS: 'vanguard.com', VUG: 'vanguard.com', VYM: 'vanguard.com', CSPX: 'ishares.com', SXR8: 'ishares.com', IUSA: 'ishares.com', IWDA: 'ishares.com',
-    EUNL: 'ishares.com', SWDA: 'ishares.com', EMIM: 'ishares.com', CNDX: 'ishares.com', IVV: 'ishares.com', EQQQ: 'invesco.com', QQQ: 'invesco.com' };
+    EUNL: 'ishares.com', SWDA: 'ishares.com', EMIM: 'ishares.com', CNDX: 'ishares.com', XNAS: 'etf.dws.com', IVV: 'ishares.com', EQQQ: 'invesco.com', QQQ: 'invesco.com' };
   // SPDR (SPYL, SPY...) se ve como en Revolut: un círculo verde con las letras SPDR, no el logo de State Street.
   const esSpdr = (nombre, tok) => /spdr|state street/i.test(nombre || '') || tok === 'SPYL' || tok === 'SPY';
   const esBbva = (nombre, tok) => /bbva/i.test(nombre || '') || tok === '0P00000V7Q';   // fondo BBVA Megatendencia Tecnología A (símbolo de Yahoo)
@@ -1196,7 +1196,7 @@ const App = (() => {
   // son (no es lo mismo "Global" que "S&P 500"); el resto, el nombre sin sufijos legales y con dos palabras como mucho.
   const ETF_CORTO = { VUAA: 'S&P 500', VUSA: 'S&P 500 Dist', CSPX: 'S&P 500', SXR8: 'S&P 500', SPYL: 'S&P 500', VOO: 'S&P 500', SPY: 'S&P 500', IVV: 'S&P 500',
     VWCE: 'Global', VWRL: 'Global Dist', VT: 'Global', IWDA: 'MSCI World', EUNL: 'MSCI World', SWDA: 'MSCI World', VTI: 'USA total', VXUS: 'Internacional',
-    EQQQ: 'Nasdaq 100', CNDX: 'Nasdaq 100', QQQ: 'Nasdaq 100', EMIM: 'Emergentes', VUG: 'Growth', SCHD: 'Dividendos', VYM: 'Dividendos' };
+    EQQQ: 'Nasdaq 100', CNDX: 'Nasdaq 100', XNAS: 'Nasdaq 100', QQQ: 'Nasdaq 100', EMIM: 'Emergentes', VUG: 'Growth', SCHD: 'Dividendos', VYM: 'Dividendos' };
   // Nombre corto para la tabla: la lista de la SEC trae el título legal ("Shell plc American Depositary Shares (Each representing…)"); se corta antes de la clase de valor.
   const nombreCorto = (n) => String(n).replace(/\s+(American Depositary|Class [A-Z]|Common Stock|Ordinary Shares|Depositary).*$/i, '');
   function bolsaNombre(tok) {
@@ -2724,6 +2724,7 @@ const App = (() => {
     ['IWDA', 'iShares Core MSCI World UCITS ETF (Acc)', 'global world mundo msci ishares ucits acc', UCITS], ['EUNL', 'iShares Core MSCI World UCITS ETF (Acc, Xetra)', 'global world mundo msci ishares ucits acc xetra', UCITS],
     ['SWDA', 'iShares Core MSCI World UCITS ETF (Acc, Londres)', 'global world mundo msci ishares ucits acc londres', UCITS],
     ['EQQQ', 'Invesco EQQQ NASDAQ-100 UCITS ETF', 'nasdaq 100 invesco ucits tecnologia', UCITS], ['CNDX', 'iShares NASDAQ 100 UCITS ETF (Acc)', 'nasdaq 100 ishares ucits acc tecnologia', UCITS],
+    ['XNAS', 'Xtrackers NASDAQ 100 UCITS ETF (Acc)', 'nasdaq 100 xtrackers ucits acc', UCITS],
     ['EMIM', 'iShares Core MSCI EM IMI UCITS ETF (Acc)', 'emergentes emerging msci ishares ucits acc', UCITS],
     ['VOO', 'Vanguard S&P 500 ETF', 'sp500 s&p vanguard'], ['SPY', 'SPDR S&P 500 ETF Trust', 'sp500 s&p spdr'], ['IVV', 'iShares Core S&P 500 ETF', 'sp500 s&p ishares'],
     ['VTI', 'Vanguard Total Stock Market ETF', 'vanguard total usa bolsa'], ['VT', 'Vanguard Total World Stock ETF', 'vanguard global world mundo total'],
