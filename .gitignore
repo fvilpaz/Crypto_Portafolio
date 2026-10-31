@@ -9,3 +9,6 @@ MAS CRYPTO.xlsx
 
 # Informes de nando-toolkit (no subir: señalan los puntos débiles)
 docs/audit-*
+
+# Python
+__pycache__/
