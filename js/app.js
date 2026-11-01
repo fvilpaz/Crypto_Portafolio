@@ -2704,10 +2704,12 @@ const App = (() => {
   let addState = { token: 'BTC', type: 'Compra' };
   let editingId = null;
 
+  // Chips del modal: solo lo que tienes en cartera (y el token elegido, aunque no lo tengas todavía). Para el resto, el buscador.
   function renderAddChips() {
-    document.getElementById('add-coin-chips').innerHTML = Object.keys(COINS).map(t => `
+    const toks = [...new Set([...portfolio.map(a => a.token), addState.token])];
+    document.getElementById('add-coin-chips').innerHTML = toks.map(t => `
       <button type="button" class="coin-chip${t === addState.token ? ' active' : ''}" data-token="${t}">
-        ${iconHtml(t, COINS[t].cssClass, 20)}<span>${t}</span>
+        ${iconHtml(t, COINS[t]?.cssClass || '', 20)}<span>${t}</span>
       </button>`).join('');
   }
 
@@ -2974,7 +2976,7 @@ const App = (() => {
 
   function openAddModal(tx) {
     editingId = tx ? tx.id : null;
-    addState = { token: tx ? tx.token : 'BTC', type: tx ? tx.type : 'Compra' };
+    addState = { token: tx ? tx.token : (portfolio[0]?.token || 'BTC'), type: tx ? tx.type : 'Compra' };   // por defecto, el primero de tu cartera
     document.getElementById('add-title').textContent = tx ? 'Editar movimiento' : 'Añadir movimiento';
     document.getElementById('add-date').value = tx ? tx.date : new Date().toISOString().slice(0, 10);
     document.getElementById('add-qty').value = tx ? fmtInput(tx.qty, 8) : '';
