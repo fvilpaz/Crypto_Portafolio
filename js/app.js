@@ -2706,16 +2706,23 @@ const App = (() => {
 
   // Chips del modal: solo lo que tienes en cartera (y el token elegido, aunque no lo tengas todavía). Para el resto, el buscador.
   function renderAddChips() {
-    const toks = [...new Set([...portfolio.map(a => a.token), addState.token])];
+    const ocultos = new Set(settings.chipsOcultos || []);
+    const enCartera = new Set(portfolio.map(a => a.token));
+    const toks = [...new Set([...enCartera, addState.token])]
+      .filter(t => t === addState.token || !ocultos.has(t));
     document.getElementById('add-coin-chips').innerHTML = toks.map(t => `
       <button type="button" class="coin-chip${t === addState.token ? ' active' : ''}" data-token="${t}">
-        ${iconHtml(t, COINS[t]?.cssClass || '', 20)}<span>${t}</span>
+        ${iconHtml(t, COINS[t]?.cssClass || '', 20)}<span>${t}</span>${enCartera.has(t) && t !== addState.token ? `<span class="chip-hide" data-hide="${t}" title="Ocultar de esta lista">×</span>` : ''}
       </button>`).join('');
   }
 
   // Selecciona una moneda en el modal y recalcula lo que dependa de ella (lo hace el clic en un chip y la búsqueda).
   function selectToken(token) {
     addState.token = token;
+    if (settings.chipsOcultos?.includes(token)) {   // si lo habías ocultado, vuelve a la lista
+      settings.chipsOcultos = settings.chipsOcultos.filter(t => t !== token);
+      persist();
+    }
     document.getElementById('add-price-manual').value = '';
     renderAddChips();
     renderAddPrice();
@@ -3825,6 +3832,13 @@ Aceptar = ponerlas a cero (se registra una Venta de todo). Cancelar = dejarlas c
       if (e.target.id === 'add-modal') closeAddModal();
     });
     document.getElementById('add-coin-chips').addEventListener('click', (e) => {
+      const x = e.target.closest('.chip-hide');
+      if (x) {   // ocultar del selector: no toca la cartera, solo la lista de chips
+        settings.chipsOcultos = [...new Set([...(settings.chipsOcultos || []), x.dataset.hide])];
+        persist();
+        renderAddChips();
+        return;
+      }
       const chip = e.target.closest('.coin-chip');
       if (!chip) return;
       selectToken(chip.dataset.token);

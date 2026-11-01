@@ -2151,6 +2151,8 @@ main.container { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
 #add-coin-results:empty { display: none; }
 .coin-chip.active { background: var(--accent-yellow); color: #0b0e11; border-color: var(--accent-yellow); }
 .coin-chip:hover:not(.active) { color: var(--text-primary); border-color: var(--bg-hover); }
+.coin-chip .chip-hide { margin-left: -2px; padding: 0 3px; font-size: 15px; line-height: 1; opacity: .5; }
+.coin-chip .chip-hide:hover { opacity: 1; }
 .add-row { display: flex; gap: 14px; margin-bottom: 18px; }
 .add-field { flex: 1; min-width: 0; }
 .add-select {
