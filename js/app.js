@@ -1502,6 +1502,7 @@ const App = (() => {
 
     // tokens actualmente en el split
     const tokenMap = { ...curSplit }; // token → fracción
+    const borrados = new Set();       // activos sin posición que se quitan de la lista al pulsar Guardar
 
     function renderTokens() {
       const total = Object.values(tokenMap).reduce((s, v) => s + v * 100, 0);
@@ -1516,9 +1517,9 @@ const App = (() => {
             style="width:64px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:15px;font-weight:600;padding:5px 10px;outline:none;text-align:center;">
           <span style="color:var(--text-muted);font-size:13px;">%</span>
           ${stock ? `<button type="button" class="tx-btn" data-star="${tok}" title="Marcar como núcleo de la bolsa" style="width:34px;padding:0;text-align:center;${tok === nucleo ? 'color:var(--accent-yellow);' : ''}">${tok === nucleo ? '★' : '☆'}</button>` : ''}
-          <button type="button" class="tx-btn tx-del" data-remove="${tok}" title="Quitar" aria-label="Quitar">
+          ${stock && tok === 'SP' ? '' : `<button type="button" class="tx-btn tx-del" data-remove="${tok}" title="${stock ? 'Eliminar de mi lista' : 'Quitar'}" aria-label="Quitar">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/></svg>
-          </button>
+          </button>`}
         </div>`).join('');
 
       // eventos de los inputs y botones de borrar
@@ -1531,7 +1532,16 @@ const App = (() => {
         });
       });
       document.querySelectorAll('#bucket-tokens button[data-remove]').forEach(btn => {
-        btn.addEventListener('click', () => { delete tokenMap[btn.dataset.remove]; renderTokens(); });
+        btn.addEventListener('click', () => {
+          const tok = btn.dataset.remove;
+          if (!stock) { delete tokenMap[tok]; renderTokens(); return; }   // crypto: solo sale del reparto
+          if (portfolio.some(a => a.token === tok)) {   // con posición no se puede quitar de la lista
+            alert(`Tienes posición en ${tok}: no se puede quitar de la lista. Ponle 0% si no quieres asignarle dinero.`);
+            return;
+          }
+          if (!confirm(`¿Eliminar ${tok} de tu lista de bolsa? No tienes posición.`)) return;
+          borrados.add(tok); delete tokenMap[tok]; renderTokens();
+        });
       });
       document.querySelectorAll('#bucket-tokens [data-star]').forEach(b => {
         b.addEventListener('click', () => {
@@ -1579,7 +1589,7 @@ const App = (() => {
             e.preventDefault();
             const c = sugDatos[el.dataset.add], sym = c.symbol;
             if (COINS[sym] && COINS[sym].kind !== 'stock') return;   // ese símbolo ya es una moneda crypto
-            if (!COINS[sym] && sym !== 'SP') {
+            if (!settings.customStocks?.[sym] && sym !== 'SP') {   // también si lo quitaste de la lista: se puede volver a añadir
               const previo = settings.customStocks;
               settings.customStocks = Object.assign({}, previo, { [sym]: { name: c.name } });
               registerCustomStocks();
@@ -1650,7 +1660,8 @@ const App = (() => {
       settings[targetKey] = target;
       settings[splitKey]  = { ...tokenMap };
       if (stock) {   // el núcleo de la bolsa y, si con la bolsa los objetivos ya no suman 100, los otros tres se reajustan en proporción
-        settings.bolsaCore = nucleo;
+        borrados.forEach(t => { if (settings.customStocks) delete settings.customStocks[t]; });   // solo al Guardar: Cancelar no borra nada
+        settings.bolsaCore = borrados.has(nucleo) ? null : nucleo;
         const suma = (settings.coreTarget ?? DEFAULT_CORE_TARGET) + (settings.satTarget ?? DEFAULT_SAT_TARGET) + (settings.defenseTarget || 0) + target;
         if (Math.abs(suma - 100) > 0.05) fitTargetsTo100();
       }
