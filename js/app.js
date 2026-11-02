@@ -354,6 +354,9 @@ const App = (() => {
 
   const pnlClass = (n) => n > 0 ? 'positive' : n < 0 ? 'negative' : 'neutral';
 
+  // Tamaño de los iconos de activo en las baldosas y en las listas (cartera, staking, airdrops, movimientos, reparto, ventana de cada
+  // baldosa): el mismo en todas (también en styles.css, .card-coins y .reparto-coin). Más pequeños solo en chips y buscadores; 56 en la ficha
+  const ICON_SIZE = 34;
   function iconHtml(token, cssClass, size = 32) {
     const all = portfolio;
     const asset = all.find(a => a.token === token) || COINS[token];
@@ -941,7 +944,7 @@ const App = (() => {
     const iconsEl = document.getElementById('btceth-icons');
     if (iconsEl && iconsEl.dataset.sig !== getCoreTokens().join()) {   // se repinta si cambia la lista del núcleo
       iconsEl.dataset.sig = getCoreTokens().join();
-      iconsEl.innerHTML = getCoreTokens().map(tok => { const c = COINS[tok]; return c ? iconHtml(tok, c.cssClass, 30) : ''; }).join('');
+      iconsEl.innerHTML = getCoreTokens().map(tok => { const c = COINS[tok]; return c ? iconHtml(tok, c.cssClass, ICON_SIZE) : ''; }).join('');
     }
     const btcEthSub = document.getElementById('card-btceth-sub');
     if (btcEthSub) {
@@ -955,7 +958,7 @@ const App = (() => {
     if (cosmosIconsEl && cosmosIconsEl.dataset.sig !== getSatTokens().join()) {   // se repinta si cambia la lista de satélites
       cosmosIconsEl.dataset.sig = getSatTokens().join();
       cosmosIconsEl.innerHTML = getSatTokens()
-        .map(tok => { const c = COINS[tok]; return c ? iconHtml(tok, c.cssClass, 30) : ''; })
+        .map(tok => { const c = COINS[tok]; return c ? iconHtml(tok, c.cssClass, ICON_SIZE) : ''; })
         .join('');
     }
     const cosmosStakingEl = document.getElementById('card-cosmos-staking');
@@ -971,7 +974,7 @@ const App = (() => {
     document.getElementById('card-defense-pct').textContent = `${(defenseWeight * 100).toFixed(1)}%`;
     const defenseIconsEl = document.getElementById('defense-icons');
     const refTokens = getRefugioTokens();
-    if (defenseIconsEl && defenseIconsEl.dataset.tokens !== refTokens.join(',')) { defenseIconsEl.dataset.tokens = refTokens.join(','); defenseIconsEl.innerHTML = refTokens.map(t => iconHtml(t, (COINS[t] || {}).cssClass || t.toLowerCase(), 30)).join(''); }
+    if (defenseIconsEl && defenseIconsEl.dataset.tokens !== refTokens.join(',')) { defenseIconsEl.dataset.tokens = refTokens.join(','); defenseIconsEl.innerHTML = refTokens.map(t => iconHtml(t, (COINS[t] || {}).cssClass || t.toLowerCase(), ICON_SIZE)).join(''); }
     const defenseBar = document.getElementById('defense-bar-fill');
     const defRatio = defenseTargetFrac > 0 ? defenseWeight / defenseTargetFrac : 1;
     if (defenseBar) {
@@ -995,7 +998,7 @@ const App = (() => {
     const bolsaVal = stocks.reduce((s, a) => s + getAssetValue(a), 0);
     const bolsaWeight = total > 0 ? bolsaVal / total : 0, bolsaTarget = settings.bolsaTarget || 0;
     document.getElementById('card-bolsa-pct').textContent = `${(bolsaWeight * 100).toFixed(1)}%`;
-    document.getElementById('bolsa-icons').innerHTML = stocks.map(a => iconHtml(a.token, a.cssClass || 'stk', 30)).join('');   // todos: la fila se desliza si no caben
+    document.getElementById('bolsa-icons').innerHTML = stocks.map(a => iconHtml(a.token, a.cssClass || 'stk', ICON_SIZE)).join('');   // todos: la fila se desliza si no caben
     ['btceth-icons', 'cosmos-icons', 'defense-icons', 'bolsa-icons'].forEach(marcaDeslizable);
     const bolsaBar = document.getElementById('bolsa-bar-fill');
     const bolsaRatio = bolsaTarget > 0 ? (bolsaWeight * 100) / bolsaTarget : 1;
@@ -1367,10 +1370,10 @@ const App = (() => {
           const prog = rowProgress(row.token);
           const pct = (prog * 100).toFixed(0);
           const barColor = prog >= 1 ? 'var(--accent-green)' : prog >= 0.8 ? 'var(--accent-yellow)' : 'var(--accent-blue)';
-          return repartoRowHtml({ icon: iconHtml(row.token, row.cssClass, 24), label: row.label, amountText: on ? fmtCurrency(row.amount) : `${pct}%`, pct, barColor, idle: !on });
+          return repartoRowHtml({ icon: iconHtml(row.token, row.cssClass, ICON_SIZE), label: row.label, amountText: on ? fmtCurrency(row.amount) : `${pct}%`, pct, barColor, idle: !on });
         }).join('');
         const bAmt = bolsaPorPlantilla(s, r.bolsaUsd), bNuc = bolsaNucleo();
-        const stockRows = bolsaLista().length ? bolsaLista().map(([tok, name, css]) => repartoRowHtml({ icon: iconHtml(tok, css, 24), label: name + (tok === bNuc ? ' · núcleo' : ''), amountText: fmtCurrency(bAmt[tok]) })).join('')
+        const stockRows = bolsaLista().length ? bolsaLista().map(([tok, name, css]) => repartoRowHtml({ icon: iconHtml(tok, css, ICON_SIZE), label: name + (tok === bNuc ? ' · núcleo' : ''), amountText: fmtCurrency(bAmt[tok]) })).join('')
           : '<div class="card-sub" style="padding:8px 12px">Añade acciones con el buscador del botón + para repartir la bolsa.</div>';
         return `
           <details class="strat-block ${key === settings.strategy ? 'active' : ''}" data-strat="${key}" open>
@@ -1784,7 +1787,7 @@ const App = (() => {
         <tr data-token="${asset.token}" class="fade-in-up" style="cursor:pointer;animation-delay:${i * 0.06}s;${asset.hidden ? 'opacity:0.45;' : ''}">
           <td>
             <div class="token-cell">
-              ${iconHtml(asset.token, asset.cssClass)}
+              ${iconHtml(asset.token, asset.cssClass, ICON_SIZE)}
               <div>
                 <div class="token-name" title="${asset.name}">${nombreCorto(asset.name)}${asset.hidden ? ' <span class="hidden-tag">oculta</span>' : ''}</div>
                 <div class="token-symbol">${asset.token}</div>
@@ -2068,7 +2071,7 @@ const App = (() => {
         <div class="staking-card fade-in-up" style="animation-delay:${i * 0.08}s">
           <div class="staking-card-header">
             <div class="token-info">
-              ${iconHtml(s.token, s.cssClass || '', 32)}
+              ${iconHtml(s.token, s.cssClass || '', ICON_SIZE)}
               <span class="token-name">${s.token} Staking</span>
             </div>
             <span class="staking-apr" data-apr-edit="${s.token}" title="Toca para cambiar el APR" style="cursor:pointer">${fmtApr(s.apr)} APR ✎</span>
@@ -2113,7 +2116,7 @@ const App = (() => {
         <tr>
           <td>
             <div class="token-cell">
-              ${iconHtml(a.token, a.cssClass)}
+              ${iconHtml(a.token, a.cssClass, ICON_SIZE)}
               <div>
                 <div class="token-name">${a.name}</div>
                 <div class="token-symbol">${a.token}</div>
@@ -2171,7 +2174,7 @@ const App = (() => {
         <td style="color:var(--text-secondary);">${tx.date}</td>
         <td>
           <div class="token-cell">
-            ${iconHtml(tx.token, txAsset?.cssClass || '', 24)}
+            ${iconHtml(tx.token, txAsset?.cssClass || '', ICON_SIZE)}
             <span class="token-name">${tx.token}</span>
           </div>
         </td>
@@ -2649,7 +2652,7 @@ const App = (() => {
         <div class="bucket-row" style="border-right:3px solid ${accentColor};">
 
           <div class="bucket-row-left">
-            ${iconHtml(tok, c.cssClass || tok.toLowerCase(), 36)}
+            ${iconHtml(tok, c.cssClass || tok.toLowerCase(), ICON_SIZE)}
             <div class="bucket-row-info">
               <div class="bucket-row-name">${c.name || tok} <span class="bucket-row-sym">${tok}</span></div>
               <div class="bucket-row-sub" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
