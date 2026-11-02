@@ -3834,6 +3834,7 @@ Aceptar = ponerlas a cero (se registra una Venta de todo). Cancelar = dejarlas c
     document.getElementById('add-coin-chips').addEventListener('click', (e) => {
       const x = e.target.closest('.chip-hide');
       if (x) {   // ocultar del selector: no toca la cartera, solo la lista de chips
+        if (!confirm(`¿Ocultar ${x.dataset.hide} de la lista? Tu posición no se toca.`)) return;
         settings.chipsOcultos = [...new Set([...(settings.chipsOcultos || []), x.dataset.hide])];
         persist();
         renderAddChips();
