@@ -3818,6 +3818,23 @@ Aceptar = ponerlas a cero (se registra una Venta de todo). Cancelar = dejarlas c
     }, { rootMargin: '-120px 0px -60% 0px' });
     sections.forEach(s => observer.observe(s));
 
+    // Apartados plegables: cada uno recuerda si lo dejaste cerrado (preferencia de este navegador, como la moneda).
+    const PLEGADOS_KEY = 'miCartera.plegados';
+    let plegados = [];
+    try { plegados = JSON.parse(localStorage.getItem(PLEGADOS_KEY) || '[]'); } catch (e) { /* sin almacenamiento: todos abiertos */ }
+    document.querySelectorAll('details.collapsible-section[id]').forEach(sec => {
+      if (plegados.includes(sec.id)) sec.open = false;
+      sec.addEventListener('toggle', () => {
+        plegados = plegados.filter(id => id !== sec.id).concat(sec.open ? [] : [sec.id]);
+        try { localStorage.setItem(PLEGADOS_KEY, JSON.stringify(plegados)); } catch (e) { /* sin almacenamiento: no se recuerda */ }
+      });
+    });
+    // Un enlace del menú a un apartado cerrado lo abre (si no, saltaría a un título plegado)
+    navLinks.forEach(l => l.addEventListener('click', () => {
+      const sec = document.querySelector(l.getAttribute('href'));
+      if (sec && sec.tagName === 'DETAILS') sec.open = true;
+    }));
+
     // FAB + formulario "Añadir movimiento"
     document.getElementById('add-fab').addEventListener('click', () => openAddModal());
     document.getElementById('tx-tbody').addEventListener('click', (e) => {
