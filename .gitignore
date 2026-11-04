@@ -12,3 +12,5 @@ docs/audit-*
 
 # Python
 __pycache__/
+# Informes de nando-toolkit (no subir: señalan los puntos débiles)
+docs/audit-*

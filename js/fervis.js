@@ -133,7 +133,7 @@
   // ── IA (Groq) con herramientas ──
   // El modelo NO ve la cartera entera: solo la pregunta y lo que devuelven las herramientas que él decide llamar (con los parámetros que
   // entienda de la pregunta: cuántas, compras o ventas, bolsa o cripto…). Las herramientas leen los datos de ESTE navegador y de los JSON de la app.
-  // A Groq la clave solo va en la cabecera de la petición; el resto de la cartera no se envía.
+  // A Groq la clave solo va en la cabecera de la petición. Los datos solo salen si el modelo llama a una herramienta (resumen_cartera manda todas las posiciones).
   const GROQ = 'https://api.groq.com/openai/v1';
   const MODELOS = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'llama-3.1-8b-instant'];   // el primero que tenga la cuenta
   const SISTEMA = 'Eres Fervis, el asistente de la cartera de inversión de esta persona. Responde siempre en castellano, breve y claro, sin markdown. ' +
@@ -223,7 +223,7 @@
   }
 
   const bienvenida = () => leerClave()
-    ? 'Hola, soy Fervis. Pregúntame lo que quieras de tu cartera, tus operaciones o el mercado de la app. Para contestarte envío a Groq tu pregunta y los datos que consulte para responder (nunca tu clave ni el resto de la cartera). Todavía estoy en pruebas.'
+    ? 'Hola, soy Fervis. Pregúntame lo que quieras de tu cartera, tus operaciones o el mercado de la app. Para contestarte envío a Groq tu pregunta y los datos que consulte para responder (por ejemplo, tus posiciones y su valor si me preguntas por tu cartera). Tu clave nunca se envía en el mensaje. Todavía estoy en pruebas.'
     : 'Hola, soy Fervis, el asistente de tu cartera. Sin clave solo sé respuestas básicas (valor de la cartera y cambios de hoy). Para hablar conmigo de verdad hará falta tu clave gratuita de Groq: pégala en Ajustes (el primer icono de arriba a la derecha).';
   let overlay = null, msgs = null, texto = null, ajustes = null, titulo = null, pintarEstado = () => {};
 
@@ -315,7 +315,7 @@
     const ayuda = el('p', 'fervis-ayuda', 'Pega tu clave gratuita de Groq (se crea en ');
     const enlace = el('a', '', 'console.groq.com');
     enlace.href = 'https://console.groq.com/keys'; enlace.target = '_blank'; enlace.rel = 'noopener noreferrer';
-    ayuda.append(enlace, '). Se guarda solo en este navegador: no se sube a GitHub, ni se sincroniza, ni va en las exportaciones. Al preguntar, a Groq se envían tu pregunta y los datos que Fervis consulte para contestarte (nunca tu clave ni el resto de la cartera).');
+    ayuda.append(enlace, '). Se guarda solo en este navegador: no se sube a GitHub, ni se sincroniza, ni va en las exportaciones. Al preguntar, a Groq se envían tu pregunta y los datos que Fervis consulte para contestarte (por ejemplo, tus posiciones y su valor si preguntas por tu cartera, o tus operaciones si preguntas por ellas).');
     const campo = el('input', 'fervis-clave');
     campo.type = 'text'; campo.autocomplete = 'off'; campo.name = 'fervis-clave-groq'; campo.autocapitalize = 'off'; campo.setAttribute('data-lpignore', 'true'); campo.setAttribute('data-1p-ignore', 'true');   // tipo texto (se ve con puntos por CSS): así el gestor de contraseñas del navegador no la ofrece guardar ni rellenar
      campo.spellcheck = false; campo.maxLength = 220; campo.placeholder = 'gsk_…'; campo.setAttribute('aria-label', 'Clave de Groq');
