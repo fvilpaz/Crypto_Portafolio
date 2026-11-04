@@ -293,7 +293,6 @@
     acciones.append(ajustar, borrar, cerrar);
     cab.append(tit, acciones);
 
-    const aviso = el('p', 'fervis-prueba', 'Versión de prueba · lee tu cartera en local, sin IA todavía');
 
     // Ajustes: pegar (o quitar) la clave de Groq de este navegador
     ajustes = el('form', 'fervis-ajustes');
@@ -301,14 +300,14 @@
     const ayuda = el('p', 'fervis-ayuda', 'Pega tu clave gratuita de Groq (se crea en ');
     const enlace = el('a', '', 'console.groq.com');
     enlace.href = 'https://console.groq.com/keys'; enlace.target = '_blank'; enlace.rel = 'noopener noreferrer';
-    ayuda.append(enlace, '). Se guarda solo en este navegador: no se sube a GitHub, ni se sincroniza, ni va en las exportaciones.');
+    ayuda.append(enlace, '). Se guarda solo en este navegador: no se sube a GitHub, ni se sincroniza, ni va en las exportaciones. Al preguntar, a Groq se envían tu pregunta y los datos que Fervis consulte para contestarte (nunca tu clave ni el resto de la cartera).');
     const campo = el('input', 'fervis-clave');
     campo.type = 'password'; campo.autocomplete = 'off'; campo.spellcheck = false; campo.maxLength = 220; campo.placeholder = 'gsk_…'; campo.setAttribute('aria-label', 'Clave de Groq');
     const guardar = el('button', 'fervis-mini', 'Guardar'); guardar.type = 'submit';
     const quitar = el('button', 'fervis-mini sec', 'Quitar clave'); quitar.type = 'button';
     const fila = el('div', 'fervis-fila'); fila.append(campo, guardar);
     const estado = el('p', 'fervis-estado'); estado.setAttribute('role', 'status');
-    pintarEstado = () => { const k = leerClave(); aviso.textContent = k ? 'Con IA (Groq) · se envían a Groq tu pregunta y los datos que consulte' : 'Sin clave · respuestas básicas locales'; estado.textContent = k ? 'Clave guardada: ' + enmascarar(k) : 'Sin clave todavía.'; quitar.hidden = !k; };
+    pintarEstado = () => { const k = leerClave(); estado.textContent = k ? 'Clave guardada: ' + enmascarar(k) : 'Sin clave todavía.'; quitar.hidden = !k; };
     ajustes.append(ayuda, fila, estado, quitar);
     pintarEstado();
     ajustes.addEventListener('submit', (e) => {
@@ -340,7 +339,7 @@
     form.append(texto, enviar);
     const pie = el('p', 'fervis-pie', 'Información de tu cartera, no consejos de inversión.');
 
-    modal.append(cab, aviso, ajustes, msgs, form, pie);
+    modal.append(cab, ajustes, msgs, form, pie);
     overlay.append(modal);
     document.body.append(overlay);
 
