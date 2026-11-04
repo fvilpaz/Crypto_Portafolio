@@ -2321,7 +2321,6 @@ body.light #mercado .new { color: #8a6500; }
 .fervis-fab { position: fixed; right: 22px; top: 150px; z-index: 150; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 0; border: none; background: none; cursor: pointer; font: inherit; }
 .fervis-cara { display: flex; align-items: center; justify-content: center; width: 58px; height: 58px; border-radius: 50%; background: var(--accent-yellow); color: #0b0e11;
   box-shadow: 0 8px 24px rgba(240, 185, 11, .5); transition: transform .15s ease, box-shadow .15s ease; }
-.fervis-nombre { padding: 1px 10px; border-radius: 99px; background: #0b0e11; color: var(--accent-yellow); font-size: 12px; font-weight: 800; letter-spacing: .3px; }
 .fervis-cara svg { flex: none; }
 .fervis-fab:hover .fervis-cara { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(240, 185, 11, .65); }
 .fervis-fab:focus-visible { outline: none; }
