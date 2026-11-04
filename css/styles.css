@@ -2327,7 +2327,7 @@ body.light #mercado .new { color: #8a6500; }
 .pestana svg { flex: none; width: 18px; height: 18px; }
 .pestana-txt { writing-mode: vertical-rl; transform: rotate(180deg); }
 .fervis-fab.pestana { top: 150px; background: var(--accent-yellow); }
-.fab.pestana { bottom: calc(76px + env(safe-area-inset-bottom)); background: var(--accent-green); }
+.fab.pestana { top: 270px; bottom: auto; background: var(--accent-green); }   /* justo debajo de la de Fervis (150 + 112 + 8): juntas arriba, nunca se pisan */
 /* Panel del chat de Fervis: usa la ventana del «+» (.modal-overlay / .modal) con el chat dentro; en móvil, a pantalla completa */
 .fervis-modal { display: flex; flex-direction: column; height: min(640px, 88vh); overflow: hidden; }
 @media (min-width: 601px) { .fervis-modal { width: min(720px, 92vw); max-width: none; height: min(780px, 90vh); } }
@@ -2358,4 +2358,4 @@ body.light #mercado .new { color: #8a6500; }
 .fervis-mini[hidden] { display: none; }
 .fervis-estado { margin: 0; color: var(--text-secondary); font-size: 12px; }
 .fervis-modal h3:focus { outline: none; }   /* el título recibe el foco al abrir en móvil; no hace falta marcarlo */
-@media (max-width: 600px) { .fervis-fab.pestana { top: 184px; } }
+@media (max-width: 600px) { .fervis-fab.pestana { top: 184px; } .fab.pestana { top: 304px; } }
