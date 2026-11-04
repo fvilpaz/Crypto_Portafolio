@@ -121,9 +121,100 @@
     return null;
   }
 
-  const bienvenida = () => 'Hola, soy Fervis, el asistente de tu cartera. Todavía estoy en pruebas: leo tu cartera guardada en este navegador y te contesto lo básico (valor y cambios de hoy), pero aún no tengo IA para conversar. Nada sale de aquí. ' +
-    (leerClave() ? 'Tu clave de Groq está guardada, pero todavía no la uso: la conexión llega en el siguiente paso.'
-                 : 'Para hablar conmigo hará falta tu clave gratuita de Groq: pégala en Ajustes (el primer icono de arriba a la derecha).');
+  // ── IA (Groq) con herramientas ──
+  // El modelo NO ve la cartera entera: solo la pregunta y lo que devuelven las herramientas que él decide llamar (con los parámetros que
+  // entienda de la pregunta: cuántas, compras o ventas, bolsa o cripto…). Las herramientas leen los datos de ESTE navegador y de los JSON de la app.
+  // A Groq la clave solo va en la cabecera de la petición; el resto de la cartera no se envía.
+  const GROQ = 'https://api.groq.com/openai/v1';
+  const MODELOS = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'llama-3.1-8b-instant'];   // el primero que tenga la cuenta
+  const SISTEMA = 'Eres Fervis, el asistente de la cartera de inversión de esta persona. Responde siempre en castellano, breve y claro, sin markdown. ' +
+    'Para cualquier dato (valor de la cartera, operaciones, precios, indicadores) usa SIEMPRE las herramientas; nunca inventes cifras ni recuerdes datos de memoria. ' +
+    'Si ninguna herramienta puede darte lo que piden, dilo con sinceridad y explica qué sí puedes consultar. Los importes están en dólares. ' +
+    'El S&P 500 se consulta con el símbolo SPY (ETF que lo replica). No des consejos de inversión: describe los datos.';
+  const HERRAMIENTAS = [
+    { type: 'function', function: { name: 'resumen_cartera', description: 'Valor total de la cartera, lo invertido, ganancia o pérdida, posiciones con su valor y su cambio de 24 h, y la antigüedad de los precios.', parameters: { type: 'object', properties: {} } } },
+    { type: 'function', function: { name: 'operaciones', description: 'Últimas operaciones guardadas (más recientes primero), con filtros opcionales.', parameters: { type: 'object', properties: {
+      n: { type: 'integer', description: 'cuántas devolver (1 a 50; 5 si no se dice)' },
+      tipo: { type: 'string', enum: ['Compra', 'Venta', 'Recompensa'], description: 'solo de este tipo' },
+      clase: { type: 'string', enum: ['bolsa', 'cripto'], description: 'bolsa = acciones y ETF; cripto = criptomonedas' },
+      token: { type: 'string', description: 'símbolo concreto, p. ej. BTC o NVDA' } } } } },
+    { type: 'function', function: { name: 'diagnostico_tecnico', description: 'Datos técnicos de una acción o ETF de la app: precio, cambio de hoy, medias de 50 y 200 días, RSI de 14 y variación de las últimas sesiones. No incluye rentabilidad del último año completo.', parameters: { type: 'object', properties: { simbolo: { type: 'string', description: 'símbolo, p. ej. NVDA o SPY (S&P 500)' } }, required: ['simbolo'] } } },
+  ];
+  const sinNaN = (x) => (Number.isFinite(x) ? Math.round(x * 100) / 100 : null);
+  const esBolsa = (token, portfolio, d) => { const p = portfolio.find((a) => a && a.token === token); return p ? p.kind === 'stock' : !!(d && d.tec[token]); };
+  const FUNCIONES = {
+    resumen_cartera: async () => {
+      const c = leerCartera();
+      if (c.vacia) return { vacia: true };
+      return { valor_usd: sinNaN(c.valor), invertido_usd: sinNaN(c.coste), ganancia_usd: sinNaN(c.valor - c.coste), antiguedad_precios_min: c.ts ? Math.round((Date.now() - c.ts) / 60000) : null,
+        posiciones: c.filas.map((f) => ({ token: f.token, valor_usd: sinNaN(f.valor), invertido_usd: sinNaN(f.coste), cambio_24h_pct: f.cambio === null ? null : sinNaN(f.cambio) })) };
+    },
+    operaciones: async (a) => {
+      let s = {}; try { s = JSON.parse(localStorage.getItem('miCartera.v1') || '{}'); } catch (e) { /* sin datos */ }
+      const lista = Array.isArray(s.transactions) ? s.transactions : [], port = Array.isArray(s.portfolio) ? s.portfolio : [];
+      let d = null; if (a.clase) { try { d = await cargarMercado(); } catch (e) { /* sin mercado: solo vale la cartera */ } }
+      const n = Math.min(50, Math.max(1, parseInt(a.n, 10) || 5));
+      const sel = lista.filter((o) => o && o.token && (!a.tipo || o.type === a.tipo) && (!a.token || String(o.token).toUpperCase() === String(a.token).toUpperCase()) &&
+        (!a.clase || esBolsa(o.token, port, d) === (a.clase === 'bolsa')))
+        .map((o, i) => ({ o, i })).sort((x, y) => String(y.o.date).localeCompare(String(x.o.date)) || y.i - x.i).slice(0, n)
+        .map(({ o }) => ({ fecha: o.date, tipo: o.type, token: o.token, cantidad: o.qty, precio_usd: o.price, total_usd: o.totalUsd }));
+      return { cuantas: sel.length, operaciones: sel };
+    },
+    diagnostico_tecnico: async (a) => {
+      const sim = String(a.simbolo || '').toUpperCase();
+      let d; try { d = await cargarMercado(); } catch (e) { return { error: 'No se pudieron cargar los datos de mercado' }; }
+      const t = d.tec[sim], p = d.precios[sim];
+      if (!t || !p || !(p.price > 0)) return { error: 'Sin datos de ' + sim + ' en la app' };
+      const serie = Array.isArray(t.serie) ? t.serie.filter((v) => v > 0) : [];
+      return { simbolo: sim, fecha: d.fecha.slice(0, 10), precio_usd: p.price, cambio_hoy_pct: typeof p.change === 'number' ? sinNaN(p.change) : null, media_50d: t.sma50, media_200d: t.sma200, rsi14: t.rsi14,
+        sesiones: serie.length, variacion_sesiones_pct: serie.length > 1 ? sinNaN((serie[serie.length - 1] / serie[0] - 1) * 100) : null };
+    },
+  };
+
+  let modeloGroq = null, historial = [];
+  async function pedirGroq(clave, cuerpo) {
+    let r;
+    try { r = await fetch(GROQ + cuerpo.ruta, { method: cuerpo.body ? 'POST' : 'GET', headers: Object.assign({ Authorization: 'Bearer ' + clave }, cuerpo.body ? { 'Content-Type': 'application/json' } : {}), body: cuerpo.body, signal: AbortSignal.timeout(30000) }); }
+    catch (e) { throw new Error('No he podido conectar con Groq (¿sin internet?).'); }
+    if (r.status === 401) throw new Error('Groq no acepta tu clave (401). Revisa que esté entera en Ajustes.');
+    if (r.status === 429) throw new Error('Has llegado al límite gratuito de Groq (429). Espera un minuto y vuelve a preguntar.');
+    if (!r.ok) throw new Error('Groq ha fallado (código ' + r.status + ').');
+    return r.json();
+  }
+  async function responderConIA(pregunta) {
+    const clave = leerClave();
+    if (!modeloGroq) {
+      const lista = ((await pedirGroq(clave, { ruta: '/models' })).data || []).map((m) => m.id);
+      modeloGroq = MODELOS.find((m) => lista.includes(m));
+      if (!modeloGroq) throw new Error('Tu cuenta de Groq no tiene ninguno de los modelos que uso con herramientas.');
+    }
+    const turno = [{ role: 'user', content: pregunta }];
+    for (let vuelta = 0; vuelta < 4; vuelta++) {
+      const r = await pedirGroq(clave, { ruta: '/chat/completions', body: JSON.stringify({ model: modeloGroq, temperature: 0.2, max_tokens: 700, tools: HERRAMIENTAS, tool_choice: 'auto',
+        messages: [{ role: 'system', content: SISTEMA }].concat(historial, turno) }) });
+      const m = r.choices && r.choices[0] && r.choices[0].message;
+      if (!m) throw new Error('Groq ha contestado algo vacío.');
+      if (!m.tool_calls || !m.tool_calls.length) {
+        const texto = String(m.content || '').trim() || 'No he sabido qué contestar a eso.';
+        historial = historial.concat(turno[0], { role: 'assistant', content: texto }).slice(-10);
+        return texto;
+      }
+      turno.push({ role: 'assistant', content: m.content || '', tool_calls: m.tool_calls });
+      for (const tc of m.tool_calls) {
+        let salida;
+        try {
+          const fn = FUNCIONES[tc.function.name];
+          salida = fn ? await fn(JSON.parse(tc.function.arguments || '{}') || {}) : { error: 'Herramienta desconocida' };
+        } catch (e) { salida = { error: 'No se pudo ejecutar la herramienta' }; }
+        turno.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(salida) });
+      }
+    }
+    throw new Error('No he conseguido cerrar la respuesta. Prueba a preguntarlo de otra forma.');
+  }
+
+  const bienvenida = () => leerClave()
+    ? 'Hola, soy Fervis. Pregúntame lo que quieras de tu cartera, tus operaciones o el mercado de la app. Para contestarte envío a Groq tu pregunta y los datos que consulte para responder (nunca tu clave ni el resto de la cartera). Todavía estoy en pruebas.'
+    : 'Hola, soy Fervis, el asistente de tu cartera. Sin clave solo sé respuestas básicas (valor de la cartera y cambios de hoy). Para hablar conmigo de verdad hará falta tu clave gratuita de Groq: pégala en Ajustes (el primer icono de arriba a la derecha).';
   let overlay = null, msgs = null, chips = null, texto = null, ajustes = null, titulo = null, pintarEstado = () => {};
 
   const el = (tag, clase, contenido) => {
@@ -163,6 +254,7 @@
 
   function reiniciar() {
     msgs.replaceChildren();
+    historial = [];
     mensaje('fervis', bienvenida());
     chips.hidden = false;
   }
@@ -173,10 +265,14 @@
     chips.hidden = true;
     mensaje('yo', q);
     const pensando = mensaje('fervis pensando', '…');
-    const ruta = respuestaLocal(q);   // texto, promesa o null
+    if (leerClave()) {
+      responderConIA(q).catch((e) => e.message).then((txt) => { pensando.remove(); mensaje('fervis', txt); });
+      return;
+    }
+    const ruta = respuestaLocal(q);   // sin clave: respuestas básicas locales
     Promise.resolve(ruta).then((local) => new Promise((ok) => setTimeout(() => ok(local), 500))).catch(() => null).then((local) => {
       pensando.remove();
-      mensaje('fervis', local || 'De momento solo sé contestar con datos de la app: tu cartera, tus últimas operaciones y el diagnóstico técnico de una acción o del S&P 500 (prueba «¿Cuánto vale mi cartera?», «últimas 5 compras» o «diagnóstico del S&P 500»). Para «' + q + '» hará falta la IA, que llega en el siguiente paso.');
+      mensaje('fervis', local || 'Sin clave de Groq solo sé respuestas básicas (prueba «¿Cuánto vale mi cartera?» o «¿Qué ha subido hoy?»). Para «' + q + '» pega tu clave gratuita en Ajustes.');
     });
   }
 
@@ -216,7 +312,7 @@
     const quitar = el('button', 'fervis-mini sec', 'Quitar clave'); quitar.type = 'button';
     const fila = el('div', 'fervis-fila'); fila.append(campo, guardar);
     const estado = el('p', 'fervis-estado'); estado.setAttribute('role', 'status');
-    pintarEstado = () => { const k = leerClave(); estado.textContent = k ? 'Clave guardada: ' + enmascarar(k) : 'Sin clave todavía.'; quitar.hidden = !k; };
+    pintarEstado = () => { const k = leerClave(); aviso.textContent = k ? 'Con IA (Groq) · se envían a Groq tu pregunta y los datos que consulte' : 'Sin clave · respuestas básicas locales'; estado.textContent = k ? 'Clave guardada: ' + enmascarar(k) : 'Sin clave todavía.'; quitar.hidden = !k; };
     ajustes.append(ayuda, fila, estado, quitar);
     pintarEstado();
     ajustes.addEventListener('submit', (e) => {
@@ -228,7 +324,7 @@
       campo.value = '';   // la clave ya no se queda escrita en la página
       pintarEstado();
       mensaje('fervis', 'Clave guardada ✓ (' + enmascarar(k) + '). ' + (k.startsWith('gsk_') ? '' : 'Ojo: no empieza por gsk_, que es como empiezan las de Groq; si no funciona, revisa que la hayas copiado entera. ') +
-        'Todavía no la uso: la conexión con Groq llega en el siguiente paso.');
+        'Ya puedo contestar con IA: se envían a Groq tu pregunta y los datos que consulte.');
     });
     quitar.addEventListener('click', () => { guardarClave(''); campo.value = ''; pintarEstado(); mensaje('fervis', 'Clave quitada de este navegador.'); });
     ajustar.addEventListener('click', () => {
