@@ -2318,13 +2318,16 @@ body.light #mercado .new { color: #8a6500; }
 .token-icon.fondo { background: #3a2f6b; color: #c3b4ff; font-weight: 800; letter-spacing: -.02em; }   /* insignia genérica de fondo de inversión */
 
 /* ── Fervis (asistente de la cartera): botón independiente y flotante (position: fixed), construido como el «+»: arriba a la derecha, a la altura del dinero total ── */
-.fervis-fab { position: fixed; right: 22px; top: 150px; z-index: 150; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 0; border: none; background: none; cursor: pointer; font: inherit; }
-.fervis-cara { display: flex; align-items: center; justify-content: center; width: 58px; height: 58px; border-radius: 50%; background: var(--accent-yellow); color: #0b0e11;
-  box-shadow: 0 8px 24px rgba(240, 185, 11, .5); transition: transform .15s ease, box-shadow .15s ease; }
-.fervis-cara svg { flex: none; }
-.fervis-fab:hover .fervis-cara { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(240, 185, 11, .65); }
-.fervis-fab:focus-visible { outline: none; }
-.fervis-fab:focus-visible .fervis-cara { outline: 3px solid var(--text-primary); outline-offset: 2px; }
+/* Pestañas laterales (Fervis y Añadir): pegadas al borde derecho; un toque abre su acción. Se ensanchan un poco al pasar el ratón. */
+.pestana { position: fixed; right: 0; left: auto; z-index: 150; width: 32px; height: 112px; padding: 0; gap: 8px; border: none; border-radius: 14px 0 0 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: #0b0e11; font: inherit; font-size: 13px; font-weight: 800; letter-spacing: .4px;
+  box-shadow: -2px 3px 12px rgba(0, 0, 0, .25); transition: width .2s ease; }
+.pestana:hover, .pestana:focus-visible { width: 40px; transform: none; }
+.pestana:focus-visible { outline: 3px solid var(--text-primary); outline-offset: -3px; }
+.pestana svg { flex: none; width: 18px; height: 18px; }
+.pestana-txt { writing-mode: vertical-rl; transform: rotate(180deg); }
+.fervis-fab.pestana { top: 150px; background: var(--accent-yellow); }
+.fab.pestana { bottom: calc(76px + env(safe-area-inset-bottom)); background: var(--accent-green); }
 /* Panel del chat de Fervis: usa la ventana del «+» (.modal-overlay / .modal) con el chat dentro; en móvil, a pantalla completa */
 .fervis-modal { display: flex; flex-direction: column; height: min(640px, 88vh); overflow: hidden; }
 @media (min-width: 601px) { .fervis-modal { width: min(720px, 92vw); max-width: none; height: min(780px, 90vh); } }
@@ -2355,4 +2358,4 @@ body.light #mercado .new { color: #8a6500; }
 .fervis-mini[hidden] { display: none; }
 .fervis-estado { margin: 0; color: var(--text-secondary); font-size: 12px; }
 .fervis-modal h3:focus { outline: none; }   /* el título recibe el foco al abrir en móvil; no hace falta marcarlo */
-@media (max-width: 600px) { .fervis-fab { right: 16px; top: 184px; } }
+@media (max-width: 600px) { .fervis-fab.pestana { top: 184px; } }
