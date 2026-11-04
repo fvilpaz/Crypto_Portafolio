@@ -371,7 +371,6 @@
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
     btn.setAttribute('aria-expanded', 'true');
-    guarda('fervis.usado', '1'); ocultarGlobo();
     // En el móvil, poner el cursor en la casilla saca el teclado y esconde el saludo: ahí el foco va al título (lo anuncian los lectores de
     // pantalla) y el teclado sale solo al tocar la casilla. Con ratón (escritorio) sí se escribe directamente.
     if (window.matchMedia('(pointer: fine)').matches) texto.focus(); else titulo.focus();
@@ -384,54 +383,6 @@
     btn.setAttribute('aria-expanded', 'false');
     btn.focus();
   }
-
-  // ── Saludo ──
-  // El robot del panel se mueve y sale un globito para que se sepa que Fervis existe. Pocas veces: 3 por visita, 6 en total, y nunca más si la
-  // persona ya ha abierto el chat o cierra el globito con la ×. Con «?saludo» en la dirección se fuerza (para verlo mientras se ajusta).
-  const SALUDOS_MAX = 6, SALUDOS_POR_VISITA = 3, ENTRE_SALUDOS = 30000, SALUDO_VISIBLE = 9000;
-  const guardado = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
-  const guarda = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* sin almacenamiento: no se recuerda */ } };
-  const forzarSaludo = /[?&]saludo\b/.test(location.search);
-  const yaNoSaludar = () => !forzarSaludo && (guardado('fervis.usado') || Number(guardado('fervis.saludos') || 0) >= SALUDOS_MAX);
-  let globo = null, vistos = 0, quitaGlobo = null;
-
-  function ocultarGlobo() {
-    clearTimeout(quitaGlobo);
-    if (globo) globo.classList.remove('visible');
-    btn.classList.remove('saludando');
-  }
-  function construirGlobo() {
-    globo = el('div', 'fervis-globo');
-    globo.setAttribute('role', 'status');
-    const titulo = el('b', '', 'Hola, soy Fervis, tu asistente');
-    globo.append(titulo, '¿Tienes alguna duda? ¿Te puedo ayudar en algo?');
-    const x = el('button', 'fervis-globo-x', '×');
-    x.type = 'button'; x.setAttribute('aria-label', 'No volver a mostrar este aviso');
-    x.addEventListener('click', (e) => { e.stopPropagation(); guarda('fervis.saludos', String(SALUDOS_MAX)); ocultarGlobo(); });
-    globo.append(x);
-    globo.addEventListener('click', abrir);   // tocar el globito abre el chat
-    document.body.append(globo);
-  }
-  function saludar() {
-    if (document.hidden || (overlay && overlay.classList.contains('open'))) return;
-    if (!globo) construirGlobo();
-    if (globo.parentNode !== document.body) document.body.append(globo);
-    const r = btn.getBoundingClientRect();
-    const centro = r.left + r.width / 2, ancho = globo.offsetWidth;
-    const izq = Math.max(12, Math.min(Math.round(centro - ancho / 2), window.innerWidth - ancho - 12));   // centrado sobre el robot, sin salirse de la pantalla
-    globo.style.left = izq + 'px'; globo.style.right = 'auto'; globo.style.top = 'auto';
-    globo.style.bottom = Math.round(window.innerHeight - r.top + 14) + 'px';
-    globo.style.setProperty('--flecha', Math.max(10, Math.round(centro - izq - 6)) + 'px');   // la flecha apunta al centro del robot
-    btn.classList.add('saludando');
-    globo.classList.add('visible');
-    guarda('fervis.saludos', String(Number(guardado('fervis.saludos') || 0) + 1));
-    clearTimeout(quitaGlobo); quitaGlobo = setTimeout(ocultarGlobo, SALUDO_VISIBLE);
-  }
-  function programarSaludo() {
-    if (yaNoSaludar() || vistos >= SALUDOS_POR_VISITA) return;
-    setTimeout(() => { if (yaNoSaludar()) return; saludar(); vistos++; programarSaludo(); }, vistos === 0 ? 2500 : ENTRE_SALUDOS);
-  }
-  programarSaludo();
 
   btn.setAttribute('aria-controls', 'fervis-modal');
   btn.addEventListener('click', abrir);
