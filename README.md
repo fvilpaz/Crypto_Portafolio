@@ -88,6 +88,11 @@ are intentionally not merged. The apps cross-link, nothing more.
 - **Weekly backup reminder:** the portfolio lives only in the browser, so if it has been more than 7 days since the last JSON export (or never) a notice at the top
   offers "Exportar ahora" in one tap (and "Compartir copia" where the browser can share files: Drive, WhatsApp, mail, Files; "Mañana" snoozes it a day; "No avisar más" turns it off for good, and it never appears while the cloud sync has uploaded in the last 7 days); the app also asks the
   browser for persistent storage (`navigator.storage.persist()`) so the data is not evicted when space runs low; it also says whether the cloud sync (private Gist) is on
+- **Fervis, the portfolio assistant** (bottom dock, robot in the centre): a chat that answers free-form questions about *your* portfolio and the app's own data
+  (portfolio value, last N buys/sells filtered by type, crypto or stocks, technical diagnosis of a stock or the S&P 500, in the currency you have selected). It runs on
+  Groq with tool calls: the model decides which tool to call, the tools read this browser's data and the app's JSON, and only the question plus the tool results are sent
+  to Groq. **Bring your own key:** each person pastes a free Groq key in the chat's settings; it stays in that browser (never in the repo, the export or the sync).
+  Without a key it only gives basic local answers. Replies are plain text (markdown from the model is turned into • symbols). It is read-only: it cannot change the portfolio.
 - Manual refresh + auto-refresh of live prices
 - Installable as a **PWA** (offline-capable app shell via a service worker)
 - Dark theme, responsive / mobile-friendly
@@ -284,7 +289,6 @@ half. Each does one thing well and they link to each other.
 - **Accounts and server-side storage** (for sharing the app with other people, each with their own login): a small FastAPI backend (email + password with argon2
   hash and a JWT, one row per user holding the same JSON the browser stores today), Postgres on Neon (SQLite only for local development, same `DATABASE_URL`) and the
   API on Railway or Netlify Functions; the front end would only swap its saving layer (the existing sync layer can be reused). Needs a Neon/Railway account.
-- **Market chat**: a static page cannot hide an API key, so the realistic version is bring-your-own-key (each person pastes their own free Groq key, kept only in
-  their browser) with the app's own data (prices, technicals, fundamentals, 13F, news, portfolio) as context; or a cloud function as proxy.
+- **Fervis, next steps** (bring-your-own-key chat is done, see Features): a cloud function as proxy so it works without a key; more tools (13F, news, fundamentals, DefiLlama); a long price history (1-2 years of the S&P 500, BTC and ETH: today the JSON files only hold moving averages and 51 sessions, so it cannot say how much something grew over years); and an "add an asset" action that only proposes and waits for the person to confirm.
 - **Charging for it**: first move from unofficial / free-plan data sources (Yahoo endpoints, Twelve Data free plan, Google News RSS, CoinGecko demo key) to licensed
   ones, keep the app informational (no personalised recommendations: that is regulated advice) with a clear legal notice, and get a lawyer to review it.
