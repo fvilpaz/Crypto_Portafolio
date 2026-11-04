@@ -2318,14 +2318,18 @@ body.light #mercado .new { color: #8a6500; }
 .token-icon.fondo { background: #3a2f6b; color: #c3b4ff; font-weight: 800; letter-spacing: -.02em; }   /* insignia genérica de fondo de inversión */
 
 /* ── Fervis (asistente de la cartera): botón independiente y flotante (position: fixed), construido como el «+»: arriba a la derecha, a la altura del dinero total ── */
-/* Pestañas laterales (Fervis y Añadir): pegadas al borde derecho; un toque abre su acción. Se ensanchan un poco al pasar el ratón. */
-.pestana { position: fixed; right: 0; left: auto; z-index: 150; width: 32px; height: 112px; padding: 0; gap: 8px; border: none; border-radius: 14px 0 0 14px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: #0b0e11; font: inherit; font-size: 13px; font-weight: 800; letter-spacing: .4px;
-  box-shadow: -2px 3px 12px rgba(0, 0, 0, .25); transition: width .2s ease; }
-.pestana:hover, .pestana:focus-visible { width: 40px; transform: none; }
+/* Pestañas laterales (Fervis y Añadir): pegadas al borde derecho, solo con el texto. Al pulsarlas se deshacen y sale el icono (botón redondo); pulsar el icono abre su acción.
+   A los 4 s, o al tocar fuera, vuelven a esconderse (js/pestanas.js). */
+.pestana { position: fixed; right: 0; left: auto; z-index: 150; width: 32px; height: 112px; padding: 0; border: none; border-radius: 14px 0 0 14px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer; color: #0b0e11; font: inherit; font-size: 13px; font-weight: 800; letter-spacing: .4px;
+  box-shadow: -2px 3px 12px rgba(0, 0, 0, .25); transition: width .25s ease, height .25s ease, right .25s ease, border-radius .25s ease; }
+.pestana:hover:not(.abierto), .pestana:focus-visible:not(.abierto) { width: 40px; transform: none; }
 .pestana:focus-visible { outline: 3px solid var(--text-primary); outline-offset: -3px; }
-.pestana svg { flex: none; width: 18px; height: 18px; }
+.pestana svg { display: none; flex: none; }
 .pestana-txt { writing-mode: vertical-rl; transform: rotate(180deg); }
+.pestana.abierto { width: 58px; height: 58px; right: 22px; border-radius: 50%; box-shadow: 0 8px 24px rgba(0, 0, 0, .35); }
+.pestana.abierto svg { display: block; width: 30px; height: 30px; }
+.pestana.abierto .pestana-txt { display: none; }
 .fervis-fab.pestana { top: 150px; background: var(--accent-yellow); }
 .fab.pestana { top: 270px; bottom: auto; background: var(--accent-green); }   /* justo debajo de la de Fervis (150 + 112 + 8): juntas arriba, nunca se pisan */
 /* Panel del chat de Fervis: usa la ventana del «+» (.modal-overlay / .modal) con el chat dentro; en móvil, a pantalla completa */

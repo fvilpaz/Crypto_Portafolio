@@ -9,6 +9,7 @@ const ASSETS = [
   './js/fx.js',
   './js/mercado.js',
   './js/fervis.js',
+  './js/pestanas.js',
   './gestor.html',
   './js/gestor.js',
   './manifest.json',
