@@ -40,7 +40,8 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
 /* Datos reales: ultimo 13F de cada gestor (los genera scripts/update_13f.py). Se cargan al abrir Mercado por primera vez. */
 (function () {
   const fx = window.mkFx, view = document.getElementById('mercado'), cont = document.getElementById('b13f');
-  let datos = null, indice = null, coin = null;
+  let datos = null, indice = null, coin = null;   // lo que se pinta: solo los inversores que se siguen
+  let datosAll = null, indiceAll = null, coinAll = null;   // todo lo que publica el servidor (los 3 inversores)
   // Las empresas que sigo en bolsa las define scripts/update_13f.py (SEGUIDAS) y llegan en coin.seguidas.
   const sigo = (emisor) => listaSeguimiento().some((x) => { const a = norm(x.n), b = norm(emisor); return !!a && !!b && (a === b || b.startsWith(a + ' ') || a.startsWith(b + ' ')); });
   const el = (tag, txt, cls) => { const e = document.createElement(tag); e.textContent = txt; if (cls) e.className = cls; return e; };
@@ -122,7 +123,54 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   }
   function pintar() {
     if (!datos || !coin) return;
+    if (!datos.length) { cont.replaceChildren(el('p', 'No sigues a ningún inversor. Actívalos en «Inversores que sigues».', 'nm')); return; }
     cont.replaceChildren(...datos.map((d, i) => seccion(d, indice[i].clave)));
+  }
+  // ── Inversores que se siguen (se elige cuáles; se guarda en este navegador, no viaja en la exportación) ──
+  // Sin elección guardada se siguen todos los que publica el servidor. Las coincidencias entre carteras vienen precalculadas para todos; con una elección
+  // distinta se recalculan aquí con 13f_posiciones.json (mismo criterio que scripts/update_13f.py: se descartan las posiciones que ya vendieron entera).
+  const SEG_GEST_KEY = 'miCartera.gestoresSeguidos';
+  const gestoresGuardados = () => { try { const a = JSON.parse(localStorage.getItem(SEG_GEST_KEY)); return Array.isArray(a) ? a : null; } catch (e) { return null; } };
+  const sigueGestor = (clave) => { const s = gestoresGuardados(); return !s || s.includes(clave); };
+  const losMios = (p) => (p.gestores || []).filter((g) => sigueGestor(g.clave));
+  function coinSubconjunto(claves) {
+    const por = [];
+    Object.entries(posAll.filas).forEach(([emisor, m]) => {
+      const g = claves.filter((k) => m[k] && m[k][2] !== 'salio').map((k) => ({ clave: k, peso_pct: m[k][0], cambio_acciones_pct: m[k][2] }));
+      if (g.length >= 2) por.push([emisor, g]);
+    });
+    const peso = (g) => g.reduce((s, x) => s + x.peso_pct, 0);
+    por.sort((a, b) => b[1].length - a[1].length || peso(b[1]) - peso(a[1]));
+    return { gestores_seguidos: claves.length, periodo: coinAll.periodo, en_2_o_mas: por.length, en_todas: por.filter(([, g]) => g.length === claves.length).length,
+      filas: por.slice(0, 15).map(([emisor, gestores]) => ({ emisor, gestores })),
+      seguidas: coinAll.seguidas.map((s) => Object.assign({}, s, { gestores: s.gestores.filter((g) => claves.includes(g.clave)) })) };
+  }
+  function aplicarGestores() {
+    if (!datosAll) return;
+    const claves = indiceAll.filter((g) => sigueGestor(g.clave)).map((g) => g.clave);
+    const hecho = () => {
+      indice = indiceAll.filter((g) => claves.includes(g.clave));
+      datos = datosAll.filter((d, i) => claves.includes(indiceAll[i].clave));
+      coin = claves.length === indiceAll.length ? coinAll : coinSubconjunto(claves);
+      pintar(); pintarCoinciden(); pintarBarra();
+    };
+    if (claves.length === indiceAll.length) hecho(); else cargaPos().then(hecho).catch(() => { cont.textContent = 'No se pudieron cargar las posiciones de los inversores.'; });
+  }
+  const barra = document.createElement('div'); barra.id = 'b13f-barra'; barra.className = 'gest-barra'; cont.parentNode.insertBefore(barra, cont);
+  function pintarBarra() {
+    if (!indiceAll) return;
+    barra.replaceChildren(el('span', 'Inversores que sigues:', 'nm'), ...indiceAll.map((g) => {
+      const on = sigueGestor(g.clave);
+      const b = el('button', (on ? '✓ ' : '+ ') + g.corto + ' · ' + g.nombre, 'gest-chip' + (on ? ' on' : ''));
+      b.type = 'button'; b.setAttribute('aria-pressed', String(on)); b.title = on ? 'Dejar de seguir' : 'Seguir';
+      b.addEventListener('click', () => {
+        const actual = indiceAll.map((x) => x.clave).filter(sigueGestor);
+        const nuevo = on ? actual.filter((c) => c !== g.clave) : actual.concat(g.clave);
+        try { localStorage.setItem(SEG_GEST_KEY, JSON.stringify(nuevo)); } catch (e) { /* sin almacenamiento: vale para esta visita */ }
+        aplicarGestores();
+      });
+      return b;
+    }));
   }
   const pct = (n) => n.toLocaleString('es-ES') + ' %';
   // Personas que no presentan 13F (p. ej. Elon Musk): lo que declaran a la SEC en los Schedule 13D/13G (pasar del 5 % de una empresa) y en los Form 4
@@ -279,7 +327,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
         const rango = p && p.min_52s != null && p.max_52s > p.min_52s ? Math.round((p.price - p.min_52s) / (p.max_52s - p.min_52s) * 100) : null;
         const cv = document.createElement('td'); cv.className = 'text-right'; if (p) { if (p.change) cv.append(cambioChip(Math.round(p.change * 100) / 100)); else cv.textContent = '0 %'; } else cv.textContent = '—';
         tr.append(emp, num(p ? `${n2g(p.price)} ${mon}` : null, p ? '' : 'Sin dato: no está en la lista de precios automáticos'), cv, num(rango !== null ? rango + ' %' : null, 'Dónde está el precio entre el mínimo (0 %) y el máximo (100 %) de las últimas 52 semanas'),
-          capDe(p, fu) ? num(capDe(p, fu).txt, capDe(p, fu).tip) : num(null), perDe(p, fu) ? num(n2g(perDe(p, fu).v), perDe(p, fu).tip) : num(null), chipsPoseedores(poseedoresDe(pos, x.n), pos.gestores));
+          capDe(p, fu) ? num(capDe(p, fu).txt, capDe(p, fu).tip) : num(null), perDe(p, fu) ? num(n2g(perDe(p, fu).v), perDe(p, fu).tip) : num(null), chipsPoseedores(poseedoresDe(pos, x.n), losMios(pos)));
         return tr;
       }));
     });
@@ -389,13 +437,13 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
           fu && fu.bpa != null ? celda(n2(fu.bpa) + ' ' + simMon(fu.moneda || (pr && pr.currency)), fu.fuente === 'Yahoo' ? 'Beneficio por acción de los últimos 12 meses (Yahoo Finance)' : ejercicio) : vacio(sinFund),
           fu && fu.ingresos ? celda(grandeMon(fu.ingresos, finMon(fu)), fu.fuente === 'Yahoo' ? 'Ingresos de los últimos 12 meses (Yahoo Finance)' : ejercicio) : vacio(sinFund),
           fu && fu.beneficio != null ? celda(grandeMon(fu.beneficio, finMon(fu)), fu.fuente === 'Yahoo' ? 'Beneficio neto de los últimos 12 meses (Yahoo Finance)' : ejercicio) : vacio(sinFund));
-        const quien = chipsPoseedores(f.por, d.gestores);
+        const quien = chipsPoseedores(f.por, losMios(d));
         tr.append(quien); tb.append(tr);
         const nombreEl = emp.querySelector('.tk'); nombreEl.style.cursor = 'pointer'; nombreEl.title = 'Ver la ficha y el gráfico';
         let abierta = null;
         nombreEl.addEventListener('click', () => {   // pulsar el nombre despliega (o pliega) su ficha debajo de la fila
           if (abierta) { if (abierta._grafica) abierta._grafica.destroy(); abierta.remove(); abierta = null; return; }
-          abierta = fichaEmpresa(f, pr, tec, fu, d.gestores, t.querySelectorAll('thead th').length); tr.after(abierta);
+          abierta = fichaEmpresa(f, pr, tec, fu, losMios(d), t.querySelectorAll('thead th').length); tr.after(abierta);
         });
       });
       t.append(tb); res.replaceChildren(t);
@@ -471,7 +519,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     const json = (url) => fetch(url).then((r) => r.json());
     json('data/13f_indice.json')
       .then((ix) => { indice = ix; return Promise.all([json('data/13f_coinciden.json'), ...ix.map((g) => json('data/13f_' + encodeURIComponent(g.clave) + '.json'))]); })
-      .then(([c, ...ds]) => { coin = c; datos = ds; pintar(); pintarCoinciden(); })
+      .then(([c, ...ds]) => { indiceAll = indice; coinAll = c; datosAll = ds; aplicarGestores(); })
       .catch(() => { cont.textContent = 'No se pudieron cargar los datos de los gestores.'; });
     cargaPos().then(buscador).catch(() => {});   // aparte: si falta, la pestaña sigue igual
     json('data/insiders.json').then(pintarPersonas).catch(() => {});   // aparte: si falta, la pestaña sigue igual

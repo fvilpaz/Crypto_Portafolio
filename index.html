@@ -450,10 +450,6 @@
   <!-- ═══ FOOTER ═══ -->
   <footer class="footer">
     <div class="container">
-      <div class="footer-top">
-        <span>Mi Cartera &copy; 2026 &middot; <strong>Fernando Vilas Paz</strong></span>
-        <a href="https://fvilpaz.github.io/mycryptofolio-landing/#cafe" target="_blank" rel="noopener" style="font-size:13px;color:var(--accent-green);font-weight:600;">☕ Invítame a un café</a>
-      </div>
       <p class="disclaimer">
         Herramienta personal de visualización, no asesoramiento financiero.
         Actualización automática cada 60 segundos. Always do your own research.
@@ -462,13 +458,19 @@
   </footer>
 
   <!-- ═══ TOKEN DETAIL MODAL ═══ -->
-  <!-- ═══ FAB + MODAL AÑADIR MOVIMIENTO ═══ -->
-  <!-- Fervis y Añadir: pestañas laterales pegadas al borde derecho (un toque abre su acción) -->
-  <button id="fervis-btn" class="fervis-fab pestana" type="button" title="Fervis, el asistente de tu cartera (versión de prueba)" aria-label="Abrir el chat con Fervis (versión de prueba)" aria-expanded="false"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V5"/><circle cx="12" cy="3.6" r="1.1"/><path d="M9 14h.01M15 14h.01"/><path d="M2 13v3M22 13v3"/></svg><span class="pestana-txt">Fervis IA</span></button>
-  <button type="button" id="add-fab" class="fab pestana" title="Añadir movimiento" aria-label="Añadir movimiento">
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="pestana-txt">Añadir</span>
-  </button>
+  <!-- ═══ DOCK (fijo abajo del todo): Fervis · añadir movimiento · café ═══ -->
+  <nav class="dock" aria-label="Acciones rápidas">
+    <div class="container dock-fila">
+      <div class="dock-pie">
+        <a class="dock-cafe" href="https://fvilpaz.github.io/mycryptofolio-landing/#cafe" target="_blank" rel="noopener" title="Invítame a un café" aria-label="Invítame a un café"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8h1a3 3 0 010 6h-1"/><path d="M3 8h14v6a5 5 0 01-5 5H8a5 5 0 01-5-5V8z"/><path d="M7 2v3M11 2v3M15 2v3"/></svg><span class="dock-cafe-txt">Invítame a un café</span></a>
+        <span class="dock-copy">Mi Cartera &copy; 2026 &middot; <strong>Fernando Vilas Paz</strong></span>
+      </div>
+      <button id="fervis-btn" class="dock-robot" type="button" title="Abrir el chat con Fervis" aria-label="Abrir el chat con Fervis (versión de prueba)" aria-expanded="false"><span class="dock-robot-cara"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="8" width="16" height="12" rx="3"/><path d="M12 8V5"/><circle cx="12" cy="3.6" r="1.1"/><path d="M9 14h.01M15 14h.01"/><path d="M2 13v3M22 13v3"/></svg></span></button>
+      <button type="button" id="add-fab" class="dock-mas" title="Añadir movimiento" aria-label="Añadir movimiento"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div>
+  </nav>
 
+  <!-- ═══ MODAL AÑADIR MOVIMIENTO ═══ -->
   <div class="modal-overlay" id="add-modal">
     <div class="modal">
       <div class="add-modal-head">
@@ -549,6 +551,5 @@
   <script src="js/fx.js"></script>
   <script src="js/mercado.js"></script>
   <script src="js/fervis.js"></script>
-  <script src="js/pestanas.js"></script>
 </body>
 </html>
