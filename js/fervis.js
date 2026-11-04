@@ -7,8 +7,6 @@
   const btn = document.getElementById('fervis-btn');
   if (!btn) return;
 
-  const SUGERENCIAS = ['¿Cuánto vale mi cartera?', '¿Qué ha subido hoy?', 'Diagnóstico del S&P 500', 'Mis últimas 5 compras'];
-
   // La clave de Groq de ESTE navegador. Va fuera del prefijo «miCartera.»: la exportación y la sincronización usan buildState()
   // (un estado explícito, no recorren todo el almacenamiento), así que la clave no sale en archivos ni en el gist. Nunca se escribe
   // en la página entera: solo enmascarada (últimas 4 letras) y nunca va al código ni a GitHub.
@@ -215,7 +213,7 @@
   const bienvenida = () => leerClave()
     ? 'Hola, soy Fervis. Pregúntame lo que quieras de tu cartera, tus operaciones o el mercado de la app. Para contestarte envío a Groq tu pregunta y los datos que consulte para responder (nunca tu clave ni el resto de la cartera). Todavía estoy en pruebas.'
     : 'Hola, soy Fervis, el asistente de tu cartera. Sin clave solo sé respuestas básicas (valor de la cartera y cambios de hoy). Para hablar conmigo de verdad hará falta tu clave gratuita de Groq: pégala en Ajustes (el primer icono de arriba a la derecha).';
-  let overlay = null, msgs = null, chips = null, texto = null, ajustes = null, titulo = null, pintarEstado = () => {};
+  let overlay = null, msgs = null, texto = null, ajustes = null, titulo = null, pintarEstado = () => {};
 
   const el = (tag, clase, contenido) => {
     const x = document.createElement(tag);
@@ -256,13 +254,11 @@
     msgs.replaceChildren();
     historial = [];
     mensaje('fervis', bienvenida());
-    chips.hidden = false;
   }
 
   function preguntar(pregunta) {
     const q = pregunta.trim().slice(0, 200);
     if (!q) return;
-    chips.hidden = true;
     mensaje('yo', q);
     const pensando = mensaje('fervis pensando', '…');
     if (leerClave()) {
@@ -335,13 +331,6 @@
     msgs = el('div', 'fervis-msgs');
     msgs.setAttribute('role', 'log');
     msgs.setAttribute('aria-live', 'polite');
-    chips = el('div', 'fervis-chips');
-    for (const s of SUGERENCIAS) {
-      const c = el('button', 'fervis-chip', s);
-      c.type = 'button';
-      c.addEventListener('click', () => preguntar(s));
-      chips.append(c);
-    }
     const form = el('form', 'fervis-form');
     form.autocomplete = 'off';
     texto = el('input', 'fervis-texto');
@@ -351,7 +340,7 @@
     form.append(texto, enviar);
     const pie = el('p', 'fervis-pie', 'Información de tu cartera, no consejos de inversión.');
 
-    modal.append(cab, aviso, ajustes, msgs, chips, form, pie);
+    modal.append(cab, aviso, ajustes, msgs, form, pie);
     overlay.append(modal);
     document.body.append(overlay);
 

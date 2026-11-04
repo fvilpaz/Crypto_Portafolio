@@ -2335,9 +2335,6 @@ body.light #mercado .new { color: #8a6500; }
 .fervis-etiqueta { display: inline-block; margin-right: 2px; padding: 1px 8px; border-radius: 99px; background: var(--accent-yellow); color: #0b0e11; font-size: 12px; font-weight: 800; letter-spacing: .2px; }
 .fervis-msg.yo { align-self: flex-end; background: var(--accent-yellow); color: #0b0e11; border-bottom-right-radius: 4px; font-weight: 500; }
 .fervis-msg.pensando { color: var(--text-secondary); letter-spacing: 2px; }
-.fervis-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 20px 10px; }
-.fervis-chips[hidden] { display: none; }
-.fervis-chip { min-height: 40px; padding: 6px 14px; background: transparent; border: 1px solid var(--accent-yellow); color: var(--accent-yellow); border-radius: 99px; cursor: pointer; font: inherit; font-size: 13px; }
 .fervis-form { display: flex; gap: 8px; padding: 10px 20px; border-top: 1px solid var(--border); }
 .fervis-texto { flex: 1; min-width: 0; padding: 12px 14px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 99px; color: var(--text-primary); font: inherit; font-size: 16px; }
 .fervis-texto:focus { outline: 2px solid var(--accent-yellow); border-color: transparent; }
