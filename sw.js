@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mi-cartera-v8';
+const CACHE_NAME = 'mi-cartera-v9';
 const ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const ASSETS = [
   './js/app.js',
   './js/fx.js',
   './js/mercado.js',
+  './js/fervis.js',
   './gestor.html',
   './js/gestor.js',
   './manifest.json',
