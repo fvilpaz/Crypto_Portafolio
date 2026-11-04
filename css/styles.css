@@ -2302,7 +2302,8 @@ body.light #mercado .new { color: #8a6500; }
 
 /* ── Fervis (asistente de la cartera): botón independiente y flotante (position: fixed), construido como el «+»: arriba a la derecha, a la altura del dinero total ── */
 /* Mercado: elegir a qué inversores se sigue (botones de seguir / dejar de seguir) */
-.gest-barra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px; }
+.gest-barra { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin: 0 0 14px; }
+.gest-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .gest-chip { padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--text-secondary); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 .gest-chip.on { border-color: var(--accent-green); background: var(--accent-green-bg); color: var(--accent-green); }
 .gest-chip:focus-visible { outline: 3px solid var(--text-primary); outline-offset: 2px; }

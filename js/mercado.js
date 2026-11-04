@@ -159,7 +159,8 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
   const barra = document.createElement('div'); barra.id = 'b13f-barra'; barra.className = 'gest-barra'; cont.parentNode.insertBefore(barra, cont);
   function pintarBarra() {
     if (!indiceAll) return;
-    barra.replaceChildren(el('span', 'Inversores que sigues:', 'nm'), ...indiceAll.map((g) => {
+    const chips = document.createElement('div'); chips.className = 'gest-chips';
+    chips.append(...indiceAll.map((g) => {
       const on = sigueGestor(g.clave);
       const b = el('button', (on ? '✓ ' : '+ ') + g.corto + ' · ' + g.nombre, 'gest-chip' + (on ? ' on' : ''));
       b.type = 'button'; b.setAttribute('aria-pressed', String(on)); b.title = on ? 'Dejar de seguir' : 'Seguir';
@@ -171,6 +172,7 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
       });
       return b;
     }));
+    barra.replaceChildren(el('span', 'Inversores que sigues:', 'nm'), chips);
   }
   const pct = (n) => n.toLocaleString('es-ES') + ' %';
   // Personas que no presentan 13F (p. ej. Elon Musk): lo que declaran a la SEC en los Schedule 13D/13G (pasar del 5 % de una empresa) y en los Form 4
