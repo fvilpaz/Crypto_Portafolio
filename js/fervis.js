@@ -75,7 +75,7 @@
 
   const bienvenida = () => 'Hola, soy Fervis, el asistente de tu cartera. Todavía estoy en pruebas: leo tu cartera guardada en este navegador y te contesto lo básico (valor y cambios de hoy), pero aún no tengo IA para conversar. Nada sale de aquí. ' +
     (leerClave() ? 'Tu clave de Groq está guardada, pero todavía no la uso: la conexión llega en el siguiente paso.'
-                 : 'Para hablar conmigo hará falta tu clave gratuita de Groq: pégala en ⚙ Ajustes.');
+                 : 'Para hablar conmigo hará falta tu clave gratuita de Groq: pégala en Ajustes (el primer icono de arriba a la derecha).');
   let overlay = null, msgs = null, chips = null, texto = null, ajustes = null, titulo = null, pintarEstado = () => {};
 
   const el = (tag, clase, contenido) => {
@@ -84,6 +84,24 @@
     if (contenido !== undefined) x.textContent = contenido;
     return x;
   };
+
+  // Iconos de trazo (como los del resto de la app), dibujados con el DOM: nada de emojis, que cada sistema pinta distinto y feo.
+  const ICONOS = {
+    ajustes: [['line', { x1: 4, y1: 21, x2: 4, y2: 14 }], ['line', { x1: 4, y1: 10, x2: 4, y2: 3 }], ['line', { x1: 12, y1: 21, x2: 12, y2: 12 }], ['line', { x1: 12, y1: 8, x2: 12, y2: 3 }], ['line', { x1: 20, y1: 21, x2: 20, y2: 16 }], ['line', { x1: 20, y1: 12, x2: 20, y2: 3 }], ['line', { x1: 1, y1: 14, x2: 7, y2: 14 }], ['line', { x1: 9, y1: 8, x2: 15, y2: 8 }], ['line', { x1: 17, y1: 16, x2: 23, y2: 16 }]],
+    papelera: [['polyline', { points: '3 6 5 6 21 6' }], ['path', { d: 'M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2' }], ['line', { x1: 10, y1: 11, x2: 10, y2: 17 }], ['line', { x1: 14, y1: 11, x2: 14, y2: 17 }]],
+    cerrar: [['line', { x1: 18, y1: 6, x2: 6, y2: 18 }], ['line', { x1: 6, y1: 6, x2: 18, y2: 18 }]],
+  };
+  function icono(nombre) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(NS, 'svg');
+    for (const [k, v] of Object.entries({ width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true' })) svg.setAttribute(k, v);
+    for (const [tag, attrs] of ICONOS[nombre]) {
+      const p = document.createElementNS(NS, tag);
+      for (const [k, v] of Object.entries(attrs)) p.setAttribute(k, v);
+      svg.append(p);
+    }
+    return svg;
+  }
 
   function mensaje(rol, contenido) {
     const m = el('div', 'fervis-msg ' + rol);
@@ -126,11 +144,11 @@
     const tit = el('h3', '', 'Fervis');
     tit.id = 'fervis-titulo'; tit.tabIndex = -1; titulo = tit;
     const acciones = el('div', 'fervis-acciones');
-    const ajustar = el('button', 'modal-close', '⚙');
+    const ajustar = el('button', 'modal-close'); ajustar.append(icono('ajustes'));
     ajustar.type = 'button'; ajustar.title = 'Ajustes de Fervis'; ajustar.setAttribute('aria-label', 'Ajustes de Fervis'); ajustar.setAttribute('aria-expanded', 'false');
-    const borrar = el('button', 'modal-close', '🗑');
+    const borrar = el('button', 'modal-close'); borrar.append(icono('papelera'));
     borrar.type = 'button'; borrar.title = 'Borrar la conversación'; borrar.setAttribute('aria-label', 'Borrar la conversación');
-    const cerrar = el('button', 'modal-close', '×');
+    const cerrar = el('button', 'modal-close'); cerrar.append(icono('cerrar'));
     cerrar.type = 'button'; cerrar.title = 'Cerrar (la conversación se queda)'; cerrar.setAttribute('aria-label', 'Cerrar el chat');
     acciones.append(ajustar, borrar, cerrar);
     cab.append(tit, acciones);
