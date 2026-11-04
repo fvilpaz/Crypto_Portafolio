@@ -86,7 +86,10 @@
   };
 
   function mensaje(rol, contenido) {
-    const m = el('div', 'fervis-msg ' + rol, contenido);
+    const m = el('div', 'fervis-msg ' + rol);
+    // Lo que dice Fervis lleva delante su etiqueta amarilla con texto negro; lo que escribe la persona, no.
+    if (rol.startsWith('fervis')) m.append(el('span', 'fervis-etiqueta', 'Fervis:'), ' ');
+    m.append(contenido);
     msgs.append(m);
     msgs.scrollTop = msgs.scrollHeight;
     return m;
