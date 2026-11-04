@@ -2317,11 +2317,8 @@ body.light #mercado .new { color: #8a6500; }
 .token-icon.bbva { background: #0b2f6b; color: #7fb2ff; font-weight: 800; letter-spacing: -.02em; }   /* insignia de BBVA (fondo Megatendencia Tecnología) */
 .token-icon.fondo { background: #3a2f6b; color: #c3b4ff; font-weight: 800; letter-spacing: -.02em; }   /* insignia genérica de fondo de inversión */
 
-/* ── Fervis (asistente de la cartera): botón redondo como el «+», en la fila de pestañas, a la derecha; y aviso «Próximamente» ── */
-.vista-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; position: relative; }
-.vista-nav .seg-grupo { flex: 0 1 auto; min-width: 0; }
-@media (max-width: 480px) { .vista-nav .seg-grupo { flex: 1 1 auto; width: auto; } }
-.fervis-fab { flex: none; display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border: none; border-radius: 50%; cursor: pointer;
+/* ── Fervis (asistente de la cartera): botón redondo en la cabecera fija (sticky), a la derecha del título y fuera del grupo de iconos; se queda arriba al deslizar ── */
+.fervis-fab { flex: none; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: 0 12px 0 auto; border: none; border-radius: 50%; cursor: pointer;
   background: var(--accent-yellow); color: #0b0e11; box-shadow: 0 6px 20px rgba(240, 185, 11, .45); transition: transform .2s, box-shadow .2s; }
 .fervis-fab:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(240, 185, 11, .6); }
 .fervis-fab:focus-visible { outline: 3px solid var(--text-primary); outline-offset: 2px; }
@@ -2356,3 +2353,4 @@ body.light #mercado .new { color: #8a6500; }
 .fervis-mini[hidden] { display: none; }
 .fervis-estado { margin: 0; color: var(--text-secondary); font-size: 12px; }
 .fervis-modal h3:focus { outline: none; }   /* el título recibe el foco al abrir en móvil; no hace falta marcarlo */
+@media (max-width: 600px) { .fervis-fab { width: 40px; height: 40px; margin-right: 0; } }

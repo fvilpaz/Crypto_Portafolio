@@ -15,8 +15,14 @@
   const CLAVE_KEY = 'fervis.groqKey';
   const leerClave = () => { try { return localStorage.getItem(CLAVE_KEY) || ''; } catch (e) { return ''; } };
   const guardarClave = (k) => { try { if (k) localStorage.setItem(CLAVE_KEY, k); else localStorage.removeItem(CLAVE_KEY); return true; } catch (e) { return false; } };
-  const claveValida = (k) => /^gsk_[\w-]{16,200}$/.test(k);   // forma de las claves de Groq; no comprueba que valga (eso, al usarla)
-  const enmascarar = (k) => 'gsk_…' + k.slice(-4);
+  // Lo que se pega suele venir de un .env: «GROQ_API_KEY=gsk_…», con comillas, con «export» delante o con saltos de línea. Se limpia solo.
+  const limpiarClave = (texto) => String(texto || '').trim()
+    .replace(/^export\s+/i, '').replace(/^bearer\s+/i, '')
+    .replace(/^[A-Za-z][A-Za-z0-9_]*\s*=\s*/, '')   // «NOMBRE=» delante
+    .replace(/^["'`]+|["'`]+$/g, '').trim();
+  // Solo se comprueba que parezca una clave (sin espacios, longitud razonable); no que valga: eso se sabe al usarla.
+  const claveValida = (k) => /^[\w.\-]{20,300}$/.test(k);
+  const enmascarar = (k) => (k.startsWith('gsk_') ? 'gsk_' : '') + '…' + k.slice(-4);
 
   const bienvenida = () => 'Hola, soy Fervis, el asistente de tu cartera. Todavía estoy en pruebas: aún no leo tu cartera ni tengo IA, así que no puedo darte datos. ' +
     (leerClave() ? 'Tu clave de Groq está guardada, pero todavía no la uso: la conexión llega en el siguiente paso.'
@@ -96,12 +102,14 @@
     pintarEstado();
     ajustes.addEventListener('submit', (e) => {
       e.preventDefault();
-      const k = campo.value.trim();
-      if (!claveValida(k)) { estado.textContent = 'Esa clave no tiene la forma de una clave de Groq (empieza por gsk_). No se ha guardado.'; return; }
-      if (!guardarClave(k)) { estado.textContent = 'No se ha podido guardar: el navegador no lo permite.'; return; }
+      const k = limpiarClave(campo.value);
+      if (!k) { estado.textContent = 'Pega primero tu clave de Groq en el campo.'; return; }
+      if (!claveValida(k)) { estado.textContent = 'Eso no parece una clave: tiene espacios o no mide entre 20 y 300 caracteres. No se ha guardado.'; return; }
+      if (!guardarClave(k)) { estado.textContent = 'No se ha podido guardar: el navegador no lo permite (¿modo privado?).'; return; }
       campo.value = '';   // la clave ya no se queda escrita en la página
       pintarEstado();
-      mensaje('fervis', 'Clave guardada ✓ (' + enmascarar(k) + '). Todavía no la uso: la conexión con Groq llega en el siguiente paso.');
+      mensaje('fervis', 'Clave guardada ✓ (' + enmascarar(k) + '). ' + (k.startsWith('gsk_') ? '' : 'Ojo: no empieza por gsk_, que es como empiezan las de Groq; si no funciona, revisa que la hayas copiado entera. ') +
+        'Todavía no la uso: la conexión con Groq llega en el siguiente paso.');
     });
     quitar.addEventListener('click', () => { guardarClave(''); campo.value = ''; pintarEstado(); mensaje('fervis', 'Clave quitada de este navegador.'); });
     ajustar.addEventListener('click', () => {
