@@ -2343,3 +2343,16 @@ body.light #mercado .new { color: #8a6500; }
 .fervis-enviar { flex: none; width: 46px; height: 46px; border: 0; border-radius: 50%; background: var(--accent-yellow); color: #0b0e11; font-size: 18px; cursor: pointer; }
 .fervis-pie { margin: 0; padding: 0 20px 14px; color: var(--text-muted); font-size: 11px; text-align: center; }
 @media (max-width: 600px) { .fervis-modal { width: 100%; max-width: none; height: 100%; max-height: none; border-radius: 0; border: 0; } }
+/* Ajustes de Fervis: campo para pegar la clave de Groq de este navegador */
+.fervis-ajustes { display: flex; flex-direction: column; gap: 8px; padding: 4px 20px 12px; border-bottom: 1px solid var(--border); }
+.fervis-ajustes[hidden] { display: none; }
+.fervis-ayuda { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.45; }
+.fervis-ayuda a { color: var(--accent-yellow); }
+.fervis-fila { display: flex; gap: 8px; }
+.fervis-clave { flex: 1; min-width: 0; padding: 10px 12px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font: inherit; font-size: 16px; }
+.fervis-clave:focus { outline: 2px solid var(--accent-yellow); border-color: transparent; }
+.fervis-mini { min-height: 40px; padding: 6px 14px; border: 1px solid var(--accent-yellow); border-radius: var(--radius-sm); background: var(--accent-yellow); color: #0b0e11; font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.fervis-mini.sec { align-self: flex-start; background: transparent; color: var(--accent-yellow); }
+.fervis-mini[hidden] { display: none; }
+.fervis-estado { margin: 0; color: var(--text-secondary); font-size: 12px; }
+.fervis-modal h3:focus { outline: none; }   /* el título recibe el foco al abrir en móvil; no hace falta marcarlo */
