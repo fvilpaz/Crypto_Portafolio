@@ -1,8 +1,8 @@
-/* Fervis, el asistente de la cartera — PASO 2: el panel del chat, SIN IA todavía.
-   Se abre con el botón redondo de la fila de pestañas y usa la misma ventana que el «+» (.modal-overlay / .modal), con el chat dentro.
-   Aún no lee la cartera ni habla con ninguna IA: contesta con un texto fijo que lo dice, sin inventar ningún dato de la cartera.
-   Los pasos siguientes (leer la cartera de este navegador, ajustes de la clave, Groq) irán en este mismo archivo. Todo el texto
-   se pinta con textContent: nada de lo que se escribe se interpreta como HTML. */
+/* Fervis, el asistente de la cartera — PASO 4: lee la cartera de ESTE navegador y contesta en local, SIN IA todavía.
+   Se abre con el botón redondo fijo de arriba a la derecha y usa la misma ventana que el «+» (.modal-overlay / .modal), con el chat dentro.
+   Lee solo lo que ya está guardado en este navegador (miCartera.v1 y el último caché de precios) y calcula con eso: no manda nada a ningún
+   sitio. Los pasos siguientes (la llamada a Groq con la clave de ⚙ Ajustes) irán en este mismo archivo. Todo el texto se pinta con
+   textContent: nada de lo que se escribe se interpreta como HTML. */
 (function () {
   const btn = document.getElementById('fervis-btn');
   if (!btn) return;
@@ -24,7 +24,56 @@
   const claveValida = (k) => /^[\w.\-]{20,300}$/.test(k);
   const enmascarar = (k) => (k.startsWith('gsk_') ? 'gsk_' : '') + '…' + k.slice(-4);
 
-  const bienvenida = () => 'Hola, soy Fervis, el asistente de tu cartera. Todavía estoy en pruebas: aún no leo tu cartera ni tengo IA, así que no puedo darte datos. ' +
+  // ── Lectura de la cartera (solo local, solo lectura) ──
+  // Mismo cálculo que el encabezado de la app: valor = cantidad × precio, con el precio de mercado guardado; si no hay, el que pusiste a mano;
+  // si no, el de compra. Todo en dólares (la app los convierte a € solo al pintar).
+  const usd = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const pct = (n) => (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
+  function leerCartera() {
+    try {
+      const s = JSON.parse(localStorage.getItem('miCartera.v1') || '{}');
+      const lista = Array.isArray(s.portfolio) ? s.portfolio.filter((a) => a && a.token && Number(a.qty) > 0) : [];
+      if (!lista.length) return { vacia: true };
+      let pr = {}, ts = 0;
+      try { const c = JSON.parse(localStorage.getItem('miCartera.prices.v1') || '{}'); pr = c.prices || {}; ts = Number(c.ts) || 0; } catch (e) { /* sin caché */ }
+      const manual = (s.settings && s.settings.manualPrices) || {};
+      const filas = lista.map((a) => {
+        const vivo = pr[a.token] && pr[a.token].price > 0 ? pr[a.token] : null;
+        const precio = vivo ? vivo.price : (manual[a.token] && manual[a.token].usd) || Number(a.avgPrice) || 0;
+        return { token: String(a.token), valor: Number(a.qty) * precio, coste: Number(a.costUsd) || 0, cambio: vivo ? Number(vivo.change24h) || 0 : null };
+      });
+      return { vacia: false, filas, ts, valor: filas.reduce((x, f) => x + f.valor, 0), coste: filas.reduce((x, f) => x + f.coste, 0) };
+    } catch (e) { return { vacia: true }; }
+  }
+  const hace = (ts) => { if (!ts) return 'sin precios guardados (se usan los de compra)'; const m = Math.max(0, Math.round((Date.now() - ts) / 60000)); return m < 1 ? 'precios de hace menos de 1 min' : m < 90 ? 'precios de hace ' + m + ' min' : 'precios de hace ' + Math.round(m / 60) + ' h (puede que no estén al día)'; };
+  function respuestaValor() {
+    const c = leerCartera();
+    if (c.vacia) return 'Tu cartera está vacía en este navegador: añade alguna moneda con el «+» y te cuento.';
+    const pnl = c.valor - c.coste;
+    const top = c.filas.slice().sort((a, b) => b.valor - a.valor).slice(0, 3).map((f) => f.token + ' ' + usd(f.valor)).join(', ');
+    return 'Tu cartera vale ' + usd(c.valor) + ' (en dólares) con ' + c.filas.length + ' posiciones. Invertido: ' + usd(c.coste) + ' → ' + (pnl >= 0 ? 'ganancia ' : 'pérdida ') + usd(Math.abs(pnl)) +
+      (c.coste > 0 ? ' (' + pct(pnl / c.coste * 100) + ')' : '') + '. Mayores: ' + top + '. Datos: ' + hace(c.ts) + '.';
+  }
+  function respuestaHoy() {
+    const c = leerCartera();
+    if (c.vacia) return 'Tu cartera está vacía en este navegador: añade alguna moneda con el «+» y te cuento.';
+    const con = c.filas.filter((f) => f.cambio !== null).sort((a, b) => b.cambio - a.cambio);
+    if (!con.length) return 'Aún no tengo cambios de 24 h guardados de tus monedas (abre la app unos segundos para que cargue los precios y vuelve a preguntarme).';
+    const f = (x) => x.token + ' ' + pct(x.cambio);
+    const suben = con.filter((x) => x.cambio > 0).slice(0, 3), bajan = con.filter((x) => x.cambio < 0).reverse().slice(0, 3);
+    return 'En tu cartera, en 24 h: ' + (suben.length ? 'suben ' + suben.map(f).join(', ') : 'no sube ninguna moneda') + '; ' +
+      (bajan.length ? 'bajan ' + bajan.map(f).join(', ') : 'no baja ninguna') + '. Datos: ' + hace(c.ts) + '.';
+  }
+  // Pregunta → respuesta local, solo para lo que se puede contestar con la cartera guardada; lo demás sigue sin IA.
+  function respuestaLocal(q) {
+    const x = q.toLowerCase();
+    if (/s&p|nasdaq|bolsa|mercado|bitcoin|btc|precio de/.test(x)) return null;
+    if (/subid|bajad|sube|baja|hoy|24 ?h/.test(x)) return respuestaHoy();
+    if (/cu[aá]nto|vale|valor|total|cartera|tengo|gan|p[eé]rdid/.test(x)) return respuestaValor();
+    return null;
+  }
+
+  const bienvenida = () => 'Hola, soy Fervis, el asistente de tu cartera. Todavía estoy en pruebas: leo tu cartera guardada en este navegador y te contesto lo básico (valor y cambios de hoy), pero aún no tengo IA para conversar. Nada sale de aquí. ' +
     (leerClave() ? 'Tu clave de Groq está guardada, pero todavía no la uso: la conexión llega en el siguiente paso.'
                  : 'Para hablar conmigo hará falta tu clave gratuita de Groq: pégala en ⚙ Ajustes.');
   let overlay = null, msgs = null, chips = null, texto = null, ajustes = null, titulo = null, pintarEstado = () => {};
@@ -57,7 +106,8 @@
     const pensando = mensaje('fervis pensando', '…');
     setTimeout(() => {
       pensando.remove();
-      mensaje('fervis', 'Esto es solo una prueba del panel: todavía no leo tu cartera ni tengo IA. Cuando esté lista, aquí te contestaré a «' + q + '».');
+      const local = respuestaLocal(q);
+      mensaje('fervis', local || 'De momento solo sé contestar con tu cartera guardada (prueba «¿Cuánto vale mi cartera?» o «¿Qué ha subido hoy?»). Para «' + q + '» hará falta la IA, que llega en el siguiente paso.');
     }, 600);
   }
 
@@ -82,7 +132,7 @@
     acciones.append(ajustar, borrar, cerrar);
     cab.append(tit, acciones);
 
-    const aviso = el('p', 'fervis-prueba', 'Versión de prueba · sin IA todavía');
+    const aviso = el('p', 'fervis-prueba', 'Versión de prueba · lee tu cartera en local, sin IA todavía');
 
     // Ajustes: pegar (o quitar) la clave de Groq de este navegador
     ajustes = el('form', 'fervis-ajustes');
