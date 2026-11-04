@@ -25,7 +25,18 @@
   // ── Lectura de la cartera (solo local, solo lectura) ──
   // Mismo cálculo que el encabezado de la app: valor = cantidad × precio, con el precio de mercado guardado; si no hay, el que pusiste a mano;
   // si no, el de compra. Todo en dólares (la app los convierte a € solo al pintar).
-  const usd = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Moneda que la persona tiene elegida en la app en este momento (USD o EUR). El factor es € por $, el mismo tipo que usa la app (miCartera.rate.v1).
+  const monedaApp = () => {
+    try {
+      if (localStorage.getItem('miCartera.moneda') === 'EUR') return { codigo: 'EUR', factor: parseFloat(localStorage.getItem('miCartera.rate.v1')) || 0.85 };
+    } catch (e) { /* sin almacenamiento: dólares */ }
+    return { codigo: 'USD', factor: 1 };
+  };
+  const usd = (n) => {
+    const m = monedaApp(), v = Number(n) * m.factor;
+    return m.codigo === 'EUR' ? v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €' : '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+  const nombreMoneda = () => (monedaApp().codigo === 'EUR' ? 'euros' : 'dólares');
   const pct = (n) => (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
   function leerCartera() {
     try {
@@ -49,7 +60,7 @@
     if (c.vacia) return 'Tu cartera está vacía en este navegador: añade alguna moneda con el «+» y te cuento.';
     const pnl = c.valor - c.coste;
     const top = c.filas.slice().sort((a, b) => b.valor - a.valor).slice(0, 3).map((f) => f.token + ' ' + usd(f.valor)).join(', ');
-    return 'Tu cartera vale ' + usd(c.valor) + ' (en dólares) con ' + c.filas.length + ' posiciones. Invertido: ' + usd(c.coste) + ' → ' + (pnl >= 0 ? 'ganancia ' : 'pérdida ') + usd(Math.abs(pnl)) +
+    return 'Tu cartera vale ' + usd(c.valor) + ' (en ' + nombreMoneda() + ') con ' + c.filas.length + ' posiciones. Invertido: ' + usd(c.coste) + ' → ' + (pnl >= 0 ? 'ganancia ' : 'pérdida ') + usd(Math.abs(pnl)) +
       (c.coste > 0 ? ' (' + pct(pnl / c.coste * 100) + ')' : '') + '. Mayores: ' + top + '. Datos: ' + hace(c.ts) + '.';
   }
   function respuestaHoy() {
@@ -127,7 +138,7 @@
   const MODELOS = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'llama-3.1-8b-instant'];   // el primero que tenga la cuenta
   const SISTEMA = 'Eres Fervis, el asistente de la cartera de inversión de esta persona. Responde siempre en castellano, breve y claro, sin markdown. ' +
     'Para cualquier dato (valor de la cartera, operaciones, precios, indicadores) usa SIEMPRE las herramientas; nunca inventes cifras ni recuerdes datos de memoria. ' +
-    'Si ninguna herramienta puede darte lo que piden, dilo con sinceridad y explica qué sí puedes consultar. Los importes están en dólares. ' +
+    'Si ninguna herramienta puede darte lo que piden, dilo con sinceridad y explica qué sí puedes consultar. Cada herramienta devuelve sus importes ya en la moneda indicada en su campo «moneda» (la que la persona tiene elegida en la app); exprésalos siempre en esa moneda, con € o $. ' +
     'El S&P 500 se consulta con el símbolo SPY (ETF que lo replica). No des consejos de inversión: describe los datos.';
   const HERRAMIENTAS = [
     { type: 'function', function: { name: 'resumen_cartera', description: 'Valor total de la cartera, lo invertido, ganancia o pérdida, posiciones con su valor y su cambio de 24 h, y la antigüedad de los precios.', parameters: { type: 'object', properties: {} } } },
@@ -139,13 +150,14 @@
     { type: 'function', function: { name: 'diagnostico_tecnico', description: 'Datos técnicos de una acción o ETF de la app: precio, cambio de hoy, medias de 50 y 200 días, RSI de 14 y variación de las últimas sesiones. No incluye rentabilidad del último año completo.', parameters: { type: 'object', properties: { simbolo: { type: 'string', description: 'símbolo, p. ej. NVDA o SPY (S&P 500)' } }, required: ['simbolo'] } } },
   ];
   const sinNaN = (x) => (Number.isFinite(x) ? Math.round(x * 100) / 100 : null);
+  const aMoneda = (x) => sinNaN(Number(x) * monedaApp().factor);   // importe de la app (en $) → moneda elegida
   const esBolsa = (token, portfolio, d) => { const p = portfolio.find((a) => a && a.token === token); return p ? p.kind === 'stock' : !!(d && d.tec[token]); };
   const FUNCIONES = {
     resumen_cartera: async () => {
       const c = leerCartera();
       if (c.vacia) return { vacia: true };
-      return { valor_usd: sinNaN(c.valor), invertido_usd: sinNaN(c.coste), ganancia_usd: sinNaN(c.valor - c.coste), antiguedad_precios_min: c.ts ? Math.round((Date.now() - c.ts) / 60000) : null,
-        posiciones: c.filas.map((f) => ({ token: f.token, valor_usd: sinNaN(f.valor), invertido_usd: sinNaN(f.coste), cambio_24h_pct: f.cambio === null ? null : sinNaN(f.cambio) })) };
+      return { moneda: monedaApp().codigo, valor: aMoneda(c.valor), invertido: aMoneda(c.coste), ganancia: aMoneda(c.valor - c.coste), antiguedad_precios_min: c.ts ? Math.round((Date.now() - c.ts) / 60000) : null,
+        posiciones: c.filas.map((f) => ({ token: f.token, valor: aMoneda(f.valor), invertido: aMoneda(f.coste), cambio_24h_pct: f.cambio === null ? null : sinNaN(f.cambio) })) };
     },
     operaciones: async (a) => {
       let s = {}; try { s = JSON.parse(localStorage.getItem('miCartera.v1') || '{}'); } catch (e) { /* sin datos */ }
@@ -155,8 +167,8 @@
       const sel = lista.filter((o) => o && o.token && (!a.tipo || o.type === a.tipo) && (!a.token || String(o.token).toUpperCase() === String(a.token).toUpperCase()) &&
         (!a.clase || esBolsa(o.token, port, d) === (a.clase === 'bolsa')))
         .map((o, i) => ({ o, i })).sort((x, y) => String(y.o.date).localeCompare(String(x.o.date)) || y.i - x.i).slice(0, n)
-        .map(({ o }) => ({ fecha: o.date, tipo: o.type, token: o.token, cantidad: o.qty, precio_usd: o.price, total_usd: o.totalUsd }));
-      return { cuantas: sel.length, operaciones: sel };
+        .map(({ o }) => ({ fecha: o.date, tipo: o.type, token: o.token, cantidad: o.qty, precio: aMoneda(o.price), total: aMoneda(o.totalUsd) }));
+      return { moneda: monedaApp().codigo, cuantas: sel.length, operaciones: sel };
     },
     diagnostico_tecnico: async (a) => {
       const sim = String(a.simbolo || '').toUpperCase();
@@ -164,7 +176,7 @@
       const t = d.tec[sim], p = d.precios[sim];
       if (!t || !p || !(p.price > 0)) return { error: 'Sin datos de ' + sim + ' en la app' };
       const serie = Array.isArray(t.serie) ? t.serie.filter((v) => v > 0) : [];
-      return { simbolo: sim, fecha: d.fecha.slice(0, 10), precio_usd: p.price, cambio_hoy_pct: typeof p.change === 'number' ? sinNaN(p.change) : null, media_50d: t.sma50, media_200d: t.sma200, rsi14: t.rsi14,
+      return { moneda: monedaApp().codigo, simbolo: sim, fecha: d.fecha.slice(0, 10), precio: aMoneda(p.price), cambio_hoy_pct: typeof p.change === 'number' ? sinNaN(p.change) : null, media_50d: aMoneda(t.sma50), media_200d: aMoneda(t.sma200), rsi14: t.rsi14,
         sesiones: serie.length, variacion_sesiones_pct: serie.length > 1 ? sinNaN((serie[serie.length - 1] / serie[0] - 1) * 100) : null };
     },
   };
