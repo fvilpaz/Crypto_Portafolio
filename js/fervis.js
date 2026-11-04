@@ -136,7 +136,7 @@
   // A Groq la clave solo va en la cabecera de la petición. Los datos solo salen si el modelo llama a una herramienta (resumen_cartera manda todas las posiciones).
   const GROQ = 'https://api.groq.com/openai/v1';
   const MODELOS = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'llama-3.1-8b-instant'];   // el primero que tenga la cuenta
-  const SISTEMA = 'Eres Fervis, el asistente de la cartera de inversión de esta persona. Responde siempre en castellano, breve y claro. Escribe en texto plano: NUNCA uses asteriscos, negritas, almohadillas ni listas con guiones; para enumerar usa el símbolo • al principio de cada línea y deja una línea en blanco entre bloques. ' +
+  const SISTEMA = 'Eres Fervis, el asistente de la cartera de inversión de esta persona. Responde siempre en castellano, breve y claro. Puedes usar markdown sencillo: **negrita** para títulos y datos clave, *cursiva*, `código` y listas con «- ». No uses tablas ni títulos con #. ' +
     'Para cualquier dato (valor de la cartera, operaciones, precios, indicadores) usa SIEMPRE las herramientas; nunca inventes cifras ni recuerdes datos de memoria. ' +
     'Si ninguna herramienta puede darte lo que piden, dilo con sinceridad y explica qué sí puedes consultar. Cada herramienta devuelve sus importes ya en la moneda indicada en su campo «moneda» (la que la persona tiene elegida en la app); exprésalos siempre en esa moneda, con € o $. ' +
     'El S&P 500 se consulta con el símbolo SPY (ETF que lo replica). No des consejos de inversión: describe los datos.';
@@ -181,17 +181,6 @@
     },
   };
 
-  // Aunque se le pida texto plano, el modelo a veces devuelve markdown; aquí se convierte en símbolos (el chat pinta texto, no markdown).
-  function limpiarMarkdown(s) {
-    return String(s)
-      .replace(/^\s*#{1,6}\s*/gm, '')                // # títulos
-      .replace(/^(\s*)[-*+]\s+/gm, '$1• ')            // - item / * item → • item
-      .replace(/(\*\*|__)(.+?)\1/g, '$2')             // **negrita** y __negrita__
-      .replace(/(^|[\s(])\*([^\s*][^*\n]*?)\*(?=[\s).,;:!?]|$)/g, '$1$2')   // *cursiva*
-      .replace(/`([^`\n]+)`/g, '$1')                  // `código`
-      .replace(/\*\*|__/g, '')                        // marcas sueltas
-      .replace(/\n{3,}/g, '\n\n').trim();
-  }
   let modeloGroq = null, historial = [];
   async function pedirGroq(clave, cuerpo) {
     let r;
@@ -216,7 +205,7 @@
       const m = r.choices && r.choices[0] && r.choices[0].message;
       if (!m) throw new Error('Groq ha contestado algo vacío.');
       if (!m.tool_calls || !m.tool_calls.length) {
-        const texto = limpiarMarkdown(m.content || '') || 'No he sabido qué contestar a eso.';
+        const texto = String(m.content || '').trim() || 'No he sabido qué contestar a eso.';
         historial = historial.concat(turno[0], { role: 'assistant', content: texto }).slice(-10);
         return texto;
       }
@@ -263,6 +252,25 @@
     return svg;
   }
 
+  // Markdown mínimo, como en MasterMind: **negrita**, *cursiva*, `código` y listas con «- » (que pasan a •). Se construye con elementos del DOM
+  // y textContent, nunca con innerHTML: lo que llegue de la IA no puede inyectar HTML.
+  function pintarMarkdown(destino, texto) {
+    const s = String(texto)
+      .replace(/^\s*#{1,6}\s*(.+)$/gm, '**$1**')          // # título → negrita
+      .replace(/^(\s*)[-*+]\s+/gm, '$1• ');                // - item / * item → • item
+    const re = /\*\*(.+?)\*\*|__(.+?)__|`([^`\n]+)`|(?<![*\w])\*([^\s*][^*\n]*?)\*(?![*\w])/g;
+    let desde = 0, m;
+    while ((m = re.exec(s))) {
+      if (m.index > desde) destino.append(s.slice(desde, m.index));
+      const marca = m[3] !== undefined ? 'code' : m[4] !== undefined ? 'em' : 'strong';
+      const x = document.createElement(marca);
+      x.textContent = m[1] !== undefined ? m[1] : m[2] !== undefined ? m[2] : m[3] !== undefined ? m[3] : m[4];
+      destino.append(x);
+      desde = re.lastIndex;
+    }
+    if (desde < s.length) destino.append(s.slice(desde));
+  }
+
   function mensaje(rol, contenido) {
     const m = el('div', 'fervis-msg ' + rol);
     // Lo que dice Fervis lleva delante su etiqueta amarilla con texto negro; lo que escribe la persona, no.
@@ -270,7 +278,7 @@
     const previo = msgs.lastElementChild;
     const sigueTanda = previo && previo.classList.contains('fervis') && !previo.classList.contains('pensando');
     if (rol.startsWith('fervis') && !sigueTanda) m.append(el('span', 'fervis-etiqueta', 'Fervis'));
-    m.append(contenido);
+    if (rol.startsWith('fervis') && !rol.includes('pensando')) pintarMarkdown(m, contenido); else m.append(contenido);
     msgs.append(m);
     msgs.scrollTop = msgs.scrollHeight;
     return m;

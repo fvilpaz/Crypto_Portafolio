@@ -92,7 +92,7 @@ are intentionally not merged. The apps cross-link, nothing more.
   (portfolio value, last N buys/sells filtered by type, crypto or stocks, technical diagnosis of a stock or the S&P 500, in the currency you have selected). It runs on
   Groq with tool calls: the model decides which tool to call, the tools read this browser's data and the app's JSON, and only the question plus the tool results are sent
   to Groq. **Bring your own key:** each person pastes a free Groq key in the chat's settings; it stays in that browser (never in the repo, the export or the sync).
-  Without a key it only gives basic local answers. Replies are plain text (markdown from the model is turned into • symbols). It is read-only: it cannot change the portfolio.
+  Without a key it only gives basic local answers. Replies render simple markdown (bold, italics, inline code, bullet lists) built with DOM nodes, never innerHTML. It is read-only: it cannot change the portfolio.
 - Manual refresh + auto-refresh of live prices
 - Installable as a **PWA** (offline-capable app shell via a service worker)
 - Dark theme, responsive / mobile-friendly

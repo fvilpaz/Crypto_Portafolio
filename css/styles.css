@@ -2348,6 +2348,9 @@ body { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
 .fervis-msg.fervis { align-self: flex-start; background: var(--bg-card); border-bottom-left-radius: 4px; }
 .fervis-etiqueta { display: block; width: fit-content; margin: 0 0 7px; padding: 4px 12px; border-radius: 99px; background: var(--accent-yellow); color: #0b0e11; font-size: 13px; font-weight: 800; letter-spacing: .3px; line-height: 1.2; }
 .fervis-msg.yo { align-self: flex-end; background: var(--accent-yellow); color: #0b0e11; border-bottom-right-radius: 4px; font-weight: 500; }
+.fervis-msg strong { font-weight: 800; }
+.fervis-msg em { font-style: italic; }
+.fervis-msg code { padding: 1px 6px; border-radius: 5px; background: rgba(127, 127, 127, .22); font-family: ui-monospace, Consolas, monospace; font-size: .92em; }
 .fervis-msg.pensando { color: var(--text-secondary); letter-spacing: 2px; }
 .fervis-form { display: flex; gap: 8px; padding: 10px 20px; border-top: 1px solid var(--border); }
 .fervis-texto { flex: 1; min-width: 0; padding: 12px 14px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 99px; color: var(--text-primary); font: inherit; font-size: 16px; }
