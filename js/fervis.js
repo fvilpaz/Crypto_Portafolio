@@ -7,7 +7,7 @@
   const btn = document.getElementById('fervis-btn');
   if (!btn) return;
 
-  const SUGERENCIAS = ['¿Cuánto vale mi cartera?', '¿Qué ha subido hoy?', '¿Cómo va el S&P 500?'];
+  const SUGERENCIAS = ['¿Cuánto vale mi cartera?', '¿Qué ha subido hoy?', 'Diagnóstico del S&P 500', 'Mis últimas 5 compras'];
 
   // La clave de Groq de ESTE navegador. Va fuera del prefijo «miCartera.»: la exportación y la sincronización usan buildState()
   // (un estado explícito, no recorren todo el almacenamiento), así que la clave no sale en archivos ni en el gist. Nunca se escribe
@@ -64,10 +64,58 @@
     return 'En tu cartera, en 24 h: ' + (suben.length ? 'suben ' + suben.map(f).join(', ') : 'no sube ninguna moneda') + '; ' +
       (bajan.length ? 'bajan ' + bajan.map(f).join(', ') : 'no baja ninguna') + '. Datos: ' + hace(c.ts) + '.';
   }
-  // Pregunta → respuesta local, solo para lo que se puede contestar con la cartera guardada; lo demás sigue sin IA.
+  // Operaciones guardadas en este navegador (compras, ventas, recompensas): las N últimas, de un tipo si se pide.
+  const NUMEROS = { uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10 };
+  const cant = (n) => Number(n).toLocaleString('en-US', { maximumFractionDigits: 6 });
+  function respuestaOperaciones(q) {
+    const x = q.toLowerCase();
+    const m = x.match(/\b(\d{1,2}|uno|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b/);
+    const n = Math.min(20, m ? (NUMEROS[m[1]] || Number(m[1])) : 5) || 5;
+    const tipo = /venta/.test(x) ? 'Venta' : /compra/.test(x) ? 'Compra' : null;
+    let lista = [];
+    try { const s = JSON.parse(localStorage.getItem('miCartera.v1') || '{}'); lista = Array.isArray(s.transactions) ? s.transactions : []; } catch (e) { /* sin datos */ }
+    lista = lista.filter((o) => o && o.token && (!tipo || o.type === tipo))
+      .map((o, i) => ({ o, i })).sort((a, b) => String(b.o.date).localeCompare(String(a.o.date)) || b.i - a.i).slice(0, n).map((e) => e.o);
+    if (!lista.length) return tipo ? 'No tengo ' + (tipo === 'Venta' ? 'ventas' : 'compras') + ' guardadas en este navegador.' : 'No tengo operaciones guardadas en este navegador.';
+    const uno = lista.length === 1;
+    return (uno ? 'Tu última ' : 'Tus ' + lista.length + ' últimas ') + (tipo === 'Venta' ? (uno ? 'venta' : 'ventas') : tipo === 'Compra' ? (uno ? 'compra' : 'compras') : (uno ? 'operación' : 'operaciones')) + ':\n' +
+      lista.map((o) => '• ' + o.date + ' · ' + o.type + ' · ' + cant(o.qty) + ' ' + o.token + ' a ' + usd(o.price) + ' (total ' + usd(o.totalUsd) + ')').join('\n');
+  }
+
+  // Diagnóstico técnico con los datos que ya publica la app (data/tecnico.json y data/precios.json). El S&P 500 se mide con SPY, el ETF que lo replica.
+  let datosMercado = null;
+  async function cargarMercado() {
+    if (datosMercado) return datosMercado;
+    const [t, p] = await Promise.all(['data/tecnico.json', 'data/precios.json'].map((u) => fetch(u).then((r) => { if (!r.ok) throw new Error(u); return r.json(); })));
+    datosMercado = { tec: t.simbolos || {}, precios: p.precios || {}, fecha: t.updated || '' };
+    return datosMercado;
+  }
+  async function respuestaDiagnostico(simbolo, etiqueta) {
+    let d;
+    try { d = await cargarMercado(); } catch (e) { return 'No he podido cargar los datos de mercado de la app ahora mismo. Inténtalo en un momento.'; }
+    const t = d.tec[simbolo], p = d.precios[simbolo];
+    if (!t || !p || !(p.price > 0)) return 'No tengo datos de ' + etiqueta + ' en la app.';
+    const precio = p.price, serie = Array.isArray(t.serie) ? t.serie.filter((v) => v > 0) : [];
+    const lineas = ['Diagnóstico técnico de ' + etiqueta + (simbolo !== etiqueta ? ' (' + simbolo + ')' : '') + ', con los datos de la app' + (d.fecha ? ' del ' + d.fecha.slice(0, 10) : '') + ':',
+      '• Precio: ' + usd(precio) + (typeof p.change === 'number' ? ' (' + pct(p.change) + ' hoy)' : ''),
+      '• Fondo: ' + (precio > t.sma200 ? 'por encima' : 'por debajo') + ' de su media de 200 días (' + usd(t.sma200) + '): tendencia de fondo ' + (precio > t.sma200 ? 'alcista' : 'bajista'),
+      '• Corto plazo: ' + (precio > t.sma50 ? 'por encima' : 'por debajo') + ' de su media de 50 días (' + usd(t.sma50) + ')',
+      '• RSI 14: ' + t.rsi14.toFixed(0) + (t.rsi14 >= 70 ? ' (sobrecompra)' : t.rsi14 <= 30 ? ' (sobreventa)' : ' (zona neutral)')];
+    if (serie.length > 1) lineas.push('• Últimas ' + serie.length + ' sesiones: ' + pct((serie[serie.length - 1] / serie[0] - 1) * 100));
+    lineas.push('Ojo: no tengo la rentabilidad del último año completo, solo estas medias y las últimas sesiones. Es una lectura técnica, no un consejo de inversión.');
+    return lineas.join('\n');
+  }
+
+  // Pregunta → respuesta local (texto, promesa o null), solo para lo que se puede contestar con los datos de la app; lo demás sigue sin IA.
   function respuestaLocal(q) {
     const x = q.toLowerCase();
-    if (/s&p|nasdaq|bolsa|mercado|bitcoin|btc|precio de/.test(x)) return null;
+    if (/(últim|ultim|recient).*(compra|venta|operaci|movimiento)|(compra|venta|operaci|movimiento).*(últim|ultim|recient)/.test(x)) return respuestaOperaciones(q);
+    if (/s&p|sp ?500|\bspy\b/.test(x)) return respuestaDiagnostico('SPY', 'S&P 500');
+    if (/diagn|an[aá]lisis|tendencia|c[oó]mo va/.test(x)) {
+      const s = (q.match(/\b[A-Z]{2,6}\b/g) || []).find((w) => datosMercado ? datosMercado.tec[w] : true);
+      if (s) return respuestaDiagnostico(s, s);
+    }
+    if (/precio de/.test(x)) return null;
     if (/subid|bajad|sube|baja|hoy|24 ?h/.test(x)) return respuestaHoy();
     if (/cu[aá]nto|vale|valor|total|cartera|tengo|gan|p[eé]rdid/.test(x)) return respuestaValor();
     return null;
@@ -125,11 +173,11 @@
     chips.hidden = true;
     mensaje('yo', q);
     const pensando = mensaje('fervis pensando', '…');
-    setTimeout(() => {
+    const ruta = respuestaLocal(q);   // texto, promesa o null
+    Promise.resolve(ruta).then((local) => new Promise((ok) => setTimeout(() => ok(local), 500))).catch(() => null).then((local) => {
       pensando.remove();
-      const local = respuestaLocal(q);
-      mensaje('fervis', local || 'De momento solo sé contestar con tu cartera guardada (prueba «¿Cuánto vale mi cartera?» o «¿Qué ha subido hoy?»). Para «' + q + '» hará falta la IA, que llega en el siguiente paso.');
-    }, 600);
+      mensaje('fervis', local || 'De momento solo sé contestar con datos de la app: tu cartera, tus últimas operaciones y el diagnóstico técnico de una acción o del S&P 500 (prueba «¿Cuánto vale mi cartera?», «últimas 5 compras» o «diagnóstico del S&P 500»). Para «' + q + '» hará falta la IA, que llega en el siguiente paso.');
+    });
   }
 
   function construir() {
