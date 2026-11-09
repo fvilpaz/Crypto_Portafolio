@@ -1806,23 +1806,25 @@ const App = (() => {
       `;
     };
     // Con acciones en la cartera se ven dos carteras independientes (Crypto y Bolsa), cada una con su subtotal; el total sigue sumando las dos.
-    const grupoHtml = (nombre, color, lista) => {
-      const v = lista.reduce((s, a) => s + getAssetValue(a), 0);
+    // El subtotal cuenta TODAS las posiciones del grupo, también las ocultas (ocultar es solo de la vista y no cambia el valor, como el total de la cabecera); la lista enseña solo las visibles.
+    const grupoHtml = (nombre, color, lista, todas) => {
+      const v = todas.reduce((s, a) => s + getAssetValue(a), 0);
       return `<tr class="asset-group-row"><td colspan="9"><span class="asset-group-name" style="color:${color}">${nombre}</span>
         <span>${lista.length} activo${lista.length === 1 ? '' : 's'} · ${fmtCurrency(v)} · ${total > 0 ? (v / total * 100).toFixed(1) : '0.0'}% de la cartera</span></td></tr>`;
     };
     const cryptoList = sorted.filter(a => a.kind !== 'stock'), bolsaList = sorted.filter(a => a.kind === 'stock');
+    const cryptoTodas = portfolio.filter(a => a.kind !== 'stock'), bolsaTodas = portfolio.filter(a => a.kind === 'stock');   // con las ocultas, para los subtotales
     // Con acciones hay un selector Crypto | Bolsa (como en las demás secciones): la tabla enseña solo el grupo elegido; el % de cartera sigue siendo sobre el total y cada botón dice cuánto hay en su grupo.
     const g = pintaSelector('seg-cart', 'cart', cryptoList.length > 0, bolsaList.length > 0);
     const segCart = document.getElementById('seg-cart');
     if (segCart) {
       const suma = l => fmtCurrency(l.reduce((s, a) => s + getAssetValue(a), 0));
-      segCart.querySelector('[data-g="crypto"]').textContent = `Crypto · ${suma(cryptoList)}`;
-      segCart.querySelector('[data-g="bolsa"]').textContent = `Bolsa · ${suma(bolsaList)}`;
+      segCart.querySelector('[data-g="crypto"]').textContent = `Crypto · ${suma(cryptoTodas)}`;
+      segCart.querySelector('[data-g="bolsa"]').textContent = `Bolsa · ${suma(bolsaTodas)}`;
     }
     tbody.innerHTML = bolsaList.length
-      ? (g === 'bolsa' ? [['Bolsa', 'var(--accent-teal)', bolsaList]] : [['Crypto', 'var(--accent-green)', cryptoList]])
-          .filter(x => x[2].length).map(([n, col, l]) => grupoHtml(n, col, l) + l.map(rowHtml).join('')).join('')
+      ? (g === 'bolsa' ? [['Bolsa', 'var(--accent-teal)', bolsaList, bolsaTodas]] : [['Crypto', 'var(--accent-green)', cryptoList, cryptoTodas]])
+          .filter(x => x[2].length).map(([n, col, l, todas]) => grupoHtml(n, col, l, todas) + l.map(rowHtml).join('')).join('')
       : sorted.map(rowHtml).join('');
 
     if (hiddenCount > 0) {
