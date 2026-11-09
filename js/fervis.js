@@ -181,27 +181,46 @@
     },
   };
 
-  let modeloGroq = null, historial = [];
+  let escalera = null, limitados = {}, historial = [];   // escalera: los MODELOS que tiene la cuenta, en orden; limitados: modelo → hasta cuándo no probarlo (ms)
   async function pedirGroq(clave, cuerpo) {
     let r;
     try { r = await fetch(GROQ + cuerpo.ruta, { method: cuerpo.body ? 'POST' : 'GET', headers: Object.assign({ Authorization: 'Bearer ' + clave }, cuerpo.body ? { 'Content-Type': 'application/json' } : {}), body: cuerpo.body, signal: AbortSignal.timeout(30000) }); }
     catch (e) { throw new Error('No he podido conectar con Groq (¿sin internet?).'); }
     if (r.status === 401) throw new Error('Groq no acepta tu clave (401). Revisa que esté entera en Ajustes.');
-    if (r.status === 429) throw new Error('Has llegado al límite gratuito de Groq (429). Espera un minuto y vuelve a preguntar.');
-    if (!r.ok) throw new Error('Groq ha fallado (código ' + r.status + ').');
+    if (!r.ok) {
+      const e = new Error(r.status === 429 ? 'Has llegado al límite gratuito de Groq (429). Espera un minuto y vuelve a preguntar.' : 'Groq ha fallado (código ' + r.status + ').');
+      e.estado = r.status;   // para decidir si se prueba otro modelo
+      throw e;
+    }
     return r.json();
+  }
+  // Cuánto se aparta un modelo tras fallar: límite (429) 5 min, retirado (404) hasta recargar la página, caído (5xx) 1 min. Otro error: no se salta (null).
+  const esperaPorError = (estado) => (estado === 429 ? 5 * 60000 : estado === 404 ? Infinity : estado >= 500 ? 60000 : null);
+  // Pide la respuesta al primer modelo de la escalera que no esté apartado; si falla por límite, retirada o caída, lo aparta y prueba el siguiente.
+  async function pedirConRespaldo(clave, mensajes) {
+    let ultimo = null;
+    for (;;) {
+      const modelo = escalera.find((m) => !(limitados[m] > Date.now()));
+      if (!modelo) throw ultimo || new Error('No hay ningún modelo de Groq disponible ahora mismo.');
+      try { return await pedirGroq(clave, { ruta: '/chat/completions', body: JSON.stringify({ model: modelo, temperature: 0.2, max_tokens: 700, tools: HERRAMIENTAS, tool_choice: 'auto', messages: mensajes }) }); }
+      catch (e) {
+        const espera = esperaPorError(e.estado);
+        if (espera === null) throw e;
+        limitados[modelo] = Date.now() + espera;
+        ultimo = e;
+      }
+    }
   }
   async function responderConIA(pregunta) {
     const clave = leerClave();
-    if (!modeloGroq) {
+    if (!escalera) {
       const lista = ((await pedirGroq(clave, { ruta: '/models' })).data || []).map((m) => m.id);
-      modeloGroq = MODELOS.find((m) => lista.includes(m));
-      if (!modeloGroq) throw new Error('Tu cuenta de Groq no tiene ninguno de los modelos que uso con herramientas.');
+      escalera = MODELOS.filter((m) => lista.includes(m));
+      if (!escalera.length) { escalera = null; throw new Error('Tu cuenta de Groq no tiene ninguno de los modelos que uso con herramientas.'); }
     }
     const turno = [{ role: 'user', content: pregunta }];
     for (let vuelta = 0; vuelta < 4; vuelta++) {
-      const r = await pedirGroq(clave, { ruta: '/chat/completions', body: JSON.stringify({ model: modeloGroq, temperature: 0.2, max_tokens: 700, tools: HERRAMIENTAS, tool_choice: 'auto',
-        messages: [{ role: 'system', content: SISTEMA }].concat(historial, turno) }) });
+      const r = await pedirConRespaldo(clave, [{ role: 'system', content: SISTEMA }].concat(historial, turno));
       const m = r.choices && r.choices[0] && r.choices[0].message;
       if (!m) throw new Error('Groq ha contestado algo vacío.');
       if (!m.tool_calls || !m.tool_calls.length) {
