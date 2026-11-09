@@ -2318,6 +2318,17 @@ body.light .dock { background: linear-gradient(45deg, #2563eb, #4f46e5); border-
 .dock-robot { display: flex; align-items: center; justify-content: center; width: 52px; height: 44px; padding: 0; border: none; border-radius: 12px; background: none; color: var(--accent-yellow); cursor: pointer; transition: transform .15s ease, background .15s ease; }
 .dock-robot:hover { transform: translateY(-1px); background: rgba(240, 185, 11, .12); }
 .dock-robot-cara { display: flex; align-items: center; justify-content: center; }
+/* Animaciones al abrir el chat (fervis.js elige una al azar; las duraciones van a juego con ANIMACIONES) */
+.dock-robot.anim-pulso { animation: fervis-pulso .45s ease-out; }
+.dock-robot.anim-brote { animation: fervis-hunde .3s ease-in; }
+.dock-robot.anim-gesto .dock-robot-cara { animation: fervis-gesto .65s ease-in-out; }
+@keyframes fervis-pulso { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(240, 185, 11, .6); } 40% { transform: scale(1.3); } 100% { transform: scale(1); box-shadow: 0 0 0 18px rgba(240, 185, 11, 0); } }
+@keyframes fervis-hunde { 0% { transform: scale(1); } 100% { transform: scale(.75); } }
+@keyframes fervis-gesto { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-18deg); } 40% { transform: rotate(16deg); } 60% { transform: rotate(-10deg); } 80% { transform: rotate(6deg); } }
+.modal-overlay.preparando .modal { transition: none; }
+.modal-overlay.brote .modal { transform-origin: var(--origen, center); }
+.modal-overlay.brote:not(.open) .modal { transform: scale(.04); }   /* parte (y al cerrar vuelve) al tamaño del robot */
+@media (prefers-reduced-motion: reduce) { .dock-robot[class*="anim-"], .dock-robot[class*="anim-"] .dock-robot-cara { animation: none; } }
 .dock-robot-cara svg { display: block; width: 34px; height: 34px; }
 .dock-pie { justify-self: start; display: flex; align-items: center; gap: 16px; }
 .dock-copy { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
@@ -2352,6 +2363,8 @@ body { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
 .fervis-msg em { font-style: italic; }
 .fervis-msg code { padding: 1px 6px; border-radius: 5px; background: rgba(127, 127, 127, .22); font-family: ui-monospace, Consolas, monospace; font-size: .92em; }
 .fervis-msg.pensando { color: var(--text-secondary); letter-spacing: 2px; }
+.fervis-modelo { display: block; margin-top: 8px; font-size: 11px; letter-spacing: .3px; color: var(--text-muted); }
+.fervis-modelo.respaldo { color: var(--accent-yellow); font-weight: 700; }
 .fervis-form { display: flex; gap: 8px; padding: 10px 20px; border-top: 1px solid var(--border); }
 .fervis-texto { flex: 1; min-width: 0; padding: 12px 14px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 99px; color: var(--text-primary); font: inherit; font-size: 16px; }
 .fervis-texto:focus { outline: 2px solid var(--accent-yellow); border-color: transparent; }

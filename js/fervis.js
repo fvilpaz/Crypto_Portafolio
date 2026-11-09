@@ -181,33 +181,61 @@
     },
   };
 
-  let modeloGroq = null, historial = [];
+  let escalera = null, limitados = {}, historial = [];   // escalera: los MODELOS que tiene la cuenta, en orden; limitados: modelo → hasta cuándo no probarlo (ms)
   async function pedirGroq(clave, cuerpo) {
     let r;
     try { r = await fetch(GROQ + cuerpo.ruta, { method: cuerpo.body ? 'POST' : 'GET', headers: Object.assign({ Authorization: 'Bearer ' + clave }, cuerpo.body ? { 'Content-Type': 'application/json' } : {}), body: cuerpo.body, signal: AbortSignal.timeout(30000) }); }
     catch (e) { throw new Error('No he podido conectar con Groq (¿sin internet?).'); }
     if (r.status === 401) throw new Error('Groq no acepta tu clave (401). Revisa que esté entera en Ajustes.');
-    if (r.status === 429) throw new Error('Has llegado al límite gratuito de Groq (429). Espera un minuto y vuelve a preguntar.');
-    if (!r.ok) throw new Error('Groq ha fallado (código ' + r.status + ').');
+    if (!r.ok) {
+      const e = new Error(r.status === 429 ? 'Has llegado al límite gratuito de Groq (429). Espera un minuto y vuelve a preguntar.' : 'Groq ha fallado (código ' + r.status + ').');
+      e.estado = r.status;   // para decidir si se prueba otro modelo
+      e.reintentarEn = parseInt(r.headers.get('retry-after'), 10) || null;   // segundos que pide esperar Groq; null si el navegador no deja leer la cabecera
+      throw e;
+    }
     return r.json();
+  }
+  // Cuánto se aparta un modelo tras fallar: límite (429) 5 min, retirado (404) hasta recargar la página, caído (5xx) 1 min. Otro error: no se salta (null).
+  const esperaPorError = (estado) => (estado === 429 ? 5 * 60000 : estado === 404 ? Infinity : estado >= 500 ? 60000 : null);
+  // Pide la respuesta al primer modelo de la escalera que no esté apartado; si falla por límite, retirada o caída, lo aparta y prueba el siguiente.
+  // Sin este dato, preguntado «¿qué modelo eres?» un modelo rellena con lo más famoso («GPT-4 de OpenAI»; medido en nandis el 21-sep-2026). Va por llamada: si cae a otro modelo, dice el nuevo.
+  const identidad = (modelo) => ' Modelo que te ejecuta ahora mismo: ' + modelo + ' (en la nube de Groq). Si te preguntan qué modelo, agente o IA eres, dilo tal cual y di que Fervis es tu nombre como asistente. ' +
+    'No afirmes ser ChatGPT, GPT-4, Claude, Gemini ni ningún otro modelo que no sea ese, ni inventes detalles de tu arquitectura.';
+  async function pedirConRespaldo(clave, conversacion) {
+    let ultimo = null;
+    for (;;) {
+      const modelo = escalera.find((m) => !(limitados[m] > Date.now()));
+      if (!modelo) {   // no queda ninguno: se dice claro, con la espera que pida Groq solo si el navegador la dejó leer
+        const s = ultimo && ultimo.reintentarEn;
+        const e = new Error('Ahora mismo no puedo contestar: los modelos gratuitos de Groq están al límite o caídos.' + (s ? ' Groq pide esperar unos ' + (s < 90 ? s + ' segundos' : Math.ceil(s / 60) + ' minutos') + '.' : ' Prueba de nuevo en unos minutos.'));
+        e.estado = ultimo && ultimo.estado;
+        throw e;
+      }
+      try { return { r: await pedirGroq(clave, { ruta: '/chat/completions', body: JSON.stringify({ model: modelo, temperature: 0.2, max_tokens: 700, tools: HERRAMIENTAS, tool_choice: 'auto', messages: [{ role: 'system', content: SISTEMA + identidad(modelo) }].concat(conversacion) }) }), modelo }; }
+      catch (e) {
+        const espera = esperaPorError(e.estado);
+        if (espera === null) throw e;
+        limitados[modelo] = Date.now() + espera;
+        ultimo = e;
+      }
+    }
   }
   async function responderConIA(pregunta) {
     const clave = leerClave();
-    if (!modeloGroq) {
+    if (!escalera) {
       const lista = ((await pedirGroq(clave, { ruta: '/models' })).data || []).map((m) => m.id);
-      modeloGroq = MODELOS.find((m) => lista.includes(m));
-      if (!modeloGroq) throw new Error('Tu cuenta de Groq no tiene ninguno de los modelos que uso con herramientas.');
+      escalera = MODELOS.filter((m) => lista.includes(m));
+      if (!escalera.length) { escalera = null; throw new Error('Tu cuenta de Groq no tiene ninguno de los modelos que uso con herramientas.'); }
     }
     const turno = [{ role: 'user', content: pregunta }];
     for (let vuelta = 0; vuelta < 4; vuelta++) {
-      const r = await pedirGroq(clave, { ruta: '/chat/completions', body: JSON.stringify({ model: modeloGroq, temperature: 0.2, max_tokens: 700, tools: HERRAMIENTAS, tool_choice: 'auto',
-        messages: [{ role: 'system', content: SISTEMA }].concat(historial, turno) }) });
+      const { r, modelo } = await pedirConRespaldo(clave, historial.concat(turno));
       const m = r.choices && r.choices[0] && r.choices[0].message;
       if (!m) throw new Error('Groq ha contestado algo vacío.');
       if (!m.tool_calls || !m.tool_calls.length) {
         const texto = String(m.content || '').trim() || 'No he sabido qué contestar a eso.';
         historial = historial.concat(turno[0], { role: 'assistant', content: texto }).slice(-10);
-        return texto;
+        return { texto, modelo, respaldo: modelo !== escalera[0] };   // respaldo: contestó otro que no es el primero de la escalera
       }
       turno.push({ role: 'assistant', content: m.content || '', tool_calls: m.tool_calls });
       for (const tc of m.tool_calls) {
@@ -223,7 +251,7 @@
   }
 
   const bienvenida = () => leerClave()
-    ? 'Hola, soy Fervis. Pregúntame lo que quieras de tu cartera, tus operaciones o el mercado de la app. Para contestarte envío a Groq tu pregunta y los datos que consulte para responder (por ejemplo, tus posiciones y su valor si me preguntas por tu cartera). Tu clave nunca se envía en el mensaje. Todavía estoy en pruebas.'
+    ? 'Hola, soy Fervis. Pregúntame lo que quieras de tu cartera, tus operaciones o el mercado de la app.'
     : 'Hola, soy Fervis, el asistente de tu cartera. Sin clave solo sé respuestas básicas (valor de la cartera y cambios de hoy). Para hablar conmigo de verdad hará falta tu clave gratuita de Groq: pégala en Ajustes (el primer icono de arriba a la derecha).';
   let overlay = null, msgs = null, texto = null, ajustes = null, titulo = null, pintarEstado = () => {};
 
@@ -271,7 +299,7 @@
     if (desde < s.length) destino.append(s.slice(desde));
   }
 
-  function mensaje(rol, contenido) {
+  function mensaje(rol, contenido, modelo, respaldo) {
     const m = el('div', 'fervis-msg ' + rol);
     // Lo que dice Fervis lleva delante su etiqueta amarilla con texto negro; lo que escribe la persona, no.
     // La etiqueta va una sola vez por tanda: si el mensaje anterior ya era de Fervis, no se repite.
@@ -279,6 +307,8 @@
     const sigueTanda = previo && previo.classList.contains('fervis') && !previo.classList.contains('pensando');
     if (rol.startsWith('fervis') && !sigueTanda) m.append(el('span', 'fervis-etiqueta', 'Fervis'));
     if (rol.startsWith('fervis') && !rol.includes('pensando')) pintarMarkdown(m, contenido); else m.append(contenido);
+    // Quién contestó, debajo del mensaje (como en el Fervis de nandis); resaltado si fue un respaldo. Con textContent: nada de HTML.
+    if (modelo) m.append(el('small', 'fervis-modelo' + (respaldo ? ' respaldo' : ''), 'groq · ' + modelo + (respaldo ? ' (respaldo)' : '')));
     msgs.append(m);
     msgs.scrollTop = msgs.scrollHeight;
     return m;
@@ -296,7 +326,7 @@
     mensaje('yo', q);
     const pensando = mensaje('fervis pensando', '…');
     if (leerClave()) {
-      responderConIA(q).catch((e) => e.message).then((txt) => { pensando.remove(); mensaje('fervis', txt); });
+      responderConIA(q).catch((e) => ({ texto: e.message })).then((res) => { pensando.remove(); mensaje('fervis', res.texto, res.modelo, res.respaldo); });
       return;
     }
     const ruta = respuestaLocal(q);   // sin clave: respuestas básicas locales
@@ -385,8 +415,31 @@
     reiniciar();
   }
 
+  // Animación de apertura: sale una al azar (nunca la misma dos veces seguidas) y el chat aparece al terminar. Las duraciones (ms) van
+  // a juego con las de css/styles.css. Con «reducir movimiento» activado en el sistema se abre al instante.
+  const ANIMACIONES = [['pulso', 450], ['brote', 300], ['gesto', 650]];
+  let ultimaAnim = null, animando = false;
   function abrir() {
+    if (animando) return;   // un segundo clic durante la animación no abre otra vez
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { mostrar(null); return; }
+    const opciones = ANIMACIONES.filter(([n]) => n !== ultimaAnim);
+    const [nombre, ms] = opciones[Math.floor(Math.random() * opciones.length)];
+    ultimaAnim = nombre; animando = true;
+    btn.classList.add('anim-' + nombre);
+    setTimeout(() => { btn.classList.remove('anim-' + nombre); animando = false; mostrar(nombre); }, ms);
+  }
+
+  function mostrar(anim) {
     if (!overlay) construir();
+    overlay.classList.add('preparando');   // sin transición: el chat se coloca de golpe en su punto de partida antes de abrir
+    overlay.classList.toggle('brote', anim === 'brote');
+    if (anim === 'brote') {   // el chat nace del robot: su centro, medido desde la esquina del chat sin transformar (offsetLeft/Top no cuentan el scale)
+      const m = overlay.firstElementChild, r = btn.getBoundingClientRect();
+      m.style.setProperty('--origen', (r.left + r.width / 2 - m.offsetLeft) + 'px ' + (r.top + r.height / 2 - m.offsetTop) + 'px');
+    }
+    void overlay.offsetWidth;   // aplica el punto de partida...
+    overlay.classList.remove('preparando');
+    void overlay.offsetWidth;   // ...y recupera la transición antes de abrir, para que se vea también en la primera apertura
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
     btn.setAttribute('aria-expanded', 'true');
