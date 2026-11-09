@@ -32,6 +32,14 @@
     } catch (e) { /* sin almacenamiento: dólares */ }
     return { codigo: 'USD', factor: 1 };
   };
+  // Monedas que Fervis sabe dar cuando se las piden: añadir otra es una fila nueva (cuánto vale 1 $ en ella). El cambio a € es el que baja la app (miCartera.rate.v1); no hay
+  // ningún valor fijo salvo el de arranque que usa la propia app si nunca pudo pedirlo. El cálculo lo hace el código, no el modelo.
+  const MONEDAS = { USD: () => 1, EUR: () => { try { return parseFloat(localStorage.getItem('miCartera.rate.v1')) || 0.85; } catch (e) { return 0.85; } } };
+  const monedaDe = (pedida) => {   // la que pide el modelo; sin pedir ninguna, la elegida en la app; null si no la sé dar
+    const c = String(pedida || '').trim().toUpperCase();
+    if (!c) return monedaApp();
+    return MONEDAS[c] ? { codigo: c, factor: MONEDAS[c]() } : null;
+  };
   const usd = (n) => {
     const m = monedaApp(), v = Number(n) * m.factor;
     return m.codigo === 'EUR' ? v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €' : '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -138,28 +146,31 @@
   const MODELOS = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'llama-3.1-8b-instant'];   // el primero que tenga la cuenta
   const SISTEMA = 'Eres Fervis, el asistente de la cartera de inversión de esta persona. Responde siempre en castellano, breve y claro. Puedes usar markdown sencillo: **negrita** para títulos y datos clave, *cursiva*, `código` y listas con «- ». No uses tablas ni títulos con #. ' +
     'Para cualquier dato (valor de la cartera, operaciones, precios, indicadores) usa SIEMPRE las herramientas; nunca inventes cifras ni recuerdes datos de memoria. ' +
-    'Si ninguna herramienta puede darte lo que piden, dilo con sinceridad y explica qué sí puedes consultar. Cada herramienta devuelve sus importes ya en la moneda indicada en su campo «moneda» (la que la persona tiene elegida en la app); exprésalos siempre en esa moneda, con € o $. ' +
+    'Si ninguna herramienta puede darte lo que piden, dilo con sinceridad y explica qué sí puedes consultar. Cada herramienta devuelve sus importes ya en la moneda indicada en su campo «moneda» (por defecto la que la persona tiene elegida en la app); exprésalos siempre en esa moneda, con € o $. ' +
+    'Si la persona pide los importes en otra moneda (EUR o USD), vuelve a llamar a la herramienta con el parámetro «moneda»: la conversión la hace la herramienta, NUNCA la calcules tú ni uses un cambio de memoria; si te preguntan por el cambio, usa «cambio_por_1_usd» del resultado. ' +
     'El S&P 500 se consulta con el símbolo SPY (ETF que lo replica). No des consejos de inversión: describe los datos.';
+  const PARAM_MONEDA = { type: 'string', enum: Object.keys(MONEDAS), description: 'solo si la persona pide los importes en una moneda distinta de la que tiene elegida; si no, no lo pongas' };
   const HERRAMIENTAS = [
-    { type: 'function', function: { name: 'resumen_cartera', description: 'Valor total de la cartera, lo invertido, ganancia o pérdida, posiciones con su valor y su cambio de 24 h, y la antigüedad de los precios.', parameters: { type: 'object', properties: {} } } },
+    { type: 'function', function: { name: 'resumen_cartera', description: 'Valor total de la cartera, lo invertido, ganancia o pérdida, posiciones con su valor y su cambio de 24 h, y la antigüedad de los precios.', parameters: { type: 'object', properties: { moneda: PARAM_MONEDA } } } },
     { type: 'function', function: { name: 'operaciones', description: 'Últimas operaciones guardadas (más recientes primero), con filtros opcionales.', parameters: { type: 'object', properties: {
       n: { type: 'integer', description: 'cuántas devolver (1 a 50; 5 si no se dice)' },
       tipo: { type: 'string', enum: ['Compra', 'Venta', 'Recompensa'], description: 'solo de este tipo' },
       clase: { type: 'string', enum: ['bolsa', 'cripto'], description: 'bolsa = acciones y ETF; cripto = criptomonedas' },
-      token: { type: 'string', description: 'símbolo concreto, p. ej. BTC o NVDA' } } } } },
-    { type: 'function', function: { name: 'diagnostico_tecnico', description: 'Datos técnicos de una acción o ETF de la app: precio, cambio de hoy, medias de 50 y 200 días, RSI de 14 y variación de las últimas sesiones. No incluye rentabilidad del último año completo.', parameters: { type: 'object', properties: { simbolo: { type: 'string', description: 'símbolo, p. ej. NVDA o SPY (S&P 500)' } }, required: ['simbolo'] } } },
+      token: { type: 'string', description: 'símbolo concreto, p. ej. BTC o NVDA' },
+      moneda: PARAM_MONEDA } } } },
+    { type: 'function', function: { name: 'diagnostico_tecnico', description: 'Datos técnicos de una acción o ETF de la app: precio, cambio de hoy, medias de 50 y 200 días, RSI de 14 y variación de las últimas sesiones. No incluye rentabilidad del último año completo.', parameters: { type: 'object', properties: { simbolo: { type: 'string', description: 'símbolo, p. ej. NVDA o SPY (S&P 500)' }, moneda: PARAM_MONEDA }, required: ['simbolo'] } } },
   ];
   const sinNaN = (x) => (Number.isFinite(x) ? Math.round(x * 100) / 100 : null);
-  const aMoneda = (x) => sinNaN(Number(x) * monedaApp().factor);   // importe de la app (en $) → moneda elegida
+  const aMoneda = (x, m) => sinNaN(Number(x) * m.factor);   // importe de la app (en $) → moneda elegida
   const esBolsa = (token, portfolio, d) => { const p = portfolio.find((a) => a && a.token === token); return p ? p.kind === 'stock' : !!(d && d.tec[token]); };
   const FUNCIONES = {
-    resumen_cartera: async () => {
+    resumen_cartera: async (a, m) => {
       const c = leerCartera();
       if (c.vacia) return { vacia: true };
-      return { moneda: monedaApp().codigo, valor: aMoneda(c.valor), invertido: aMoneda(c.coste), ganancia: aMoneda(c.valor - c.coste), antiguedad_precios_min: c.ts ? Math.round((Date.now() - c.ts) / 60000) : null,
-        posiciones: c.filas.map((f) => ({ token: f.token, valor: aMoneda(f.valor), invertido: aMoneda(f.coste), cambio_24h_pct: f.cambio === null ? null : sinNaN(f.cambio) })) };
+      return { moneda: m.codigo, cambio_por_1_usd: m.factor, valor: aMoneda(c.valor, m), invertido: aMoneda(c.coste, m), ganancia: aMoneda(c.valor - c.coste, m), antiguedad_precios_min: c.ts ? Math.round((Date.now() - c.ts) / 60000) : null,
+        posiciones: c.filas.map((f) => ({ token: f.token, valor: aMoneda(f.valor, m), invertido: aMoneda(f.coste, m), cambio_24h_pct: f.cambio === null ? null : sinNaN(f.cambio) })) };
     },
-    operaciones: async (a) => {
+    operaciones: async (a, m) => {
       let s = {}; try { s = JSON.parse(localStorage.getItem('miCartera.v1') || '{}'); } catch (e) { /* sin datos */ }
       const lista = Array.isArray(s.transactions) ? s.transactions : [], port = Array.isArray(s.portfolio) ? s.portfolio : [];
       let d = null; if (a.clase) { try { d = await cargarMercado(); } catch (e) { /* sin mercado: solo vale la cartera */ } }
@@ -167,16 +178,16 @@
       const sel = lista.filter((o) => o && o.token && (!a.tipo || o.type === a.tipo) && (!a.token || String(o.token).toUpperCase() === String(a.token).toUpperCase()) &&
         (!a.clase || esBolsa(o.token, port, d) === (a.clase === 'bolsa')))
         .map((o, i) => ({ o, i })).sort((x, y) => String(y.o.date).localeCompare(String(x.o.date)) || y.i - x.i).slice(0, n)
-        .map(({ o }) => ({ fecha: o.date, tipo: o.type, token: o.token, cantidad: o.qty, precio: aMoneda(o.price), total: aMoneda(o.totalUsd) }));
-      return { moneda: monedaApp().codigo, cuantas: sel.length, operaciones: sel };
+        .map(({ o }) => ({ fecha: o.date, tipo: o.type, token: o.token, cantidad: o.qty, precio: aMoneda(o.price, m), total: aMoneda(o.totalUsd, m) }));
+      return { moneda: m.codigo, cambio_por_1_usd: m.factor, cuantas: sel.length, operaciones: sel };
     },
-    diagnostico_tecnico: async (a) => {
+    diagnostico_tecnico: async (a, m) => {
       const sim = String(a.simbolo || '').toUpperCase();
       let d; try { d = await cargarMercado(); } catch (e) { return { error: 'No se pudieron cargar los datos de mercado' }; }
       const t = d.tec[sim], p = d.precios[sim];
       if (!t || !p || !(p.price > 0)) return { error: 'Sin datos de ' + sim + ' en la app' };
       const serie = Array.isArray(t.serie) ? t.serie.filter((v) => v > 0) : [];
-      return { moneda: monedaApp().codigo, simbolo: sim, fecha: d.fecha.slice(0, 10), precio: aMoneda(p.price), cambio_hoy_pct: typeof p.change === 'number' ? sinNaN(p.change) : null, media_50d: aMoneda(t.sma50), media_200d: aMoneda(t.sma200), rsi14: t.rsi14,
+      return { moneda: m.codigo, cambio_por_1_usd: m.factor, simbolo: sim, fecha: d.fecha.slice(0, 10), precio: aMoneda(p.price, m), cambio_hoy_pct: typeof p.change === 'number' ? sinNaN(p.change) : null, media_50d: aMoneda(t.sma50, m), media_200d: aMoneda(t.sma200, m), rsi14: t.rsi14,
         sesiones: serie.length, variacion_sesiones_pct: serie.length > 1 ? sinNaN((serie[serie.length - 1] / serie[0] - 1) * 100) : null };
     },
   };
@@ -241,8 +252,8 @@
       for (const tc of m.tool_calls) {
         let salida;
         try {
-          const fn = FUNCIONES[tc.function.name];
-          salida = fn ? await fn(JSON.parse(tc.function.arguments || '{}') || {}) : { error: 'Herramienta desconocida' };
+          const fn = FUNCIONES[tc.function.name], args = JSON.parse(tc.function.arguments || '{}') || {}, m = monedaDe(args.moneda);
+          salida = !fn ? { error: 'Herramienta desconocida' } : m ? await fn(args, m) : { error: 'Solo sé dar importes en ' + Object.keys(MONEDAS).join(' y ') + '.' };
         } catch (e) { salida = { error: 'No se pudo ejecutar la herramienta' }; }
         turno.push({ role: 'tool', tool_call_id: tc.id, content: JSON.stringify(salida) });
       }
@@ -417,7 +428,7 @@
 
   // Animación de apertura: sale una al azar (nunca la misma dos veces seguidas) y el chat aparece al terminar. Las duraciones (ms) van
   // a juego con las de css/styles.css. Con «reducir movimiento» activado en el sistema se abre al instante.
-  const ANIMACIONES = [['pulso', 450], ['brote', 300], ['gesto', 650]];
+  const ANIMACIONES = [['pulso', 450], ['brote', 300], ['gesto', 650], ['bote', 800], ['giro', 700], ['asoma', 800], ['globo', 1000]];
   let ultimaAnim = null, animando = false;
   function abrir() {
     if (animando) return;   // un segundo clic durante la animación no abre otra vez
@@ -432,8 +443,10 @@
   function mostrar(anim) {
     if (!overlay) construir();
     overlay.classList.add('preparando');   // sin transición: el chat se coloca de golpe en su punto de partida antes de abrir
-    overlay.classList.toggle('brote', anim === 'brote');
-    if (anim === 'brote') {   // el chat nace del robot: su centro, medido desde la esquina del chat sin transformar (offsetLeft/Top no cuentan el scale)
+    const nace = anim === 'brote' || anim === 'globo';   // las dos hacen nacer el chat del robot; «globo» además parte redondo como un globo
+    overlay.classList.toggle('brote', nace);
+    overlay.classList.toggle('globo', anim === 'globo');
+    if (nace) {   // el chat nace del robot: su centro, medido desde la esquina del chat sin transformar (offsetLeft/Top no cuentan el scale)
       const m = overlay.firstElementChild, r = btn.getBoundingClientRect();
       m.style.setProperty('--origen', (r.left + r.width / 2 - m.offsetLeft) + 'px ' + (r.top + r.height / 2 - m.offsetTop) + 'px');
     }

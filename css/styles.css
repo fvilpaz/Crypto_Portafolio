@@ -2325,10 +2325,33 @@ body.light .dock { background: linear-gradient(45deg, #2563eb, #4f46e5); border-
 @keyframes fervis-pulso { 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(240, 185, 11, .6); } 40% { transform: scale(1.3); } 100% { transform: scale(1); box-shadow: 0 0 0 18px rgba(240, 185, 11, 0); } }
 @keyframes fervis-hunde { 0% { transform: scale(1); } 100% { transform: scale(.75); } }
 @keyframes fervis-gesto { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-18deg); } 40% { transform: rotate(16deg); } 60% { transform: rotate(-10deg); } 80% { transform: rotate(6deg); } }
-.modal-overlay.preparando .modal { transition: none; }
+.modal-overlay.preparando .modal, .modal-overlay.globo.preparando .modal { transition: none; }
 .modal-overlay.brote .modal { transform-origin: var(--origen, center); }
 .modal-overlay.brote:not(.open) .modal { transform: scale(.04); }   /* parte (y al cerrar vuelve) al tamaño del robot */
-@media (prefers-reduced-motion: reduce) { .dock-robot[class*="anim-"], .dock-robot[class*="anim-"] .dock-robot-cara { animation: none; } }
+/* Más movimientos del robot: bote (salta y se aplasta), giro (vuelta completa) y asomo (la cabeza se desplaza y se inclina, y los ojos miran al lado) */
+.dock-robot.anim-bote .dock-robot-cara { transform-origin: 50% 100%; animation: fervis-bote .8s ease-in-out; }
+.dock-robot.anim-giro .dock-robot-cara { animation: fervis-giro .7s ease-in-out; }
+.dock-robot.anim-asoma .dock-robot-cara svg { transform-origin: 50% 90%; animation: fervis-asoma .8s ease-in-out; }
+.dock-robot.anim-asoma .dock-robot-cara svg path:nth-of-type(2) { animation: fervis-mira .8s ease-in-out; }   /* el 2.º trazo son los ojos */
+@keyframes fervis-bote { 0%, 100% { transform: translateY(0) scale(1, 1); } 12% { transform: translateY(0) scale(1.18, .78); } 32% { transform: translateY(-18px) scale(.9, 1.12); } 52% { transform: translateY(0) scale(1.14, .84); } 68% { transform: translateY(-8px) scale(.95, 1.06); } 84% { transform: translateY(0) scale(1.06, .94); } }
+/* Globo: el robot bota como un balón (cada rebote más bajo) y al último nace un globo redondo que crece hasta ser el chat */
+.dock-robot.anim-globo .dock-robot-cara { transform-origin: 50% 100%; animation: fervis-balon 1s linear; }
+.modal-overlay.globo .modal { transition: transform .55s cubic-bezier(.34, 1.3, .64, 1), border-radius .55s ease, opacity .3s ease; }
+.modal-overlay.globo:not(.open) .modal { border-radius: 50%; }
+@keyframes fervis-balon {
+  0% { transform: translateY(0) scale(1, 1); animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
+  15% { transform: translateY(-34px) scale(.92, 1.1); animation-timing-function: cubic-bezier(.6, 0, .9, .4); }
+  30% { transform: translateY(0) scale(1.2, .76); animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
+  44% { transform: translateY(-18px) scale(.95, 1.06); animation-timing-function: cubic-bezier(.6, 0, .9, .4); }
+  58% { transform: translateY(0) scale(1.14, .84); animation-timing-function: cubic-bezier(.2, .7, .4, 1); }
+  68% { transform: translateY(-8px) scale(.98, 1.03); animation-timing-function: cubic-bezier(.6, 0, .9, .4); }
+  78% { transform: translateY(0) scale(1.1, .88); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+@keyframes fervis-giro { from { transform: perspective(160px) rotateY(0); } to { transform: perspective(160px) rotateY(360deg); } }
+@keyframes fervis-asoma { 0%, 100% { transform: translateX(0) rotate(0); } 25% { transform: translateX(-8px) rotate(-18deg); } 60% { transform: translateX(8px) rotate(18deg); } 85% { transform: translateX(-2px) rotate(-4deg); } }
+@keyframes fervis-mira { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-2.5px); } 60% { transform: translateX(2.5px); } }
+@media (prefers-reduced-motion: reduce) { .dock-robot[class*="anim-"], .dock-robot[class*="anim-"] * { animation: none; } }
 .dock-robot-cara svg { display: block; width: 34px; height: 34px; }
 .dock-pie { justify-self: start; display: flex; align-items: center; gap: 16px; }
 .dock-copy { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
@@ -2363,7 +2386,7 @@ body { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
 .fervis-msg em { font-style: italic; }
 .fervis-msg code { padding: 1px 6px; border-radius: 5px; background: rgba(127, 127, 127, .22); font-family: ui-monospace, Consolas, monospace; font-size: .92em; }
 .fervis-msg.pensando { color: var(--text-secondary); letter-spacing: 2px; }
-.fervis-modelo { display: block; margin-top: 8px; font-size: 11px; letter-spacing: .3px; color: var(--text-muted); }
+.fervis-modelo { display: block; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 12px; font-weight: 600; letter-spacing: .3px; color: var(--text-primary); opacity: .72; }
 .fervis-modelo.respaldo { color: var(--accent-yellow); font-weight: 700; }
 .fervis-form { display: flex; gap: 8px; padding: 10px 20px; border-top: 1px solid var(--border); }
 .fervis-texto { flex: 1; min-width: 0; padding: 12px 14px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 99px; color: var(--text-primary); font: inherit; font-size: 16px; }
