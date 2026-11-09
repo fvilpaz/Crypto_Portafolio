@@ -40,11 +40,14 @@
     if (!c) return monedaApp();
     return MONEDAS[c] ? { codigo: c, factor: MONEDAS[c]() } : null;
   };
-  const usd = (n) => {
-    const m = monedaApp(), v = Number(n) * m.factor;
-    return m.codigo === 'EUR' ? v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €' : '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // Un importe de la app (en $) en la moneda m, con el MISMO formato que pinta la app: «1,234.50 €» y «$1,234.50» (el signo menos delante). Así no depende de cómo lo escriba el modelo.
+  const importe = (x, m) => {
+    const v = Number(x) * m.factor;
+    if (!Number.isFinite(v)) return null;
+    const n = Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return (v < 0 && n !== '0.00' ? '-' : '') + (m.codigo === 'EUR' ? n + ' €' : '$' + n);
   };
-  const nombreMoneda = () => (monedaApp().codigo === 'EUR' ? 'euros' : 'dólares');
+  const usd = (n) => importe(n, monedaApp());
   const pct = (n) => (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
   function leerCartera() {
     try {
@@ -68,7 +71,7 @@
     if (c.vacia) return 'Tu cartera está vacía en este navegador: añade alguna moneda con el «+» y te cuento.';
     const pnl = c.valor - c.coste;
     const top = c.filas.slice().sort((a, b) => b.valor - a.valor).slice(0, 3).map((f) => f.token + ' ' + usd(f.valor)).join(', ');
-    return 'Tu cartera vale ' + usd(c.valor) + ' (en ' + nombreMoneda() + ') con ' + c.filas.length + ' posiciones. Invertido: ' + usd(c.coste) + ' → ' + (pnl >= 0 ? 'ganancia ' : 'pérdida ') + usd(Math.abs(pnl)) +
+    return 'Tu cartera vale ' + usd(c.valor) + ' con ' + c.filas.length + ' posiciones. Invertido: ' + usd(c.coste) + ' → ' + (pnl >= 0 ? 'ganancia ' : 'pérdida ') + usd(Math.abs(pnl)) +
       (c.coste > 0 ? ' (' + pct(pnl / c.coste * 100) + ')' : '') + '. Mayores: ' + top + '. Datos: ' + hace(c.ts) + '.';
   }
   function respuestaHoy() {
@@ -146,7 +149,7 @@
   const MODELOS = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'llama-3.1-8b-instant'];   // el primero que tenga la cuenta
   const SISTEMA = 'Eres Fervis, el asistente de la cartera de inversión de esta persona. Responde siempre en castellano, breve y claro. Puedes usar markdown sencillo: **negrita** para títulos y datos clave, *cursiva*, `código` y listas con «- ». No uses tablas ni títulos con #. ' +
     'Para cualquier dato (valor de la cartera, operaciones, precios, indicadores) usa SIEMPRE las herramientas; nunca inventes cifras ni recuerdes datos de memoria. ' +
-    'Si ninguna herramienta puede darte lo que piden, dilo con sinceridad y explica qué sí puedes consultar. Cada herramienta devuelve sus importes ya en la moneda indicada en su campo «moneda» (por defecto la que la persona tiene elegida en la app); exprésalos siempre en esa moneda, con € o $. ' +
+    'Si ninguna herramienta puede darte lo que piden, dilo con sinceridad y explica qué sí puedes consultar. Cada herramienta devuelve sus importes ya en la moneda indicada en su campo «moneda» (por defecto la que la persona tiene elegida en la app); cópialos tal cual vienen (ya formateados). ' +
     'Si la persona pide los importes en otra moneda (EUR o USD), vuelve a llamar a la herramienta con el parámetro «moneda»: la conversión la hace la herramienta, NUNCA la calcules tú ni uses un cambio de memoria; si te preguntan por el cambio, usa «cambio_por_1_usd» del resultado. ' +
     'El S&P 500 se consulta con el símbolo SPY (ETF que lo replica). No des consejos de inversión: describe los datos.';
   const PARAM_MONEDA = { type: 'string', enum: Object.keys(MONEDAS), description: 'solo si la persona pide los importes en una moneda distinta de la que tiene elegida; si no, no lo pongas' };
@@ -161,14 +164,13 @@
     { type: 'function', function: { name: 'diagnostico_tecnico', description: 'Datos técnicos de una acción o ETF de la app: precio, cambio de hoy, medias de 50 y 200 días, RSI de 14 y variación de las últimas sesiones. No incluye rentabilidad del último año completo.', parameters: { type: 'object', properties: { simbolo: { type: 'string', description: 'símbolo, p. ej. NVDA o SPY (S&P 500)' }, moneda: PARAM_MONEDA }, required: ['simbolo'] } } },
   ];
   const sinNaN = (x) => (Number.isFinite(x) ? Math.round(x * 100) / 100 : null);
-  const aMoneda = (x, m) => sinNaN(Number(x) * m.factor);   // importe de la app (en $) → moneda elegida
   const esBolsa = (token, portfolio, d) => { const p = portfolio.find((a) => a && a.token === token); return p ? p.kind === 'stock' : !!(d && d.tec[token]); };
   const FUNCIONES = {
     resumen_cartera: async (a, m) => {
       const c = leerCartera();
       if (c.vacia) return { vacia: true };
-      return { moneda: m.codigo, cambio_por_1_usd: m.factor, valor: aMoneda(c.valor, m), invertido: aMoneda(c.coste, m), ganancia: aMoneda(c.valor - c.coste, m), antiguedad_precios_min: c.ts ? Math.round((Date.now() - c.ts) / 60000) : null,
-        posiciones: c.filas.map((f) => ({ token: f.token, valor: aMoneda(f.valor, m), invertido: aMoneda(f.coste, m), cambio_24h_pct: f.cambio === null ? null : sinNaN(f.cambio) })) };
+      return { moneda: m.codigo, cambio_por_1_usd: m.factor, valor: importe(c.valor, m), invertido: importe(c.coste, m), ganancia: importe(c.valor - c.coste, m), antiguedad_precios_min: c.ts ? Math.round((Date.now() - c.ts) / 60000) : null,
+        posiciones: c.filas.map((f) => ({ token: f.token, valor: importe(f.valor, m), invertido: importe(f.coste, m), cambio_24h_pct: f.cambio === null ? null : sinNaN(f.cambio) })) };
     },
     operaciones: async (a, m) => {
       let s = {}; try { s = JSON.parse(localStorage.getItem('miCartera.v1') || '{}'); } catch (e) { /* sin datos */ }
@@ -178,7 +180,7 @@
       const sel = lista.filter((o) => o && o.token && (!a.tipo || o.type === a.tipo) && (!a.token || String(o.token).toUpperCase() === String(a.token).toUpperCase()) &&
         (!a.clase || esBolsa(o.token, port, d) === (a.clase === 'bolsa')))
         .map((o, i) => ({ o, i })).sort((x, y) => String(y.o.date).localeCompare(String(x.o.date)) || y.i - x.i).slice(0, n)
-        .map(({ o }) => ({ fecha: o.date, tipo: o.type, token: o.token, cantidad: o.qty, precio: aMoneda(o.price, m), total: aMoneda(o.totalUsd, m) }));
+        .map(({ o }) => ({ fecha: o.date, tipo: o.type, token: o.token, cantidad: o.qty, precio: importe(o.price, m), total: importe(o.totalUsd, m) }));
       return { moneda: m.codigo, cambio_por_1_usd: m.factor, cuantas: sel.length, operaciones: sel };
     },
     diagnostico_tecnico: async (a, m) => {
@@ -187,7 +189,7 @@
       const t = d.tec[sim], p = d.precios[sim];
       if (!t || !p || !(p.price > 0)) return { error: 'Sin datos de ' + sim + ' en la app' };
       const serie = Array.isArray(t.serie) ? t.serie.filter((v) => v > 0) : [];
-      return { moneda: m.codigo, cambio_por_1_usd: m.factor, simbolo: sim, fecha: d.fecha.slice(0, 10), precio: aMoneda(p.price, m), cambio_hoy_pct: typeof p.change === 'number' ? sinNaN(p.change) : null, media_50d: aMoneda(t.sma50, m), media_200d: aMoneda(t.sma200, m), rsi14: t.rsi14,
+      return { moneda: m.codigo, cambio_por_1_usd: m.factor, simbolo: sim, fecha: d.fecha.slice(0, 10), precio: importe(p.price, m), cambio_hoy_pct: typeof p.change === 'number' ? sinNaN(p.change) : null, media_50d: importe(t.sma50, m), media_200d: importe(t.sma200, m), rsi14: t.rsi14,
         sesiones: serie.length, variacion_sesiones_pct: serie.length > 1 ? sinNaN((serie[serie.length - 1] / serie[0] - 1) * 100) : null };
     },
   };
@@ -202,6 +204,7 @@
       const e = new Error(r.status === 429 ? 'Has llegado al límite gratuito de Groq (429). Espera un minuto y vuelve a preguntar.' : 'Groq ha fallado (código ' + r.status + ').');
       e.estado = r.status;   // para decidir si se prueba otro modelo
       e.reintentarEn = parseInt(r.headers.get('retry-after'), 10) || null;   // segundos que pide esperar Groq; null si el navegador no deja leer la cabecera
+      try { if (typeof r.text === 'function') { e.detalle = (await r.text()).slice(0, 400); console.warn('Groq ' + r.status + ':', e.detalle); } } catch (x) { /* sin detalle */ }
       throw e;
     }
     return r.json();
@@ -214,16 +217,20 @@
     'No afirmes ser ChatGPT, GPT-4, Claude, Gemini ni ningún otro modelo que no sea ese, ni inventes detalles de tu arquitectura.';
   async function pedirConRespaldo(clave, conversacion) {
     let ultimo = null;
+    const fallidos = new Set();   // modelos que dieron un 400 EN ESTA pregunta (llamada a herramienta mal formada): se prueba otro, pero no se apartan para las siguientes
     for (;;) {
-      const modelo = escalera.find((m) => !(limitados[m] > Date.now()));
+      const modelo = escalera.find((m) => !(limitados[m] > Date.now()) && !fallidos.has(m));
       if (!modelo) {   // no queda ninguno: se dice claro, con la espera que pida Groq solo si el navegador la dejó leer
         const s = ultimo && ultimo.reintentarEn;
-        const e = new Error('Ahora mismo no puedo contestar: los modelos gratuitos de Groq están al límite o caídos.' + (s ? ' Groq pide esperar unos ' + (s < 90 ? s + ' segundos' : Math.ceil(s / 60) + ' minutos') + '.' : ' Prueba de nuevo en unos minutos.'));
+        const e = new Error(ultimo && ultimo.estado === 400
+          ? 'Ningún modelo de Groq ha conseguido responder a esta pregunta. Prueba a preguntarlo de otra forma.'
+          : 'Ahora mismo no puedo contestar: los modelos gratuitos de Groq están al límite o caídos.' + (s ? ' Groq pide esperar unos ' + (s < 90 ? s + ' segundos' : Math.ceil(s / 60) + ' minutos') + '.' : ' Prueba de nuevo en unos minutos.'));
         e.estado = ultimo && ultimo.estado;
         throw e;
       }
       try { return { r: await pedirGroq(clave, { ruta: '/chat/completions', body: JSON.stringify({ model: modelo, temperature: 0.2, max_tokens: 700, tools: HERRAMIENTAS, tool_choice: 'auto', messages: [{ role: 'system', content: SISTEMA + identidad(modelo) }].concat(conversacion) }) }), modelo }; }
       catch (e) {
+        if (e.estado === 400) { fallidos.add(modelo); ultimo = e; continue; }
         const espera = esperaPorError(e.estado);
         if (espera === null) throw e;
         limitados[modelo] = Date.now() + espera;
