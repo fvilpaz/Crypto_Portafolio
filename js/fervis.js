@@ -147,6 +147,7 @@
   // A Groq la clave solo va en la cabecera de la petición. Los datos solo salen si el modelo llama a una herramienta (resumen_cartera manda todas las posiciones).
   const GROQ = 'https://api.groq.com/openai/v1';
   const MODELOS = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'llama-3.1-8b-instant'];   // el primero que tenga la cuenta
+  const COLOR_MODELO = { 'llama-3.3-70b-versatile': 'azul', 'openai/gpt-oss-120b': 'amarillo', 'openai/gpt-oss-20b': 'verde', 'llama-3.1-8b-instant': 'turquesa' };   // color de su etiqueta (css/styles.css)
   const SISTEMA = 'Eres Fervis, el asistente de la cartera de inversión de esta persona. Responde siempre en castellano, breve y claro. Puedes usar markdown sencillo: **negrita** para títulos y datos clave, *cursiva*, `código` y listas con «- ». No uses tablas ni títulos con #. ' +
     'Para cualquier dato (valor de la cartera, operaciones, precios, indicadores) usa SIEMPRE las herramientas; nunca inventes cifras ni recuerdes datos de memoria. ' +
     'Si ninguna herramienta puede darte lo que piden, dilo con sinceridad y explica qué sí puedes consultar. Cada herramienta devuelve sus importes ya en la moneda indicada en su campo «moneda» (por defecto la que la persona tiene elegida en la app); cópialos tal cual vienen (ya formateados). ' +
@@ -326,7 +327,7 @@
     if (rol.startsWith('fervis') && !sigueTanda) m.append(el('span', 'fervis-etiqueta', 'Fervis'));
     if (rol.startsWith('fervis') && !rol.includes('pensando')) pintarMarkdown(m, contenido); else m.append(contenido);
     // Quién contestó, debajo del mensaje (como en el Fervis de nandis); resaltado si fue un respaldo. Con textContent: nada de HTML.
-    if (modelo) m.append(el('small', 'fervis-modelo' + (respaldo ? ' respaldo' : ''), 'groq · ' + modelo + (respaldo ? ' (respaldo)' : '')));
+    if (modelo) m.append(el('small', 'fervis-modelo' + (COLOR_MODELO[modelo] ? ' m-' + COLOR_MODELO[modelo] : '') + (respaldo ? ' respaldo' : ''), 'groq · ' + modelo + (respaldo ? ' (respaldo)' : '')));
     msgs.append(m);
     msgs.scrollTop = msgs.scrollHeight;
     return m;

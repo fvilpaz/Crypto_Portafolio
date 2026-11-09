@@ -2386,8 +2386,17 @@ body { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
 .fervis-msg em { font-style: italic; }
 .fervis-msg code { padding: 1px 6px; border-radius: 5px; background: rgba(127, 127, 127, .22); font-family: ui-monospace, Consolas, monospace; font-size: .92em; }
 .fervis-msg.pensando { color: var(--text-secondary); letter-spacing: 2px; }
-.fervis-modelo { display: block; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 12px; font-weight: 600; letter-spacing: .3px; color: var(--text-primary); opacity: .72; }
-.fervis-modelo.respaldo { color: var(--accent-yellow); font-weight: 700; }
+/* Etiqueta del modelo que contestó: cada modelo con su color (fervis.js pone m-azul, m-amarillo, m-verde o m-turquesa); en claro, variantes oscuras para que se lean. El respaldo va en negrita y con «(respaldo)». */
+.fervis-modelo { display: block; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 12px; font-weight: 600; letter-spacing: .3px; color: var(--mc, var(--text-secondary)); }
+.fervis-modelo.respaldo { font-weight: 800; }
+.fervis-modelo.m-azul { --mc: #4aa8ff; }
+.fervis-modelo.m-amarillo { --mc: var(--accent-yellow); }
+.fervis-modelo.m-verde { --mc: var(--accent-green); }
+.fervis-modelo.m-turquesa { --mc: var(--accent-teal); }
+body.light .fervis-modelo.m-azul { --mc: #1d4ed8; }
+body.light .fervis-modelo.m-amarillo { --mc: #8a6100; }
+body.light .fervis-modelo.m-verde { --mc: #0a7a4f; }
+body.light .fervis-modelo.m-turquesa { --mc: #0f766e; }
 .fervis-form { display: flex; gap: 8px; padding: 10px 20px; border-top: 1px solid var(--border); }
 .fervis-texto { flex: 1; min-width: 0; padding: 12px 14px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 99px; color: var(--text-primary); font: inherit; font-size: 16px; }
 .fervis-texto:focus { outline: 2px solid var(--accent-yellow); border-color: transparent; }
