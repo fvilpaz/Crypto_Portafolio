@@ -197,12 +197,15 @@
   // Cuánto se aparta un modelo tras fallar: límite (429) 5 min, retirado (404) hasta recargar la página, caído (5xx) 1 min. Otro error: no se salta (null).
   const esperaPorError = (estado) => (estado === 429 ? 5 * 60000 : estado === 404 ? Infinity : estado >= 500 ? 60000 : null);
   // Pide la respuesta al primer modelo de la escalera que no esté apartado; si falla por límite, retirada o caída, lo aparta y prueba el siguiente.
-  async function pedirConRespaldo(clave, mensajes) {
+  // Sin este dato, preguntado «¿qué modelo eres?» un modelo rellena con lo más famoso («GPT-4 de OpenAI»; medido en nandis el 21-sep-2026). Va por llamada: si cae a otro modelo, dice el nuevo.
+  const identidad = (modelo) => ' Modelo que te ejecuta ahora mismo: ' + modelo + ' (en la nube de Groq). Si te preguntan qué modelo, agente o IA eres, dilo tal cual y di que Fervis es tu nombre como asistente. ' +
+    'No afirmes ser ChatGPT, GPT-4, Claude, Gemini ni ningún otro modelo que no sea ese, ni inventes detalles de tu arquitectura.';
+  async function pedirConRespaldo(clave, conversacion) {
     let ultimo = null;
     for (;;) {
       const modelo = escalera.find((m) => !(limitados[m] > Date.now()));
       if (!modelo) throw ultimo || new Error('No hay ningún modelo de Groq disponible ahora mismo.');
-      try { return { r: await pedirGroq(clave, { ruta: '/chat/completions', body: JSON.stringify({ model: modelo, temperature: 0.2, max_tokens: 700, tools: HERRAMIENTAS, tool_choice: 'auto', messages: mensajes }) }), modelo }; }
+      try { return { r: await pedirGroq(clave, { ruta: '/chat/completions', body: JSON.stringify({ model: modelo, temperature: 0.2, max_tokens: 700, tools: HERRAMIENTAS, tool_choice: 'auto', messages: [{ role: 'system', content: SISTEMA + identidad(modelo) }].concat(conversacion) }) }), modelo }; }
       catch (e) {
         const espera = esperaPorError(e.estado);
         if (espera === null) throw e;
@@ -220,7 +223,7 @@
     }
     const turno = [{ role: 'user', content: pregunta }];
     for (let vuelta = 0; vuelta < 4; vuelta++) {
-      const { r, modelo } = await pedirConRespaldo(clave, [{ role: 'system', content: SISTEMA }].concat(historial, turno));
+      const { r, modelo } = await pedirConRespaldo(clave, historial.concat(turno));
       const m = r.choices && r.choices[0] && r.choices[0].message;
       if (!m) throw new Error('Groq ha contestado algo vacío.');
       if (!m.tool_calls || !m.tool_calls.length) {
