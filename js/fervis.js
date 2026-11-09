@@ -415,8 +415,31 @@
     reiniciar();
   }
 
+  // Animación de apertura: sale una al azar (nunca la misma dos veces seguidas) y el chat aparece al terminar. Las duraciones (ms) van
+  // a juego con las de css/styles.css. Con «reducir movimiento» activado en el sistema se abre al instante.
+  const ANIMACIONES = [['pulso', 450], ['brote', 300], ['gesto', 650]];
+  let ultimaAnim = null, animando = false;
   function abrir() {
+    if (animando) return;   // un segundo clic durante la animación no abre otra vez
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { mostrar(null); return; }
+    const opciones = ANIMACIONES.filter(([n]) => n !== ultimaAnim);
+    const [nombre, ms] = opciones[Math.floor(Math.random() * opciones.length)];
+    ultimaAnim = nombre; animando = true;
+    btn.classList.add('anim-' + nombre);
+    setTimeout(() => { btn.classList.remove('anim-' + nombre); animando = false; mostrar(nombre); }, ms);
+  }
+
+  function mostrar(anim) {
     if (!overlay) construir();
+    overlay.classList.add('preparando');   // sin transición: el chat se coloca de golpe en su punto de partida antes de abrir
+    overlay.classList.toggle('brote', anim === 'brote');
+    if (anim === 'brote') {   // el chat nace del robot: su centro, medido desde la esquina del chat sin transformar (offsetLeft/Top no cuentan el scale)
+      const m = overlay.firstElementChild, r = btn.getBoundingClientRect();
+      m.style.setProperty('--origen', (r.left + r.width / 2 - m.offsetLeft) + 'px ' + (r.top + r.height / 2 - m.offsetTop) + 'px');
+    }
+    void overlay.offsetWidth;   // aplica el punto de partida...
+    overlay.classList.remove('preparando');
+    void overlay.offsetWidth;   // ...y recupera la transición antes de abrir, para que se vea también en la primera apertura
     overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
     btn.setAttribute('aria-expanded', 'true');
