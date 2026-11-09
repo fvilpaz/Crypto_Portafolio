@@ -190,6 +190,7 @@
     if (!r.ok) {
       const e = new Error(r.status === 429 ? 'Has llegado al límite gratuito de Groq (429). Espera un minuto y vuelve a preguntar.' : 'Groq ha fallado (código ' + r.status + ').');
       e.estado = r.status;   // para decidir si se prueba otro modelo
+      e.reintentarEn = parseInt(r.headers.get('retry-after'), 10) || null;   // segundos que pide esperar Groq; null si el navegador no deja leer la cabecera
       throw e;
     }
     return r.json();
@@ -204,7 +205,12 @@
     let ultimo = null;
     for (;;) {
       const modelo = escalera.find((m) => !(limitados[m] > Date.now()));
-      if (!modelo) throw ultimo || new Error('No hay ningún modelo de Groq disponible ahora mismo.');
+      if (!modelo) {   // no queda ninguno: se dice claro, con la espera que pida Groq solo si el navegador la dejó leer
+        const s = ultimo && ultimo.reintentarEn;
+        const e = new Error('Ahora mismo no puedo contestar: los modelos gratuitos de Groq están al límite o caídos.' + (s ? ' Groq pide esperar unos ' + (s < 90 ? s + ' segundos' : Math.ceil(s / 60) + ' minutos') + '.' : ' Prueba de nuevo en unos minutos.'));
+        e.estado = ultimo && ultimo.estado;
+        throw e;
+      }
       try { return { r: await pedirGroq(clave, { ruta: '/chat/completions', body: JSON.stringify({ model: modelo, temperature: 0.2, max_tokens: 700, tools: HERRAMIENTAS, tool_choice: 'auto', messages: [{ role: 'system', content: SISTEMA + identidad(modelo) }].concat(conversacion) }) }), modelo }; }
       catch (e) {
         const espera = esperaPorError(e.estado);
