@@ -69,13 +69,6 @@ const App = (() => {
   const getStakingAssets = () => portfolio.filter(a => a.tag === 'staking');
   const getAirdropAssets = () => portfolio.filter(a => a.tag === 'airdrop');
 
-  // Reparto de custodia: distribución fija, no son datos del usuario.
-  const custody = [
-    { name: 'Bit2Me', type: 'Exchange regulado ES', pct: 0.30, color: '#f0b90b', purpose: 'Fiat / Hacienda' },
-    { name: 'Autocustodia', type: 'Claves propias', pct: 0.40, color: '#0ecb81', purpose: 'Largo plazo' },
-    { name: 'Bitget', type: 'Exchange earn', pct: 0.30, color: '#1e90ff', purpose: 'Earn / operativa' },
-  ];
-
   const cosmosTopPct = () => (settings.satTarget ?? DEFAULT_SAT_TARGET) / 100;
   const DEFAULT_DCA_TARGET = 200;   // objetivo DCA inicial en €, hasta que lo edites
   const DEFAULT_DEFENSE_TARGET = 20;   // objetivo de refugio (USDC) en % de la cartera
@@ -423,6 +416,10 @@ const App = (() => {
 
   // ── ANIMATE VALUE (counter) ──
   function animateValue(el, start, end, duration, formatter) {
+    // Cada llamada anula las animaciones anteriores del mismo elemento. Sin esto, la de 1,2 s de la primera carga (con los precios de compra)
+    // seguía viva cuando llegaban los precios en vivo y su último fotograma escribía ENCIMA del total nuevo: la cabecera se quedaba con un
+    // total viejo hasta el siguiente cambio de precio (visto con la cartera real de Nando el 9-nov-2026: 4.517 $ en vez de 4.675 $).
+    const turno = el.__turnoAnimacion = (el.__turnoAnimacion || 0) + 1;
     if (start === null || start === undefined) start = end;
     if (Math.abs(end - start) < 0.01) {
       el.textContent = formatter(end);
@@ -430,6 +427,7 @@ const App = (() => {
     }
     const startTime = performance.now();
     function tick(now) {
+      if (el.__turnoAnimacion !== turno) return;   // ya hay una más nueva: esta se retira sin escribir
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
@@ -797,11 +795,11 @@ const App = (() => {
     return getAirdropAssets().reduce((sum, a) => sum + getAirdropValue(a), 0);
   }
 
-  // Base de reparto: capital invertido (todo menos airdrops, que son coste 0 y
-  // "dinero gratis"). Los cubos (Núcleo/Satélites/Refugio) se miden sobre esto
-  // para que sumen 100% y sean coherentes.
+  // Base de reparto (cubos, % de la cartera, reparto del mes, Plan): TODA la cartera, airdrops incluidos. Hasta el 9-nov-2026 los
+  // airdrops quedaban fuera por ser «coste 0»; decidido con Nando que cuentan: si mañana PI vale 500 €, son 500 € suyos y el
+  // reparto tiene que saberlo. Se deja la función (la usan 6 sitios) para que esa base viva en un solo lugar.
   function getInvestedValue() {
-    return portfolio.filter(a => a.tag !== 'airdrop').reduce((sum, a) => sum + getAssetValue(a), 0);
+    return getTotalPortfolioValue();
   }
 
   function getTotalStakingIncomeYearly() {
@@ -852,7 +850,7 @@ const App = (() => {
     } else if (prevTotal !== null && Math.abs(prevTotal - totalValue) > 0.01) {
       animateValue(heroEl, prevTotal, totalValue, 600, (v) => fmtCurrency(v));
     } else {
-      heroEl.textContent = fmtCurrency(totalValue);
+      animateValue(heroEl, totalValue, totalValue, 0, (v) => fmtCurrency(v));   // escribe ya el valor y, de paso, anula cualquier animación vieja
     }
     prevTotal = totalValue;
 
@@ -1158,12 +1156,16 @@ const App = (() => {
   }
 
   function planInput() {
-    const val = (toks) => toks.reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t && a.tag !== 'airdrop')), 0);
+    const val = (toks) => toks.reduce((s, t) => s + getAssetValue(portfolio.find(a => a.token === t)), 0);   // airdrops incluidos (ver getInvestedValue)
     const bolsa = settings.bolsaTarget || 0, rc = 100 - bolsa;
     const t = [settings.coreTarget ?? DEFAULT_CORE_TARGET, settings.satTarget ?? DEFAULT_SAT_TARGET, settings.defenseTarget || 0].map(v => rc > 0 ? v * 100 / rc : 0);
     const nuc = bolsaNucleo(), pn = nuc ? plBolsaActual()[nuc] : 0, bs = { nucleo: pn, satelites: 100 - pn };   // núcleo = la acción marcada; satélites = el resto
-    const stk = portfolio.filter(a => a.kind === 'stock' && a.tag !== 'airdrop');
-    return { mensual: Math.max(monthlySplit().totalUsd - dcaMonthBoughtUsd(), 0), ratioCrypto: rc,
+    const stk = portfolio.filter(a => a.kind === 'stock');
+    // Total REAL de cada lado (toda la cartera, no solo lo asignado a un cubo): si tienes una moneda que no es núcleo, satélite ni refugio, cuenta
+    // igual (es tuya) aunque el modelo no sepa en qué cubo recomendar comprarla. Antes se sumaban los cubos y una moneda sin asignar desaparecía
+    // del total (hallazgo de Nando, 9-nov-2026). Mismo criterio que la cabecera y los chips Crypto/Bolsa: airdrops incluidos (ver getInvestedValue).
+    const totalReal = { crypto: portfolio.filter(a => a.kind !== 'stock').reduce((s, a) => s + getAssetValue(a), 0), bolsa: stk.reduce((s, a) => s + getAssetValue(a), 0) };
+    return { mensual: Math.max(monthlySplit().totalUsd - dcaMonthBoughtUsd(), 0), ratioCrypto: rc, totalReal,
       pesos: { crypto: { nucleo: t[0], satelites: t[1], refugio: t[2] }, bolsa: { nucleo: bs.nucleo, satelites: bs.satelites } },
       valores: { crypto: { nucleo: val(getCoreTokens()), satelites: val(getSatTokens()), refugio: val(getRefugioTokens()) },
         bolsa: { nucleo: stk.filter(a => a.token === nuc).reduce((s, a) => s + getAssetValue(a), 0), satelites: stk.filter(a => a.token !== nuc).reduce((s, a) => s + getAssetValue(a), 0) } } };
@@ -1806,11 +1808,12 @@ const App = (() => {
       `;
     };
     // Con acciones en la cartera se ven dos carteras independientes (Crypto y Bolsa), cada una con su subtotal; el total sigue sumando las dos.
-    // El subtotal cuenta TODAS las posiciones del grupo, también las ocultas (ocultar es solo de la vista y no cambia el valor, como el total de la cabecera); la lista enseña solo las visibles.
+    // El subtotal (importe, nº de activos y % de cartera) cuenta TODAS las posiciones del grupo, también las ocultas (ocultar es solo de la vista
+    // y no cambia el valor, como el total de la cabecera); la lista de filas de abajo enseña solo las visibles.
     const grupoHtml = (nombre, color, lista, todas) => {
       const v = todas.reduce((s, a) => s + getAssetValue(a), 0);
       return `<tr class="asset-group-row"><td colspan="9"><span class="asset-group-name" style="color:${color}">${nombre}</span>
-        <span>${lista.length} activo${lista.length === 1 ? '' : 's'} · ${fmtCurrency(v)} · ${total > 0 ? (v / total * 100).toFixed(1) : '0.0'}% de la cartera</span></td></tr>`;
+        <span>${todas.length} activo${todas.length === 1 ? '' : 's'} · ${fmtCurrency(v)} · ${total > 0 ? (v / total * 100).toFixed(1) : '0.0'}% de la cartera</span></td></tr>`;
     };
     const cryptoList = sorted.filter(a => a.kind !== 'stock'), bolsaList = sorted.filter(a => a.kind === 'stock');
     const cryptoTodas = portfolio.filter(a => a.kind !== 'stock'), bolsaTodas = portfolio.filter(a => a.kind === 'stock');   // con las ocultas, para los subtotales
@@ -2132,22 +2135,6 @@ const App = (() => {
         </tr>
       `;
     }).join('');
-  }
-
-  function renderCustody() {
-    document.getElementById('custody-bar').innerHTML = custody.map(c =>
-      `<div class="custody-segment" style="flex:${c.pct};background:${c.color}">${(c.pct * 100).toFixed(0)}%</div>`
-    ).join('');
-
-    document.getElementById('custody-legend').innerHTML = custody.map(c =>
-      `<div class="custody-legend-item">
-        <div class="custody-legend-dot" style="background:${c.color}"></div>
-        <div class="custody-legend-text">
-          <span class="custody-legend-name">${c.name}</span>
-          <span class="custody-legend-purpose">${c.purpose}</span>
-        </div>
-      </div>`
-    ).join('');
   }
 
   function renderTransactions() {

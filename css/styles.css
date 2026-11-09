@@ -153,37 +153,7 @@ a:hover { text-decoration: underline; }
   gap: 12px;
 }
 
-/* ── App-switch pill → CryptoTrace ── */
-#app-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  background: linear-gradient(135deg, #3b82f6, #6366f1);
-  color: #fff;
-  text-decoration: none;
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.45);
-  font-size: 0.85rem;
-  font-weight: 600;
-  white-space: nowrap;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-#app-link svg { display: block; }
-#app-link .al-arrow { opacity: 0.85; }
-
-#app-link:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 22px rgba(79, 70, 229, 0.6);
-}
-
 @media (max-width: 600px) {
-  #app-link span,
-  #app-link .al-arrow { display: none; }
-  #app-link { padding: 8px 10px; gap: 0; }
-
   /* La fila de acciones baja bajo el título, alineada a la izquierda y con un
      pelín más de aire entre botones. */
   .header-actions {
@@ -560,22 +530,6 @@ a:hover { text-decoration: underline; }
 }
 .reparto-row.idle .reparto-amt { font-weight: 500; font-size: 13px; color: var(--text-muted); }
 
-.card-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  margin-bottom: 12px;
-}
-
-.card-icon.green { background: var(--accent-green-bg); }
-.card-icon.red { background: var(--accent-red-bg); }
-.card-icon.yellow { background: var(--accent-yellow-bg); }
-.card-icon.blue { background: var(--accent-blue-bg); }
-
 /* ── SECTION ── */
 .section {
   margin-bottom: 24px;
@@ -695,10 +649,6 @@ tbody td {
 .token-icon.usdc { background: #2775ca22; color: #2775ca; }
 /* Bolsa (acciones / ETF) y los grupos del Reparto */
 .token-icon.sp   { background: #0ecb8122; color: #0ecb81; }
-.token-icon.sx   { background: #8c94a833; color: var(--text-primary); }
-.token-icon.ts   { background: #f6465d22; color: var(--accent-red); }
-.token-icon.nv   { background: #76b90033; color: #8fd400; }
-.token-icon.ms   { background: #1e90ff22; color: #4aa8ff; }
 .token-icon.cush { background: #f0b90b22; color: var(--accent-yellow); }
 .token-icon.sv   { background: #1e90ff22; color: var(--accent-blue); }
 .token-icon.stk  { background: #2dd4bf22; color: var(--accent-teal); }   /* acciones/ETF añadidos por búsqueda */
@@ -745,10 +695,6 @@ tbody td {
   overflow: hidden;
 }
 
-.progress-fill.green { background: var(--accent-green); }
-.progress-fill.yellow { background: var(--accent-yellow); }
-.progress-fill.red { background: var(--accent-red); }
-.progress-fill.blue { background: var(--accent-blue); }
 
 /* ── ALLOCATION GRID ── */
 .allocation-grid {
@@ -816,23 +762,6 @@ tbody td {
 }
 
 /* ── WARNING BANNER ── */
-.portfolio-health { margin-bottom: 20px; }
-.health-wrap { display: flex; flex-direction: column; gap: 10px; }
-.health-row { display: flex; flex-direction: column; gap: 6px; }
-.health-row-head { display: flex; align-items: center; gap: 6px; font-size: 13px; }
-.health-label-name { font-weight: 600; color: var(--text-secondary); min-width: 72px; }
-.health-label-pct { font-weight: 700; }
-.health-label-target { color: var(--text-muted); font-size: 12px; }
-.health-bar-wrap { position: relative; }
-.health-bar { height: 8px; border-radius: 6px; background: var(--border); overflow: visible; position: relative; }
-.health-seg { height: 100%; border-radius: 6px; transition: width 0.5s ease; max-width: 100%; }
-.health-mark {
-  position: absolute; top: -5px; bottom: -5px;
-  width: 2px; background: var(--text-secondary);
-  border-radius: 1px; transform: translateX(-50%);
-  pointer-events: none; opacity: 0.7;
-}
-
 .warning-banner {
   background: var(--accent-yellow-bg);
   border: 1px solid rgba(240, 185, 11, 0.3);
@@ -911,66 +840,6 @@ body.light .warning-banner { background: var(--bg-secondary); border-color: rgba
   margin-top: 2px;
 }
 
-/* ── CUSTODY BAR ── */
-.custody-bar {
-  display: flex;
-  height: 32px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  margin: 12px 0;
-}
-
-.custody-segment {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  color: #0b0e11;
-  transition: flex 0.6s ease;
-}
-
-.custody-legend {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.custody-legend-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.custody-legend-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
-  flex-shrink: 0;
-  margin-top: 4px;
-}
-
-.custody-legend-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.35;
-}
-
-.custody-legend-name {
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: 0.1px;
-}
-
-.custody-legend-purpose {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
 /* ── FOOTER ── */
 .footer {
   border-top: 1px solid var(--border);
@@ -982,42 +851,6 @@ body.light .warning-banner { background: var(--bg-secondary); border-color: rgba
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.footer-top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.footer-links {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.footer-links a {
-  color: var(--text-secondary);
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.footer-links a:hover {
-  color: var(--accent-green);
-}
-
-.footer-dot {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: var(--text-muted);
 }
 
 .footer p {
@@ -1033,21 +866,6 @@ body.light .warning-banner { background: var(--bg-secondary); border-color: rgba
   max-width: 600px;
   margin: 0;
   line-height: 1.5;
-}
-
-/* ── LOADING ── */
-.loading-spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--text-muted);
-  border-top-color: var(--accent-yellow);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 /* ── LIVE DOT ── */
@@ -1214,10 +1032,6 @@ body.light .warning-banner { background: var(--bg-secondary); border-color: rgba
   color: var(--text-primary);
 }
 
-.refresh-btn.spinning svg {
-  animation: spin 0.8s linear infinite;
-}
-
 /* ── SECTION NAV ── */
 .section-nav {
   display: flex;
@@ -1287,19 +1101,6 @@ body.light .warning-banner { background: var(--bg-secondary); border-color: rgba
   letter-spacing: 0.5px;
   font-weight: 600;
 }
-
-.dca-edit {
-  background: none;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  padding: 4px 6px;
-  border-radius: 6px;
-  transition: all 0.15s ease;
-}
-.dca-edit:hover { color: var(--text-primary); background: var(--bg-hover); }
 
 .dca-amount {
   display: flex;
@@ -1956,7 +1757,6 @@ details[id^="sec-"] {
 .skeleton-line.w60 { width: 60px; }
 .skeleton-line.w80 { width: 80px; }
 .skeleton-line.w100 { width: 100px; }
-.skeleton-line.w120 { width: 120px; }
 
 .skeleton-card {
   padding: 20px;
@@ -1966,12 +1766,6 @@ details[id^="sec-"] {
   height: 20px;
   width: 60%;
   margin-bottom: 10px;
-}
-
-.skeleton-card .skeleton-line.h32 {
-  height: 32px;
-  width: 40%;
-  margin-bottom: 8px;
 }
 
 .skeleton-card .skeleton-line.h14 {
@@ -2103,19 +1897,6 @@ tbody tr[data-token]:hover {
   box-shadow: inset 0 0 0 1px rgba(240, 185, 11, 0.15);
 }
 
-/* ── PROGRESS BAR GLOW ── */
-.progress-fill.green {
-  box-shadow: 0 0 8px rgba(14, 203, 129, 0.4);
-}
-
-.progress-fill.yellow {
-  box-shadow: 0 0 8px rgba(240, 185, 11, 0.4);
-}
-
-.progress-fill.red {
-  box-shadow: 0 0 8px rgba(246, 70, 93, 0.4);
-}
-
 /* ── FAB: añadir movimiento ── */
 main.container { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
 
@@ -2221,7 +2002,7 @@ body.light #mercado .up  { color: #0a7a52; }
 body.light #mercado .dn  { color: #c4223a; }
 body.light #mercado .new { color: #8a6500; }
 #mercado .who { display: flex; gap: 5px; }
-#mercado .who .token-icon, #mercado .mh .token-icon { width: 26px; height: 26px; font-size: 11px; background: var(--bg-card); color: var(--text-primary); }
+#mercado .who .token-icon { width: 26px; height: 26px; font-size: 11px; background: var(--bg-card); color: var(--text-primary); }
 
 /* ficha de empresa y fichas de gestores: sin equivalente en la app */
 #mercado .drawer { display: none; margin-top: 14px; background: var(--bg-secondary); border: 1px solid var(--accent-yellow); border-radius: var(--radius); padding: 20px; }
@@ -2236,22 +2017,14 @@ body.light #mercado .new { color: #8a6500; }
 #mercado tr.sigo { background: rgba(45, 212, 191, 0.10); }
 #mercado tr.sigo td:first-child { box-shadow: inset 3px 0 0 var(--accent-teal); }
 #mercado .warn { font-size: 12px; color: var(--text-secondary); margin-top: 14px; border-left: 3px solid var(--accent-yellow); padding-left: 10px; }
-#mercado .mgrs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
-#mercado .mg { background: var(--bg-card); border-radius: 10px; padding: 14px; }
-#mercado .mh { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-#mercado .mn { font-size: 15px; font-weight: 700; }
-#mercado .ml { display: flex; flex-direction: column; gap: 2px; padding: 7px 0; border-top: 1px solid var(--border); }
-#mercado .ml span { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
-#mercado .ml b { font-size: 13px; font-weight: 500; color: var(--text-secondary); line-height: 1.45; }
 @media (max-width: 700px) {
   #mercado .kpis { grid-template-columns: 1fr 1fr; }
-  #mercado .two, #mercado .mgrs { grid-template-columns: 1fr; }
+  #mercado .two { grid-template-columns: 1fr; }
   #mercado .drawer .cols { grid-template-columns: 1fr; }
 }
 
 /* Panel Plan de inversión (Reparto del mes) */
 .pl-rango { width: 100%; accent-color: var(--accent-teal); margin: 6px 0; }
-.pl-tres { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; margin-top: 10px; }
 .pl-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 
 /* Tabla de activos con carteras separadas (Crypto / Bolsa) */

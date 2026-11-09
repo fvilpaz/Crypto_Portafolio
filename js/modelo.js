@@ -37,11 +37,12 @@
       const w = normalizar(p.pesos[lado], lado === 'crypto' ? 'Dentro de crypto' : 'Dentro de bolsa', avisos, cubos);
       cubos.forEach((cubo, i) => hojas.push({ lado, cubo, objetivo: ratio[lado] * w[i], valor: p.valores[lado][cubo] || 0 }));
     });
-    const total = suma(hojas.map((h) => h.valor));
-    // Dos niveles con la MISMA función: primero entre lados (crypto / bolsa) por lo que falta a cada uno para el ratio y luego,
-    // dentro del lado que recibe dinero, entre sus cubos. Así un cubo flojo de un lado que ya se pasa no se lleva dinero.
+    // El total de cada lado es el de TODA la cartera de ese lado (p.totalReal), no la suma de sus cubos: una moneda que no es núcleo, satélite
+    // ni refugio sigue siendo tuya y cuenta, aunque el modelo no sepa en qué cubo recomendar comprarla (hallazgo de Nando, 9-nov-2026). Si
+    // falta p.totalReal (código viejo que llame a modelo() sin pasarlo), se cae a sumar los cubos, como antes.
     const valorLado = {};
-    LADOS.forEach((l) => { valorLado[l] = suma(hojas.filter((h) => h.lado === l).map((h) => h.valor)); });
+    LADOS.forEach((l) => { valorLado[l] = (p.totalReal && p.totalReal[l] != null) ? p.totalReal[l] : suma(hojas.filter((h) => h.lado === l).map((h) => h.valor)); });
+    const total = suma(LADOS.map((l) => valorLado[l]));
     const recLado = repartirPorHuecos(LADOS.map((l) => valorLado[l]), LADOS.map((l) => ratio[l]), p.mensual, total);
     LADOS.forEach((lado, k) => {
       const hs = hojas.filter((h) => h.lado === lado);
@@ -56,7 +57,7 @@
     const lados = {};
     LADOS.forEach((lado) => {
       const hs = hojas.filter((h) => h.lado === lado);
-      const valor = suma(hs.map((h) => h.valor));
+      const valor = valorLado[lado];   // el real (toda la cartera de ese lado), no la suma de cubos: así coincide con los chips Crypto/Bolsa
       lados[lado] = { valor, peso: total > 0 ? valor / total : 0, objetivo: ratio[lado], rec: suma(hs.map((h) => h.rec)), cubos: hs };
     });
     return { total, mensual: p.mensual, lados, hojas, avisos };
@@ -66,13 +67,18 @@
   // el reparto entre crypto y bolsa llega al ratio (con una décima de punto de margen). null si no llega en 20 años.
   function proyeccion(p, meses) {
     const valores = JSON.parse(JSON.stringify(p.valores));
+    // El total real de cada lado (p.totalReal) también crece mes a mes, lo mismo que crecen sus cubos (m.lados[l].rec): si no, el total se quedaría
+    // fijo en el de hoy mientras los cubos suben con la simulación, y acabaría siendo menor que la suma de sus propios cubos. Sin monedas sin
+    // cubo, totalReal arranca igual que la suma de hojas y crece igual, así que el resultado no cambia (mismo comportamiento que antes).
+    const totalReal = p.totalReal ? { ...p.totalReal } : null;
     const resultado = { pesos: {}, llega: null };
     const cerca = (m) => Math.abs(m.lados.crypto.peso - m.lados.crypto.objetivo) <= 0.001;
-    if (cerca(modelo({ ...p, valores }))) resultado.llega = 0;
+    if (cerca(modelo({ ...p, valores, totalReal }))) resultado.llega = 0;
     for (let mes = 1; mes <= 240; mes++) {
-      const m = modelo({ ...p, valores });
+      const m = modelo({ ...p, valores, totalReal });
       m.hojas.forEach((h) => { valores[h.lado][h.cubo] += h.rec; });
-      const despues = modelo({ ...p, valores, mensual: 0 });
+      if (totalReal) LADOS.forEach((l) => { totalReal[l] += m.lados[l].rec; });
+      const despues = modelo({ ...p, valores, mensual: 0, totalReal });
       if (resultado.llega === null && cerca(despues)) resultado.llega = mes;
       if (meses.indexOf(mes) >= 0) resultado.pesos[mes] = { crypto: despues.lados.crypto.peso, bolsa: despues.lados.bolsa.peso };
     }

@@ -488,13 +488,6 @@ window.mkSw = mkSw; window.mkFicha = mkFicha;
     tr.append(el('td', f.emisor, 'tk'), celdaQuien, el('td', f.gestores.length, 'text-right'), el('td', `${pct(mayor.peso_pct)} (${gestor(mayor.clave).corto})`, 'text-right'), mov);
     return tr;
   }
-  function filaSeguida(s) {
-    if (s.gestores.length) { const tr = filaCoinciden({ emisor: s.nombre, gestores: s.gestores }); tr.className = 'sigo'; return tr; }
-    const tr = document.createElement('tr'); tr.className = 'sigo';
-    const sin = el('td', 'Ningún inversor de la lista la tiene entre sus posiciones', 'nm'); sin.colSpan = 4;
-    tr.append(el('td', s.nombre, 'tk'), sin);
-    return tr;
-  }
   // Leyenda de las tablas de coincidencias: un chip por inversor (sigla + nombre) y otro por cada movimiento, en una fila que se reparte (flex) y baja de línea.
   function pintaLeyenda(id) {
     const caja = document.getElementById(id); if (!caja) return;
