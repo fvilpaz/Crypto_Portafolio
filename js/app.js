@@ -69,13 +69,6 @@ const App = (() => {
   const getStakingAssets = () => portfolio.filter(a => a.tag === 'staking');
   const getAirdropAssets = () => portfolio.filter(a => a.tag === 'airdrop');
 
-  // Reparto de custodia: distribución fija, no son datos del usuario.
-  const custody = [
-    { name: 'Bit2Me', type: 'Exchange regulado ES', pct: 0.30, color: '#f0b90b', purpose: 'Fiat / Hacienda' },
-    { name: 'Autocustodia', type: 'Claves propias', pct: 0.40, color: '#0ecb81', purpose: 'Largo plazo' },
-    { name: 'Bitget', type: 'Exchange earn', pct: 0.30, color: '#1e90ff', purpose: 'Earn / operativa' },
-  ];
-
   const cosmosTopPct = () => (settings.satTarget ?? DEFAULT_SAT_TARGET) / 100;
   const DEFAULT_DCA_TARGET = 200;   // objetivo DCA inicial en €, hasta que lo edites
   const DEFAULT_DEFENSE_TARGET = 20;   // objetivo de refugio (USDC) en % de la cartera
@@ -2137,22 +2130,6 @@ const App = (() => {
         </tr>
       `;
     }).join('');
-  }
-
-  function renderCustody() {
-    document.getElementById('custody-bar').innerHTML = custody.map(c =>
-      `<div class="custody-segment" style="flex:${c.pct};background:${c.color}">${(c.pct * 100).toFixed(0)}%</div>`
-    ).join('');
-
-    document.getElementById('custody-legend').innerHTML = custody.map(c =>
-      `<div class="custody-legend-item">
-        <div class="custody-legend-dot" style="background:${c.color}"></div>
-        <div class="custody-legend-text">
-          <span class="custody-legend-name">${c.name}</span>
-          <span class="custody-legend-purpose">${c.purpose}</span>
-        </div>
-      </div>`
-    ).join('');
   }
 
   function renderTransactions() {
