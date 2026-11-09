@@ -1163,7 +1163,11 @@ const App = (() => {
     const t = [settings.coreTarget ?? DEFAULT_CORE_TARGET, settings.satTarget ?? DEFAULT_SAT_TARGET, settings.defenseTarget || 0].map(v => rc > 0 ? v * 100 / rc : 0);
     const nuc = bolsaNucleo(), pn = nuc ? plBolsaActual()[nuc] : 0, bs = { nucleo: pn, satelites: 100 - pn };   // núcleo = la acción marcada; satélites = el resto
     const stk = portfolio.filter(a => a.kind === 'stock' && a.tag !== 'airdrop');
-    return { mensual: Math.max(monthlySplit().totalUsd - dcaMonthBoughtUsd(), 0), ratioCrypto: rc,
+    // Total REAL de cada lado (toda la cartera, no solo lo asignado a un cubo): si tienes una moneda que no es núcleo, satélite ni refugio, cuenta
+    // igual (es tuya) aunque el modelo no sepa en qué cubo recomendar comprarla. Antes se sumaban los cubos y una moneda sin asignar desaparecía
+    // del total (hallazgo de Nando, 9-nov-2026). Mismo criterio que la cabecera y los chips Crypto/Bolsa: sin airdrops (no son inversión deliberada).
+    const totalReal = { crypto: portfolio.filter(a => a.kind !== 'stock' && a.tag !== 'airdrop').reduce((s, a) => s + getAssetValue(a), 0), bolsa: stk.reduce((s, a) => s + getAssetValue(a), 0) };
+    return { mensual: Math.max(monthlySplit().totalUsd - dcaMonthBoughtUsd(), 0), ratioCrypto: rc, totalReal,
       pesos: { crypto: { nucleo: t[0], satelites: t[1], refugio: t[2] }, bolsa: { nucleo: bs.nucleo, satelites: bs.satelites } },
       valores: { crypto: { nucleo: val(getCoreTokens()), satelites: val(getSatTokens()), refugio: val(getRefugioTokens()) },
         bolsa: { nucleo: stk.filter(a => a.token === nuc).reduce((s, a) => s + getAssetValue(a), 0), satelites: stk.filter(a => a.token !== nuc).reduce((s, a) => s + getAssetValue(a), 0) } } };
