@@ -81,6 +81,8 @@ body.light .header .currency-switch__code {
 body.light tbody tr[data-token]:hover {
   background: rgba(30, 144, 255, 0.08);
 }
+/* La raya bajo cada fila estaba escrita a mano en gris casi negro (para el oscuro) y en claro salía como un borde negro: en claro usa el borde del tema. */
+body.light tbody tr { border-bottom-color: var(--border); }
 
 * {
   margin: 0;
@@ -2405,10 +2407,13 @@ body { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
 .fervis-modelo.m-amarillo { --mc: var(--accent-yellow); }
 .fervis-modelo.m-verde { --mc: var(--accent-green); }
 .fervis-modelo.m-turquesa { --mc: var(--accent-teal); }
-body.light .fervis-modelo.m-azul { --mc: #1d4ed8; }
-body.light .fervis-modelo.m-amarillo { --mc: #8a6100; }
-body.light .fervis-modelo.m-verde { --mc: #0a7a4f; }
-body.light .fervis-modelo.m-turquesa { --mc: #0f766e; }
+body.light .fervis-modelo.m-azul { --mc: #2563eb; }
+body.light .fervis-modelo.m-amarillo { --mc: var(--accent-yellow); }
+body.light .fervis-modelo.m-verde { --mc: #0b9f62; }
+body.light .fervis-modelo.m-turquesa { --mc: #0b968c; }
+/* Chat en claro, al revés que antes: fondo gris y las burbujas de Fervis en blanco (más limpio para las etiquetas de color) */
+body.light .fervis-msgs { background: #eceff4; }
+body.light .fervis-msg.fervis { background: var(--bg-secondary); }
 .fervis-form { display: flex; gap: 8px; padding: 10px 20px; border-top: 1px solid var(--border); }
 .fervis-texto { flex: 1; min-width: 0; padding: 12px 14px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 99px; color: var(--text-primary); font: inherit; font-size: 16px; }
 .fervis-texto:focus { outline: 2px solid var(--accent-yellow); border-color: transparent; }
