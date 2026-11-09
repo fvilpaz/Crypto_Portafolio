@@ -60,7 +60,7 @@
       const filas = lista.map((a) => {
         const vivo = pr[a.token] && pr[a.token].price > 0 ? pr[a.token] : null;
         const precio = vivo ? vivo.price : (manual[a.token] && manual[a.token].usd) || Number(a.avgPrice) || 0;
-        return { token: String(a.token), valor: Number(a.qty) * precio, coste: Number(a.costUsd) || 0, cambio: vivo ? Number(vivo.change24h) || 0 : null };
+        return { token: String(a.token), bolsa: a.kind === 'stock', valor: Number(a.qty) * precio, coste: Number(a.costUsd) || 0, cambio: vivo ? Number(vivo.change24h) || 0 : null };
       });
       return { vacia: false, filas, ts, valor: filas.reduce((x, f) => x + f.valor, 0), coste: filas.reduce((x, f) => x + f.coste, 0) };
     } catch (e) { return { vacia: true }; }
@@ -155,7 +155,7 @@
     'El S&P 500 se consulta con el símbolo SPY (ETF que lo replica). No des consejos de inversión: describe los datos.';
   const PARAM_MONEDA = { type: 'string', enum: Object.keys(MONEDAS), description: 'solo si la persona pide los importes en una moneda distinta de la que tiene elegida; si no, no lo pongas' };
   const HERRAMIENTAS = [
-    { type: 'function', function: { name: 'resumen_cartera', description: 'Valor total de la cartera, lo invertido, ganancia o pérdida, posiciones con su valor y su cambio de 24 h, y la antigüedad de los precios.', parameters: { type: 'object', properties: { moneda: PARAM_MONEDA } } } },
+    { type: 'function', function: { name: 'resumen_cartera', description: 'Valor total de la cartera, lo invertido, ganancia o pérdida, y las posiciones YA SEPARADAS en cripto (posiciones_cripto, valor_cripto) y bolsa (posiciones_bolsa, valor_bolsa) con su valor y su cambio de 24 h, y la antigüedad de los precios.', parameters: { type: 'object', properties: { moneda: PARAM_MONEDA } } } },
     { type: 'function', function: { name: 'operaciones', description: 'Últimas operaciones guardadas (más recientes primero), con filtros opcionales.', parameters: { type: 'object', properties: {
       n: { type: 'integer', description: 'cuántas devolver (1 a 50; 5 si no se dice)' },
       tipo: { type: 'string', enum: ['Compra', 'Venta', 'Recompensa'], description: 'solo de este tipo' },
@@ -166,12 +166,17 @@
   ];
   const sinNaN = (x) => (Number.isFinite(x) ? Math.round(x * 100) / 100 : null);
   const esBolsa = (token, portfolio, d) => { const p = portfolio.find((a) => a && a.token === token); return p ? p.kind === 'stock' : !!(d && d.tec[token]); };
+  const grupo = (nombre, filas, m) => ({
+    ['valor_' + nombre]: importe(filas.reduce((s, f) => s + f.valor, 0), m),
+    ['posiciones_' + nombre]: filas.map((f) => ({ token: f.token, valor: importe(f.valor, m), invertido: importe(f.coste, m), cambio_24h_pct: f.cambio === null ? null : sinNaN(f.cambio) })),
+  });
   const FUNCIONES = {
     resumen_cartera: async (a, m) => {
       const c = leerCartera();
       if (c.vacia) return { vacia: true };
       return { moneda: m.codigo, cambio_por_1_usd: m.factor, valor: importe(c.valor, m), invertido: importe(c.coste, m), ganancia: importe(c.valor - c.coste, m), antiguedad_precios_min: c.ts ? Math.round((Date.now() - c.ts) / 60000) : null,
-        posiciones: c.filas.map((f) => ({ token: f.token, valor: importe(f.valor, m), invertido: importe(f.coste, m), cambio_24h_pct: f.cambio === null ? null : sinNaN(f.cambio) })) };
+        // Ya separadas en cripto y bolsa (con el mismo criterio que la tabla de la app: kind 'stock'): sin esto el modelo adivinaba y ponía PI o MODE en bolsa.
+        ...grupo('cripto', c.filas.filter((f) => !f.bolsa), m), ...grupo('bolsa', c.filas.filter((f) => f.bolsa), m) };
     },
     operaciones: async (a, m) => {
       let s = {}; try { s = JSON.parse(localStorage.getItem('miCartera.v1') || '{}'); } catch (e) { /* sin datos */ }
