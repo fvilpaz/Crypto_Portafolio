@@ -844,6 +844,8 @@ tbody td {
   color: var(--accent-yellow);
   font-weight: 500;
 }
+/* En claro el amarillo del texto sobre el fondo beige casi no se lee (contraste ~1,7:1): mismo tono ámbar, más oscuro */
+body.light .warning-banner { color: #7a5600; }
 
 /* ── STAKING CARDS ── */
 .staking-grid {
