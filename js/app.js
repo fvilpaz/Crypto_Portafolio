@@ -416,6 +416,10 @@ const App = (() => {
 
   // ── ANIMATE VALUE (counter) ──
   function animateValue(el, start, end, duration, formatter) {
+    // Cada llamada anula las animaciones anteriores del mismo elemento. Sin esto, la de 1,2 s de la primera carga (con los precios de compra)
+    // seguía viva cuando llegaban los precios en vivo y su último fotograma escribía ENCIMA del total nuevo: la cabecera se quedaba con un
+    // total viejo hasta el siguiente cambio de precio (visto con la cartera real de Nando el 9-nov-2026: 4.517 $ en vez de 4.675 $).
+    const turno = el.__turnoAnimacion = (el.__turnoAnimacion || 0) + 1;
     if (start === null || start === undefined) start = end;
     if (Math.abs(end - start) < 0.01) {
       el.textContent = formatter(end);
@@ -423,6 +427,7 @@ const App = (() => {
     }
     const startTime = performance.now();
     function tick(now) {
+      if (el.__turnoAnimacion !== turno) return;   // ya hay una más nueva: esta se retira sin escribir
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
@@ -845,7 +850,7 @@ const App = (() => {
     } else if (prevTotal !== null && Math.abs(prevTotal - totalValue) > 0.01) {
       animateValue(heroEl, prevTotal, totalValue, 600, (v) => fmtCurrency(v));
     } else {
-      heroEl.textContent = fmtCurrency(totalValue);
+      animateValue(heroEl, totalValue, totalValue, 0, (v) => fmtCurrency(v));   // escribe ya el valor y, de paso, anula cualquier animación vieja
     }
     prevTotal = totalValue;
 
