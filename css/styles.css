@@ -844,8 +844,8 @@ tbody td {
   color: var(--accent-yellow);
   font-weight: 500;
 }
-/* En claro el texto amarillo sobre el fondo beige casi no se lee (contraste ~1,7:1), y un ámbar más oscuro se funde con la caja (tono sobre tono): el texto va en el azul marino del resto de la app y el aviso se reconoce por su caja y su borde ámbar */
-body.light .warning-banner { color: var(--text-primary); }
+/* En claro el amarillo sobre beige casi no se lee (contraste ~1,7:1) y queda feo: el aviso usa el azul y blanco del tema (fondo blanco, borde azul, texto marino) */
+body.light .warning-banner { background: var(--bg-secondary); border-color: rgba(30, 144, 255, 0.45); color: var(--text-primary); }
 
 /* ── STAKING CARDS ── */
 .staking-grid {
