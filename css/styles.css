@@ -2369,6 +2369,16 @@ body.light .dock-copy, body.light .dock-cafe, body.light .dock-mas { color: #fff
 body.light .dock-copy { opacity: .85; }
 body.light .dock-robot { color: #fde047; }
 body.light .dock-robot:hover { background: rgba(255, 255, 255, .16); }
+/* El robot cambia de color despacio (amarillo → verde → turquesa → azul y vuelta), como el degradado del precio total pero mucho más lento: 20 s en cada sentido.
+   --rh es el tono; se anima en .dock-fila porque los movimientos de apertura del robot ya usan «animation» en el botón y en sus hijos. En claro el dock es azul: solo llega al turquesa y más claro. */
+@property --rh { syntax: '<number>'; inherits: true; initial-value: 45; }
+@keyframes robot-tono { from { --rh: 45; } to { --rh: 210; } }
+@keyframes robot-tono-claro { from { --rh: 45; } to { --rh: 172; } }
+.dock-fila { animation: robot-tono 20s ease-in-out infinite alternate; }
+.dock-robot { color: hsl(var(--rh) 92% 52%); }
+body.light .dock-fila { animation-name: robot-tono-claro; }
+body.light .dock-robot { color: hsl(var(--rh) 100% 68%); }
+@media (prefers-reduced-motion: reduce) { .dock-fila { animation: none; } }
 @media (max-width: 520px) { .dock-cafe-txt, .dock-mas-txt { display: none; } .dock-cafe { padding: 0 8px; } .dock-mas { padding: 0 8px; } .dock-cafe svg, .dock-mas svg { width: 28px; height: 28px; } }   /* en móvil solo la taza, más grande para que se reconozca */
 /* sitio para que el final de la página (el aviso legal) no quede tapado por el dock */
 body { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
