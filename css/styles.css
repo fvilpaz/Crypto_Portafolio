@@ -2393,10 +2393,9 @@ body { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
 .fervis-modelo.m-amarillo { --mc: var(--accent-yellow); }
 .fervis-modelo.m-verde { --mc: var(--accent-green); }
 .fervis-modelo.m-turquesa { --mc: var(--accent-teal); }
-body.light .fervis-modelo.m-azul { --mc: #1d4ed8; }
-body.light .fervis-modelo.m-amarillo { --mc: #8a6100; }
-body.light .fervis-modelo.m-verde { --mc: #0a7a4f; }
-body.light .fervis-modelo.m-turquesa { --mc: #0f766e; }
+/* En claro un texto de color vivo no se lee sobre la burbuja, y oscurecerlo lo apaga: ahí la etiqueta es una píldora del color con texto oscuro, como la de «Fervis». */
+body.light .fervis-modelo { display: block; width: fit-content; margin-top: 12px; padding: 3px 11px; border: 0; border-radius: 99px; background: var(--mc, var(--bg-hover)); color: #0b0e11; }
+body.light .fervis-modelo.m-azul { --mc: #60a5fa; }
 .fervis-form { display: flex; gap: 8px; padding: 10px 20px; border-top: 1px solid var(--border); }
 .fervis-texto { flex: 1; min-width: 0; padding: 12px 14px; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 99px; color: var(--text-primary); font: inherit; font-size: 16px; }
 .fervis-texto:focus { outline: 2px solid var(--accent-yellow); border-color: transparent; }
