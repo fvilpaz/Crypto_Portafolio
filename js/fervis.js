@@ -223,7 +223,7 @@
   }
 
   const bienvenida = () => leerClave()
-    ? 'Hola, soy Fervis. Pregúntame lo que quieras de tu cartera, tus operaciones o el mercado de la app. Para contestarte envío a Groq tu pregunta y los datos que consulte para responder (por ejemplo, tus posiciones y su valor si me preguntas por tu cartera). Tu clave nunca se envía en el mensaje. Todavía estoy en pruebas.'
+    ? 'Hola, soy Fervis. Pregúntame lo que quieras de tu cartera, tus operaciones o el mercado de la app.'
     : 'Hola, soy Fervis, el asistente de tu cartera. Sin clave solo sé respuestas básicas (valor de la cartera y cambios de hoy). Para hablar conmigo de verdad hará falta tu clave gratuita de Groq: pégala en Ajustes (el primer icono de arriba a la derecha).';
   let overlay = null, msgs = null, texto = null, ajustes = null, titulo = null, pintarEstado = () => {};
 
