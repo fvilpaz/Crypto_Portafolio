@@ -1806,11 +1806,12 @@ const App = (() => {
       `;
     };
     // Con acciones en la cartera se ven dos carteras independientes (Crypto y Bolsa), cada una con su subtotal; el total sigue sumando las dos.
-    // El subtotal cuenta TODAS las posiciones del grupo, también las ocultas (ocultar es solo de la vista y no cambia el valor, como el total de la cabecera); la lista enseña solo las visibles.
+    // El subtotal (importe, nº de activos y % de cartera) cuenta TODAS las posiciones del grupo, también las ocultas (ocultar es solo de la vista
+    // y no cambia el valor, como el total de la cabecera); la lista de filas de abajo enseña solo las visibles.
     const grupoHtml = (nombre, color, lista, todas) => {
       const v = todas.reduce((s, a) => s + getAssetValue(a), 0);
       return `<tr class="asset-group-row"><td colspan="9"><span class="asset-group-name" style="color:${color}">${nombre}</span>
-        <span>${lista.length} activo${lista.length === 1 ? '' : 's'} · ${fmtCurrency(v)} · ${total > 0 ? (v / total * 100).toFixed(1) : '0.0'}% de la cartera</span></td></tr>`;
+        <span>${todas.length} activo${todas.length === 1 ? '' : 's'} · ${fmtCurrency(v)} · ${total > 0 ? (v / total * 100).toFixed(1) : '0.0'}% de la cartera</span></td></tr>`;
     };
     const cryptoList = sorted.filter(a => a.kind !== 'stock'), bolsaList = sorted.filter(a => a.kind === 'stock');
     const cryptoTodas = portfolio.filter(a => a.kind !== 'stock'), bolsaTodas = portfolio.filter(a => a.kind === 'stock');   // con las ocultas, para los subtotales
