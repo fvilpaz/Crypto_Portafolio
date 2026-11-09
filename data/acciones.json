@@ -199,6 +199,10 @@
     {
       "symbol": "SPYI",
       "yahoo": "SPYI.DE"
+    },
+    {
+      "symbol": "SEC0",
+      "yahoo": "SEC0.DE"
     }
   ]
 }

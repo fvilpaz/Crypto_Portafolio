@@ -2751,6 +2751,7 @@ const App = (() => {
     ['VWCE', 'Vanguard FTSE All-World UCITS ETF (Acc)', 'vanguard global world mundo allworld ucits acc', UCITS], ['VWRL', 'Vanguard FTSE All-World UCITS ETF (Dist)', 'vanguard global world mundo allworld ucits dist', UCITS],
     ['IWDA', 'iShares Core MSCI World UCITS ETF (Acc)', 'global world mundo msci ishares ucits acc', UCITS], ['EUNL', 'iShares Core MSCI World UCITS ETF (Acc, Xetra)', 'global world mundo msci ishares ucits acc xetra', UCITS],
     ['SWDA', 'iShares Core MSCI World UCITS ETF (Acc, Londres)', 'global world mundo msci ishares ucits acc londres', UCITS],
+    ['SEC0', 'iShares MSCI Global Semiconductors UCITS ETF (Acc)', 'semiconductores semiconductors chips global msci ishares ucits acc IE000I8KRLL9', UCITS],
     ['EQQQ', 'Invesco EQQQ NASDAQ-100 UCITS ETF', 'nasdaq 100 invesco ucits tecnologia', UCITS], ['CNDX', 'iShares NASDAQ 100 UCITS ETF (Acc)', 'nasdaq 100 ishares ucits acc tecnologia', UCITS],
     ['XNAS', 'Xtrackers NASDAQ 100 UCITS ETF (Acc)', 'nasdaq 100 xtrackers ucits acc', UCITS],
     ['EMIM', 'iShares Core MSCI EM IMI UCITS ETF (Acc)', 'emergentes emerging msci ishares ucits acc', UCITS],
