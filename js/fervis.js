@@ -204,6 +204,7 @@
       const e = new Error(r.status === 429 ? 'Has llegado al límite gratuito de Groq (429). Espera un minuto y vuelve a preguntar.' : 'Groq ha fallado (código ' + r.status + ').');
       e.estado = r.status;   // para decidir si se prueba otro modelo
       e.reintentarEn = parseInt(r.headers.get('retry-after'), 10) || null;   // segundos que pide esperar Groq; null si el navegador no deja leer la cabecera
+      try { if (typeof r.text === 'function') { e.detalle = (await r.text()).slice(0, 400); console.warn('Groq ' + r.status + ':', e.detalle); } } catch (x) { /* sin detalle */ }
       throw e;
     }
     return r.json();
@@ -216,16 +217,20 @@
     'No afirmes ser ChatGPT, GPT-4, Claude, Gemini ni ningún otro modelo que no sea ese, ni inventes detalles de tu arquitectura.';
   async function pedirConRespaldo(clave, conversacion) {
     let ultimo = null;
+    const fallidos = new Set();   // modelos que dieron un 400 EN ESTA pregunta (llamada a herramienta mal formada): se prueba otro, pero no se apartan para las siguientes
     for (;;) {
-      const modelo = escalera.find((m) => !(limitados[m] > Date.now()));
+      const modelo = escalera.find((m) => !(limitados[m] > Date.now()) && !fallidos.has(m));
       if (!modelo) {   // no queda ninguno: se dice claro, con la espera que pida Groq solo si el navegador la dejó leer
         const s = ultimo && ultimo.reintentarEn;
-        const e = new Error('Ahora mismo no puedo contestar: los modelos gratuitos de Groq están al límite o caídos.' + (s ? ' Groq pide esperar unos ' + (s < 90 ? s + ' segundos' : Math.ceil(s / 60) + ' minutos') + '.' : ' Prueba de nuevo en unos minutos.'));
+        const e = new Error(ultimo && ultimo.estado === 400
+          ? 'Ningún modelo de Groq ha conseguido responder a esta pregunta. Prueba a preguntarlo de otra forma.'
+          : 'Ahora mismo no puedo contestar: los modelos gratuitos de Groq están al límite o caídos.' + (s ? ' Groq pide esperar unos ' + (s < 90 ? s + ' segundos' : Math.ceil(s / 60) + ' minutos') + '.' : ' Prueba de nuevo en unos minutos.'));
         e.estado = ultimo && ultimo.estado;
         throw e;
       }
       try { return { r: await pedirGroq(clave, { ruta: '/chat/completions', body: JSON.stringify({ model: modelo, temperature: 0.2, max_tokens: 700, tools: HERRAMIENTAS, tool_choice: 'auto', messages: [{ role: 'system', content: SISTEMA + identidad(modelo) }].concat(conversacion) }) }), modelo }; }
       catch (e) {
+        if (e.estado === 400) { fallidos.add(modelo); ultimo = e; continue; }
         const espera = esperaPorError(e.estado);
         if (espera === null) throw e;
         limitados[modelo] = Date.now() + espera;
