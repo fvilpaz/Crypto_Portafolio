@@ -417,7 +417,7 @@
 
   // Animación de apertura: sale una al azar (nunca la misma dos veces seguidas) y el chat aparece al terminar. Las duraciones (ms) van
   // a juego con las de css/styles.css. Con «reducir movimiento» activado en el sistema se abre al instante.
-  const ANIMACIONES = [['pulso', 450], ['brote', 300], ['gesto', 650]];
+  const ANIMACIONES = [['pulso', 450], ['brote', 300], ['gesto', 650], ['bote', 800], ['giro', 700], ['asoma', 800], ['globo', 1000]];
   let ultimaAnim = null, animando = false;
   function abrir() {
     if (animando) return;   // un segundo clic durante la animación no abre otra vez
@@ -432,8 +432,10 @@
   function mostrar(anim) {
     if (!overlay) construir();
     overlay.classList.add('preparando');   // sin transición: el chat se coloca de golpe en su punto de partida antes de abrir
-    overlay.classList.toggle('brote', anim === 'brote');
-    if (anim === 'brote') {   // el chat nace del robot: su centro, medido desde la esquina del chat sin transformar (offsetLeft/Top no cuentan el scale)
+    const nace = anim === 'brote' || anim === 'globo';   // las dos hacen nacer el chat del robot; «globo» además parte redondo como un globo
+    overlay.classList.toggle('brote', nace);
+    overlay.classList.toggle('globo', anim === 'globo');
+    if (nace) {   // el chat nace del robot: su centro, medido desde la esquina del chat sin transformar (offsetLeft/Top no cuentan el scale)
       const m = overlay.firstElementChild, r = btn.getBoundingClientRect();
       m.style.setProperty('--origen', (r.left + r.width / 2 - m.offsetLeft) + 'px ' + (r.top + r.height / 2 - m.offsetTop) + 'px');
     }
