@@ -202,7 +202,7 @@
     for (;;) {
       const modelo = escalera.find((m) => !(limitados[m] > Date.now()));
       if (!modelo) throw ultimo || new Error('No hay ningún modelo de Groq disponible ahora mismo.');
-      try { return await pedirGroq(clave, { ruta: '/chat/completions', body: JSON.stringify({ model: modelo, temperature: 0.2, max_tokens: 700, tools: HERRAMIENTAS, tool_choice: 'auto', messages: mensajes }) }); }
+      try { return { r: await pedirGroq(clave, { ruta: '/chat/completions', body: JSON.stringify({ model: modelo, temperature: 0.2, max_tokens: 700, tools: HERRAMIENTAS, tool_choice: 'auto', messages: mensajes }) }), modelo }; }
       catch (e) {
         const espera = esperaPorError(e.estado);
         if (espera === null) throw e;
@@ -220,13 +220,13 @@
     }
     const turno = [{ role: 'user', content: pregunta }];
     for (let vuelta = 0; vuelta < 4; vuelta++) {
-      const r = await pedirConRespaldo(clave, [{ role: 'system', content: SISTEMA }].concat(historial, turno));
+      const { r, modelo } = await pedirConRespaldo(clave, [{ role: 'system', content: SISTEMA }].concat(historial, turno));
       const m = r.choices && r.choices[0] && r.choices[0].message;
       if (!m) throw new Error('Groq ha contestado algo vacío.');
       if (!m.tool_calls || !m.tool_calls.length) {
         const texto = String(m.content || '').trim() || 'No he sabido qué contestar a eso.';
         historial = historial.concat(turno[0], { role: 'assistant', content: texto }).slice(-10);
-        return texto;
+        return { texto, modelo, respaldo: modelo !== escalera[0] };   // respaldo: contestó otro que no es el primero de la escalera
       }
       turno.push({ role: 'assistant', content: m.content || '', tool_calls: m.tool_calls });
       for (const tc of m.tool_calls) {
@@ -290,7 +290,7 @@
     if (desde < s.length) destino.append(s.slice(desde));
   }
 
-  function mensaje(rol, contenido) {
+  function mensaje(rol, contenido, modelo, respaldo) {
     const m = el('div', 'fervis-msg ' + rol);
     // Lo que dice Fervis lleva delante su etiqueta amarilla con texto negro; lo que escribe la persona, no.
     // La etiqueta va una sola vez por tanda: si el mensaje anterior ya era de Fervis, no se repite.
@@ -298,6 +298,8 @@
     const sigueTanda = previo && previo.classList.contains('fervis') && !previo.classList.contains('pensando');
     if (rol.startsWith('fervis') && !sigueTanda) m.append(el('span', 'fervis-etiqueta', 'Fervis'));
     if (rol.startsWith('fervis') && !rol.includes('pensando')) pintarMarkdown(m, contenido); else m.append(contenido);
+    // Quién contestó, debajo del mensaje (como en el Fervis de nandis); resaltado si fue un respaldo. Con textContent: nada de HTML.
+    if (modelo) m.append(el('small', 'fervis-modelo' + (respaldo ? ' respaldo' : ''), 'groq · ' + modelo + (respaldo ? ' (respaldo)' : '')));
     msgs.append(m);
     msgs.scrollTop = msgs.scrollHeight;
     return m;
@@ -315,7 +317,7 @@
     mensaje('yo', q);
     const pensando = mensaje('fervis pensando', '…');
     if (leerClave()) {
-      responderConIA(q).catch((e) => e.message).then((txt) => { pensando.remove(); mensaje('fervis', txt); });
+      responderConIA(q).catch((e) => ({ texto: e.message })).then((res) => { pensando.remove(); mensaje('fervis', res.texto, res.modelo, res.respaldo); });
       return;
     }
     const ruta = respuestaLocal(q);   // sin clave: respuestas básicas locales
