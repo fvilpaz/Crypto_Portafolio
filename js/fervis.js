@@ -146,7 +146,7 @@
   // entienda de la pregunta: cuántas, compras o ventas, bolsa o cripto…). Las herramientas leen los datos de ESTE navegador y de los JSON de la app.
   // A Groq la clave solo va en la cabecera de la petición. Los datos solo salen si el modelo llama a una herramienta (resumen_cartera manda todas las posiciones).
   const GROQ = 'https://api.groq.com/openai/v1';
-  const MODELOS = ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'llama-3.1-8b-instant'];   // el primero que tenga la cuenta
+  const MODELOS = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b'];   // el primero que tenga la cuenta. Los llama (3.3-70b, 3.1-8b) los retiró Groq el 16-ago-2026: los colores de abajo se conservan por si vuelve alguno
   const COLOR_MODELO = { 'llama-3.3-70b-versatile': 'azul', 'openai/gpt-oss-120b': 'amarillo', 'openai/gpt-oss-20b': 'verde', 'llama-3.1-8b-instant': 'turquesa' };   // color de su etiqueta (css/styles.css)
   const SISTEMA = 'Eres Fervis, el asistente de la cartera de inversión de esta persona. Responde siempre en castellano, breve y claro. Puedes usar markdown sencillo: **negrita** para títulos y datos clave, *cursiva*, `código` y listas con «- ». No uses tablas ni títulos con #. ' +
     'Para cualquier dato (valor de la cartera, operaciones, precios, indicadores) usa SIEMPRE las herramientas; nunca inventes cifras ni recuerdes datos de memoria. ' +
