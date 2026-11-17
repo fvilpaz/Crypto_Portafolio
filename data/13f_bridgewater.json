@@ -1,84 +1,84 @@
 {
   "gestor": "Bridgewater Associates",
   "cik": "0001350694",
-  "periodo": "2026-06-30",
-  "presentado": "2026-08-14",
-  "periodo_anterior": "2026-03-31",
-  "accesion": "0001350694-26-000003",
+  "periodo": "2026-09-30",
+  "presentado": "2026-11-16",
+  "periodo_anterior": "2026-06-30",
+  "accesion": "0001350694-26-000004",
   "fuente": "SEC EDGAR, formulario 13F-HR",
-  "total_usd": 24376086530,
-  "n_emisores": 990,
-  "tabla_url": "https://www.sec.gov/Archives/edgar/data/1350694/000135069426000003/xslForm13F_X02/infotable.xml",
+  "total_usd": 22985792515,
+  "n_emisores": 965,
+  "tabla_url": "https://www.sec.gov/Archives/edgar/data/1350694/000135069426000004/xslForm13F_X02/infotable.xml",
   "top": [
     {
       "emisor": "STATE STR SPDR S&P 500 ETF T",
-      "valor_usd": 3973046405,
-      "peso_pct": 16.3,
-      "acciones": 5320308,
-      "cambio_acciones_pct": 21.9
+      "valor_usd": 2595471644,
+      "peso_pct": 11.29,
+      "acciones": 3403317,
+      "cambio_acciones_pct": -36.0
     },
     {
       "emisor": "ISHARES TR",
-      "valor_usd": 2494609800,
-      "peso_pct": 10.23,
-      "acciones": 5446707,
-      "cambio_acciones_pct": 7.5
+      "valor_usd": 1394128698,
+      "peso_pct": 6.07,
+      "acciones": 4024374,
+      "cambio_acciones_pct": -26.1
     },
     {
       "emisor": "NVIDIA CORPORATION",
-      "valor_usd": 773586958,
-      "peso_pct": 3.17,
-      "acciones": 3866195,
-      "cambio_acciones_pct": -17.6
-    },
-    {
-      "emisor": "ALPHABET INC",
-      "valor_usd": 498725596,
-      "peso_pct": 2.05,
-      "acciones": 1396383,
-      "cambio_acciones_pct": -41.4
-    },
-    {
-      "emisor": "BROADCOM INC",
-      "valor_usd": 497845413,
-      "peso_pct": 2.04,
-      "acciones": 1317923,
-      "cambio_acciones_pct": -28.2
+      "valor_usd": 613935912,
+      "peso_pct": 2.67,
+      "acciones": 2688221,
+      "cambio_acciones_pct": -30.5
     },
     {
       "emisor": "ISHARES INC",
-      "valor_usd": 496484181,
-      "peso_pct": 2.04,
-      "acciones": 3816595,
-      "cambio_acciones_pct": -12.8
+      "valor_usd": 473956766,
+      "peso_pct": 2.06,
+      "acciones": 4111440,
+      "cambio_acciones_pct": 7.7
     },
     {
-      "emisor": "AMAZON COM INC",
-      "valor_usd": 482753142,
-      "peso_pct": 1.98,
-      "acciones": 2025481,
-      "cambio_acciones_pct": -53.8
+      "emisor": "BROADCOM INC",
+      "valor_usd": 461725648,
+      "peso_pct": 2.01,
+      "acciones": 1314746,
+      "cambio_acciones_pct": -0.2
     },
     {
       "emisor": "LAM RESEARCH CORP",
-      "valor_usd": 406560606,
-      "peso_pct": 1.67,
-      "acciones": 938224,
-      "cambio_acciones_pct": -40.3
-    },
-    {
-      "emisor": "VANGUARD INDEX FDS",
-      "valor_usd": 314820655,
-      "peso_pct": 1.29,
-      "acciones": 458381,
-      "cambio_acciones_pct": 189.0
+      "valor_usd": 348182821,
+      "peso_pct": 1.51,
+      "acciones": 1059885,
+      "cambio_acciones_pct": 13.0
     },
     {
       "emisor": "ADVANCED MICRO DEVICES INC",
-      "valor_usd": 312896715,
-      "peso_pct": 1.28,
-      "acciones": 538632,
-      "cambio_acciones_pct": -58.3
+      "valor_usd": 300580323,
+      "peso_pct": 1.31,
+      "acciones": 491337,
+      "cambio_acciones_pct": -8.8
+    },
+    {
+      "emisor": "APPLIED MATLS INC",
+      "valor_usd": 288100753,
+      "peso_pct": 1.25,
+      "acciones": 563379,
+      "cambio_acciones_pct": 93.3
+    },
+    {
+      "emisor": "MICRON TECHNOLOGY INC",
+      "valor_usd": 252557818,
+      "peso_pct": 1.1,
+      "acciones": 237119,
+      "cambio_acciones_pct": 103.2
+    },
+    {
+      "emisor": "NEWMONT CORP",
+      "valor_usd": 242638682,
+      "peso_pct": 1.06,
+      "acciones": 2103682,
+      "cambio_acciones_pct": -21.9
     }
   ]
 }

@@ -1,41 +1,51 @@
 {
   "gestores_seguidos": 3,
-  "periodo": "2026-06-30",
+  "periodo": "2026-09-30",
   "en_2_o_mas": 35,
-  "en_todas": 1,
+  "en_todas": 0,
   "filas": [
-    {
-      "emisor": "KRAFT HEINZ CO",
-      "gestores": [
-        {
-          "clave": "berkshire",
-          "peso_pct": 2.57,
-          "cambio_acciones_pct": 0.0
-        },
-        {
-          "clave": "bridgewater",
-          "peso_pct": 0.01,
-          "cambio_acciones_pct": 4.7
-        },
-        {
-          "clave": "gates",
-          "peso_pct": 0.17,
-          "cambio_acciones_pct": 0.0
-        }
-      ]
-    },
     {
       "emisor": "APPLE INC",
       "gestores": [
         {
           "clave": "berkshire",
-          "peso_pct": 22.04,
+          "peso_pct": 24.95,
           "cambio_acciones_pct": 0.0
         },
         {
           "clave": "bridgewater",
-          "peso_pct": 0.43,
-          "cambio_acciones_pct": -35.3
+          "peso_pct": 0.37,
+          "cambio_acciones_pct": -30.1
+        }
+      ]
+    },
+    {
+      "emisor": "BERKSHIRE HATHAWAY INC DEL",
+      "gestores": [
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.0,
+          "cambio_acciones_pct": "nueva"
+        },
+        {
+          "clave": "gates",
+          "peso_pct": 20.74,
+          "cambio_acciones_pct": -15.3
+        }
+      ]
+    },
+    {
+      "emisor": "CANADIAN NATL RY CO",
+      "gestores": [
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.0,
+          "cambio_acciones_pct": "nueva"
+        },
+        {
+          "clave": "gates",
+          "peso_pct": 20.61,
+          "cambio_acciones_pct": 0.0
         }
       ]
     },
@@ -44,12 +54,12 @@
       "gestores": [
         {
           "clave": "bridgewater",
-          "peso_pct": 0.03,
-          "cambio_acciones_pct": -91.1
+          "peso_pct": 0.15,
+          "cambio_acciones_pct": 472.3
         },
         {
           "clave": "gates",
-          "peso_pct": 19.65,
+          "peso_pct": 17.23,
           "cambio_acciones_pct": 0.0
         }
       ]
@@ -59,13 +69,13 @@
       "gestores": [
         {
           "clave": "berkshire",
-          "peso_pct": 17.14,
+          "peso_pct": 15.16,
           "cambio_acciones_pct": 0.0
         },
         {
           "clave": "bridgewater",
-          "peso_pct": 0.04,
-          "cambio_acciones_pct": 35.8
+          "peso_pct": 0.14,
+          "cambio_acciones_pct": 245.3
         }
       ]
     },
@@ -74,13 +84,13 @@
       "gestores": [
         {
           "clave": "berkshire",
-          "peso_pct": 12.62,
-          "cambio_acciones_pct": 83.2
+          "peso_pct": 11.96,
+          "cambio_acciones_pct": 0.0
         },
         {
           "clave": "bridgewater",
-          "peso_pct": 2.05,
-          "cambio_acciones_pct": -41.4
+          "peso_pct": 0.72,
+          "cambio_acciones_pct": -65.5
         }
       ]
     },
@@ -89,13 +99,13 @@
       "gestores": [
         {
           "clave": "berkshire",
-          "peso_pct": 10.86,
+          "peso_pct": 11.32,
           "cambio_acciones_pct": 0.0
         },
         {
           "clave": "bridgewater",
-          "peso_pct": 0.08,
-          "cambio_acciones_pct": 0.2
+          "peso_pct": 0.09,
+          "cambio_acciones_pct": 3.4
         }
       ]
     },
@@ -104,28 +114,13 @@
       "gestores": [
         {
           "clave": "berkshire",
-          "peso_pct": 9.2,
-          "cambio_acciones_pct": -5.9
+          "peso_pct": 8.16,
+          "cambio_acciones_pct": -5.7
         },
         {
           "clave": "bridgewater",
-          "peso_pct": 0.24,
-          "cambio_acciones_pct": -2.1
-        }
-      ]
-    },
-    {
-      "emisor": "DEERE & CO",
-      "gestores": [
-        {
-          "clave": "bridgewater",
-          "peso_pct": 0.0,
-          "cambio_acciones_pct": "nueva"
-        },
-        {
-          "clave": "gates",
-          "peso_pct": 6.56,
-          "cambio_acciones_pct": 0.0
+          "peso_pct": 0.13,
+          "cambio_acciones_pct": -45.2
         }
       ]
     },
@@ -134,28 +129,28 @@
       "gestores": [
         {
           "clave": "berkshire",
-          "peso_pct": 4.67,
+          "peso_pct": 5.66,
           "cambio_acciones_pct": 0.0
         },
         {
           "clave": "bridgewater",
-          "peso_pct": 0.11,
-          "cambio_acciones_pct": 5374.1
+          "peso_pct": 0.01,
+          "cambio_acciones_pct": -93.5
         }
       ]
     },
     {
-      "emisor": "CHUBB LIMITED",
+      "emisor": "OCCIDENTAL PETE CORP",
       "gestores": [
         {
           "clave": "berkshire",
-          "peso_pct": 3.9,
+          "peso_pct": 4.82,
           "cambio_acciones_pct": 0.0
         },
         {
           "clave": "bridgewater",
-          "peso_pct": 0.09,
-          "cambio_acciones_pct": 49.7
+          "peso_pct": 0.37,
+          "cambio_acciones_pct": "nueva"
         }
       ]
     },
@@ -164,13 +159,28 @@
       "gestores": [
         {
           "clave": "berkshire",
-          "peso_pct": 3.73,
+          "peso_pct": 3.68,
           "cambio_acciones_pct": 0.0
         },
         {
           "clave": "bridgewater",
-          "peso_pct": 0.06,
-          "cambio_acciones_pct": "nueva"
+          "peso_pct": 0.02,
+          "cambio_acciones_pct": -72.3
+        }
+      ]
+    },
+    {
+      "emisor": "CHUBB LIMITED",
+      "gestores": [
+        {
+          "clave": "berkshire",
+          "peso_pct": 3.66,
+          "cambio_acciones_pct": 0.0
+        },
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.04,
+          "cambio_acciones_pct": -53.9
         }
       ]
     },
@@ -180,42 +190,27 @@
         {
           "clave": "bridgewater",
           "peso_pct": 0.12,
-          "cambio_acciones_pct": 2.8
+          "cambio_acciones_pct": 5.3
         },
         {
           "clave": "gates",
-          "peso_pct": 2.76,
+          "peso_pct": 2.92,
           "cambio_acciones_pct": 0.0
         }
       ]
     },
     {
-      "emisor": "FEDEX CORP",
-      "gestores": [
-        {
-          "clave": "bridgewater",
-          "peso_pct": 0.09,
-          "cambio_acciones_pct": 4635.8
-        },
-        {
-          "clave": "gates",
-          "peso_pct": 2.17,
-          "cambio_acciones_pct": 0.0
-        }
-      ]
-    },
-    {
-      "emisor": "DAVITA INC",
+      "emisor": "KRAFT HEINZ CO",
       "gestores": [
         {
           "clave": "berkshire",
-          "peso_pct": 2.15,
-          "cambio_acciones_pct": -4.1
+          "peso_pct": 2.43,
+          "cambio_acciones_pct": 0.0
         },
         {
-          "clave": "bridgewater",
-          "peso_pct": 0.01,
-          "cambio_acciones_pct": -47.4
+          "clave": "gates",
+          "peso_pct": 0.19,
+          "cambio_acciones_pct": 0.0
         }
       ]
     },
@@ -224,13 +219,13 @@
       "gestores": [
         {
           "clave": "berkshire",
-          "peso_pct": 1.79,
-          "cambio_acciones_pct": 44.0
+          "peso_pct": 1.77,
+          "cambio_acciones_pct": 12.4
         },
         {
           "clave": "bridgewater",
-          "peso_pct": 0.01,
-          "cambio_acciones_pct": 1.1
+          "peso_pct": 0.02,
+          "cambio_acciones_pct": 97.7
         }
       ]
     }
@@ -242,8 +237,8 @@
       "gestores": [
         {
           "clave": "bridgewater",
-          "peso_pct": 16.3,
-          "cambio_acciones_pct": 21.9
+          "peso_pct": 11.29,
+          "cambio_acciones_pct": -36.0
         }
       ]
     },
@@ -253,15 +248,21 @@
       "gestores": [
         {
           "clave": "bridgewater",
-          "peso_pct": 0.01,
-          "cambio_acciones_pct": "nueva"
+          "peso_pct": 0.0,
+          "cambio_acciones_pct": -50.1
         }
       ]
     },
     {
       "nombre": "Tesla",
       "patron": "TESLA",
-      "gestores": []
+      "gestores": [
+        {
+          "clave": "bridgewater",
+          "peso_pct": 0.01,
+          "cambio_acciones_pct": "nueva"
+        }
+      ]
     },
     {
       "nombre": "Nvidia",
@@ -269,8 +270,8 @@
       "gestores": [
         {
           "clave": "bridgewater",
-          "peso_pct": 3.17,
-          "cambio_acciones_pct": -17.6
+          "peso_pct": 2.67,
+          "cambio_acciones_pct": -30.5
         }
       ]
     },
@@ -280,8 +281,8 @@
       "gestores": [
         {
           "clave": "bridgewater",
-          "peso_pct": 1.09,
-          "cambio_acciones_pct": -34.4
+          "peso_pct": 0.49,
+          "cambio_acciones_pct": -68.9
         }
       ]
     }

@@ -1,82 +1,82 @@
 {
   "gestor": "Berkshire Hathaway",
   "cik": "0001067983",
-  "periodo": "2026-06-30",
-  "presentado": "2026-08-14",
-  "periodo_anterior": "2026-03-31",
-  "accesion": "0001193125-26-352200",
+  "periodo": "2026-09-30",
+  "presentado": "2026-11-16",
+  "periodo_anterior": "2026-06-30",
+  "accesion": "0001193125-26-463399",
   "fuente": "SEC EDGAR, formulario 13F-HR",
-  "total_usd": 299253556246,
-  "n_emisores": 26,
-  "tabla_url": "https://www.sec.gov/Archives/edgar/data/1067983/000119312526352200/xslForm13F_X02/56757.xml",
+  "total_usd": 304196581325,
+  "n_emisores": 27,
+  "tabla_url": "https://www.sec.gov/Archives/edgar/data/1067983/000119312526463399/xslForm13F_X02/60471.xml",
   "top": [
     {
       "emisor": "APPLE INC",
-      "valor_usd": 65950296923,
-      "peso_pct": 22.04,
+      "valor_usd": 75901188420,
+      "peso_pct": 24.95,
       "acciones": 227917808,
       "cambio_acciones_pct": 0.0
     },
     {
       "emisor": "AMERICAN EXPRESS CO",
-      "valor_usd": 51282319275,
-      "peso_pct": 17.14,
+      "valor_usd": 46104813870,
+      "peso_pct": 15.16,
       "acciones": 151610700,
       "cambio_acciones_pct": 0.0
     },
     {
       "emisor": "ALPHABET INC",
-      "valor_usd": 37764088383,
-      "peso_pct": 12.62,
+      "valor_usd": 36374651401,
+      "peso_pct": 11.96,
       "acciones": 105979600,
-      "cambio_acciones_pct": 83.2
+      "cambio_acciones_pct": 0.0
     },
     {
       "emisor": "COCA COLA CO",
-      "valor_usd": 32508000000,
-      "peso_pct": 10.86,
+      "valor_usd": 34432000000,
+      "peso_pct": 11.32,
       "acciones": 400000000,
       "cambio_acciones_pct": 0.0
     },
     {
       "emisor": "BANK OF AMER CORP",
-      "valor_usd": 27543790975,
-      "peso_pct": 9.2,
-      "acciones": 483394015,
-      "cambio_acciones_pct": -5.9
+      "valor_usd": 24812509222,
+      "peso_pct": 8.16,
+      "acciones": 455860908,
+      "cambio_acciones_pct": -5.7
     },
     {
       "emisor": "CHEVRON CORPORATION",
-      "valor_usd": 13986141890,
-      "peso_pct": 4.67,
+      "valor_usd": 17230393553,
+      "peso_pct": 5.66,
       "acciones": 84375856,
       "cambio_acciones_pct": 0.0
     },
     {
       "emisor": "OCCIDENTAL PETE CORP",
-      "valor_usd": 12868205304,
-      "peso_pct": 4.3,
+      "valor_usd": 14656559963,
+      "peso_pct": 4.82,
       "acciones": 264941431,
       "cambio_acciones_pct": 0.0
     },
     {
-      "emisor": "CHUBB LIMITED",
-      "valor_usd": 11670066615,
-      "peso_pct": 3.9,
-      "acciones": 34249183,
-      "cambio_acciones_pct": 0.0
-    },
-    {
       "emisor": "MOODYS CORP",
-      "valor_usd": 11173435852,
-      "peso_pct": 3.73,
+      "valor_usd": 11203286284,
+      "peso_pct": 3.68,
       "acciones": 24669778,
       "cambio_acciones_pct": 0.0
     },
     {
+      "emisor": "CHUBB LIMITED",
+      "valor_usd": 11139546771,
+      "peso_pct": 3.66,
+      "acciones": 34249183,
+      "cambio_acciones_pct": 0.0
+    },
+    {
       "emisor": "KRAFT HEINZ CO",
-      "valor_usd": 7691494401,
-      "peso_pct": 2.57,
+      "valor_usd": 7398423065,
+      "peso_pct": 2.43,
       "acciones": 325634818,
       "cambio_acciones_pct": 0.0
     }
